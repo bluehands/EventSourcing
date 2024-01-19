@@ -1,6 +1,6 @@
 ﻿namespace EventSourcing.Infrastructure;
 
-public interface IEventSourcingBuilderInfrastructure
+public interface IEventSourcingOptionsBuilderInfrastructure
 {
     void AddOrUpdateExtension<TExtension>(TExtension extension) where TExtension : class, IEventSourcingOptionsExtension;
 }

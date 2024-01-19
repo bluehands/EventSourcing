@@ -33,12 +33,12 @@ public class EventSourcingOptions : IEventSourcingOptions
         new(_extensions.SetItem(typeof(TExtension), extension));
 }
 
-public class EventSourcingOptionsBuilder : IEventSourcingBuilderInfrastructure
+public class EventSourcingOptionsBuilder : IEventSourcingOptionsBuilderInfrastructure
 {
     EventSourcingOptions _options;
     public EventSourcingOptions Options => _options;
 
-    public static EventSourcingOptionsBuilder WithCoreOptions() => new(new EventSourcingOptions().WithExtension(new EventSourcingCoreOptionsExtension()));
+    public static EventSourcingOptionsBuilder WithCoreOptions() => new(new EventSourcingOptions().WithExtension(new EventSourcingOptionsExtension()));
 
     public EventSourcingOptionsBuilder() : this(new()) { }
 
@@ -50,25 +50,25 @@ public class EventSourcingOptionsBuilder : IEventSourcingBuilderInfrastructure
             PayloadAssemblies = ImmutableList.Create<Assembly>().Add(assembly).AddRange(assemblies)
         });
 
-    EventSourcingOptionsBuilder WithOption(Func<EventSourcingCoreOptionsExtension, EventSourcingCoreOptionsExtension> withFunc)
+    EventSourcingOptionsBuilder WithOption(Func<EventSourcingOptionsExtension, EventSourcingOptionsExtension> withFunc)
     {
-        var optionsExtension = withFunc(_options.FindExtension<EventSourcingCoreOptionsExtension>() ?? new EventSourcingCoreOptionsExtension());
+        var optionsExtension = withFunc(_options.FindExtension<EventSourcingOptionsExtension>() ?? new EventSourcingOptionsExtension());
         AddOrUpdateExtension(optionsExtension);
         return this;
     }
 
-    void AddOrUpdateExtension(EventSourcingCoreOptionsExtension optionsExtension) => ((IEventSourcingBuilderInfrastructure)this).AddOrUpdateExtension(optionsExtension);
+    void AddOrUpdateExtension(EventSourcingOptionsExtension optionsExtension) => ((IEventSourcingOptionsBuilderInfrastructure)this).AddOrUpdateExtension(optionsExtension);
 
-    void IEventSourcingBuilderInfrastructure.AddOrUpdateExtension<TExtension>(TExtension extension)
+    void IEventSourcingOptionsBuilderInfrastructure.AddOrUpdateExtension<TExtension>(TExtension extension)
     => _options = _options.WithExtension(extension);
 }
 
-public record EventSourcingCoreOptionsExtension(
+public record EventSourcingOptionsExtension(
     IReadOnlyCollection<Assembly>? PayloadAssemblies,
     IReadOnlyCollection<Assembly>? PayloadMapperAssemblies)
     : IEventSourcingOptionsExtension
 {
-    public EventSourcingCoreOptionsExtension() : this(null, null)
+    public EventSourcingOptionsExtension() : this(null, null)
     {
     }
 

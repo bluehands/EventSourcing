@@ -1,7 +1,6 @@
-﻿using System;
-using EventSourcing.Infrastructure;
+﻿using EventSourcing.Infrastructure;
 
-namespace EventSourcing.Internal;
+namespace EventSourcing.Persistence.EntityFramework.Sqlite.Infrastructure.Internal;
 
 static class OptionsBuilderExtension
 {
