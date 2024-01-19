@@ -44,10 +44,22 @@ public class EventSourcingOptionsBuilder : IEventSourcingOptionsBuilderInfrastru
 
     public EventSourcingOptionsBuilder(EventSourcingOptions options) => _options = options ?? throw new ArgumentNullException(nameof(options));
 
-    public EventSourcingOptionsBuilder WithPayloadAssemblies(Assembly assembly, params Assembly[] assemblies) =>
+    public EventSourcingOptionsBuilder PayloadAssemblies(Assembly assembly, params Assembly[] assemblies) =>
         WithOption(e => e with
         {
             PayloadAssemblies = ImmutableList.Create<Assembly>().Add(assembly).AddRange(assemblies)
+        });
+
+    public EventSourcingOptionsBuilder PayloadMapperAssemblies(Assembly assembly, params Assembly[] assemblies) =>
+        WithOption(e => e with
+        {
+            PayloadMapperAssemblies = ImmutableList.Create<Assembly>().Add(assembly).AddRange(assemblies)
+        });
+
+    public EventSourcingOptionsBuilder WithCorruptedEventsHandler<T>(ServiceLifetime lifetime = ServiceLifetime.Transient) where T : ICorruptedEventHandler =>
+        WithOption(e => e with
+        {
+            CorruptedEventsHandlerDescriptor = new(typeof(ICorruptedEventHandler), typeof(T), lifetime)
         });
 
     EventSourcingOptionsBuilder WithOption(Func<EventSourcingOptionsExtension, EventSourcingOptionsExtension> withFunc)
@@ -59,16 +71,16 @@ public class EventSourcingOptionsBuilder : IEventSourcingOptionsBuilderInfrastru
 
     void AddOrUpdateExtension(EventSourcingOptionsExtension optionsExtension) => ((IEventSourcingOptionsBuilderInfrastructure)this).AddOrUpdateExtension(optionsExtension);
 
-    void IEventSourcingOptionsBuilderInfrastructure.AddOrUpdateExtension<TExtension>(TExtension extension)
-    => _options = _options.WithExtension(extension);
+    void IEventSourcingOptionsBuilderInfrastructure.AddOrUpdateExtension<TExtension>(TExtension extension) => _options = _options.WithExtension(extension);
 }
 
 public record EventSourcingOptionsExtension(
     IReadOnlyCollection<Assembly>? PayloadAssemblies,
-    IReadOnlyCollection<Assembly>? PayloadMapperAssemblies)
+    IReadOnlyCollection<Assembly>? PayloadMapperAssemblies,
+    ServiceDescriptor? CorruptedEventsHandlerDescriptor)
     : IEventSourcingOptionsExtension
 {
-    public EventSourcingOptionsExtension() : this(null, null)
+    public EventSourcingOptionsExtension() : this(null, null, null)
     {
     }
 
@@ -77,6 +89,15 @@ public record EventSourcingOptionsExtension(
         serviceCollection.AddSingleton<EventSourcingContext>();
         RegisterEventPayloads(PayloadAssemblies ?? new []{Assembly.GetEntryAssembly()});
         RegisterPayloadMappers(PayloadMapperAssemblies ?? new []{Assembly.GetEntryAssembly()});
+
+        if (CorruptedEventsHandlerDescriptor != null)
+        {
+            serviceCollection.Add(CorruptedEventsHandlerDescriptor);
+        }
+        else
+        {
+            serviceCollection.AddTransient<ICorruptedEventHandler, LogAndIgnoreCorruptedEventHandler>();
+        }
     }
 
     static void RegisterEventPayloads(IEnumerable<Assembly> payloadAssemblies) => EventFactory.Initialize(payloadAssemblies);

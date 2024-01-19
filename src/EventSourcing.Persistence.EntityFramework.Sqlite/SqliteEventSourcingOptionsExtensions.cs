@@ -23,4 +23,12 @@ public static class SqliteEventSourcingOptionsExtensions
             sqlExtensionBuilder.UsePollingEventStream();
         }
     }
+
+    public static EventSourcingOptionsBuilder UseInMemoryEventStore(this EventSourcingOptionsBuilder optionsBuilder, string dbName = "mySharedDb")
+    {
+        new InMemoryEventStoreOptionsBuilder(optionsBuilder)
+            .DatabaseName(dbName);
+        
+        return optionsBuilder;
+    }
 }
