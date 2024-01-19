@@ -24,10 +24,14 @@ public static class SqliteEventSourcingOptionsExtensions
         }
     }
 
-    public static EventSourcingOptionsBuilder UseInMemoryEventStore(this EventSourcingOptionsBuilder optionsBuilder, string dbName = "mySharedDb")
+    public static EventSourcingOptionsBuilder UseInMemoryEventStore(this EventSourcingOptionsBuilder optionsBuilder, Action<InMemoryEventStoreOptionsBuilder>? inMemoryOptionsAction = null, string dbName = "mySharedDb")
     {
-        new InMemoryEventStoreOptionsBuilder(optionsBuilder)
+        var builder = new InMemoryEventStoreOptionsBuilder(optionsBuilder)
             .DatabaseName(dbName);
+
+        builder.UsePollingEventStream(TimeSpan.FromMilliseconds(0), TimeSpan.FromMilliseconds(50));
+
+        inMemoryOptionsAction?.Invoke(builder);
         
         return optionsBuilder;
     }

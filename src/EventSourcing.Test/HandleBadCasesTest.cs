@@ -39,28 +39,6 @@ public class HandleBadCasesTest
         receivedEvents[1].Payload.Should().BeOfType<MapToErrorPayloadHandler.CorruptedEvent>();
     }
 
-    class TestService
-    {
-        readonly EventStream<Event> _eventStream;
-        readonly IEventStore _eventStore;
-
-        public TestService(EventStream<Event> eventStream, IEventStore eventStore)
-        {
-            _eventStream = eventStream;
-            _eventStore = eventStore;
-        }
-
-        public async Task<IList<Event>> SendAndWait(IReadOnlyCollection<EventPayload> payloads, int? numberOfExpectedEvents = null)
-        {
-            await _eventStore.WriteEvents(payloads);
-
-            return await _eventStream.Take(numberOfExpectedEvents ?? payloads.Count)
-                .ToList()
-                .ToTask()
-                .WaitAsync(TimeSpan.FromSeconds(1));
-        }
-    }
-
     class StreamIds
     {
         public static StreamId Journal(string id) => new("Journal", id);
@@ -84,6 +62,28 @@ public class HandleBadCasesTest
     {
         public UnreadableEntryAdded(string journalId, string text) : base(StreamIds.Journal(journalId), "UnreadableEntryAdded") => Text = text;
         public string Text { get; }
+    }
+}
+
+class TestService
+{
+    readonly EventStream<Event> _eventStream;
+    readonly IEventStore _eventStore;
+
+    public TestService(EventStream<Event> eventStream, IEventStore eventStore)
+    {
+        _eventStream = eventStream;
+        _eventStore = eventStore;
+    }
+
+    public async Task<IList<Event>> SendAndWait(IReadOnlyCollection<EventPayload> payloads, int? numberOfExpectedEvents = null)
+    {
+        await _eventStore.WriteEvents(payloads);
+
+        return await _eventStream.Take(numberOfExpectedEvents ?? payloads.Count)
+            .ToList()
+            .ToTask()
+            .WaitAsync(TimeSpan.FromSeconds(1));
     }
 }
 

@@ -5,7 +5,7 @@ using Microsoft.Data.Sqlite;
 namespace EventSourcing.Persistence.EntityFramework.Sqlite.Infrastructure;
 
 public class InMemoryEventStoreOptionsBuilder(EventSourcingOptionsBuilder optionsBuilder)
-    : EventSourcingOptionsExtensionBuilder<InMemoryEventStoreOptionsBuilder>(optionsBuilder)
+    : EventSourcingOptionsExtensionBuilder<InMemoryEventStoreOptionsBuilder>(optionsBuilder), IAllowPollingEventStreamBuilder
 {
     public InMemoryEventStoreOptionsBuilder DatabaseName(string databaseName)
     {

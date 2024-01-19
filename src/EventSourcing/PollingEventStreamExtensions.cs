@@ -11,7 +11,7 @@ public interface IAllowPollingEventStreamBuilder;
 
 public static class PollingEventStreamExtensions
 {
-    public static TBuilder UsePollingEventStream<TBuilder>(this TBuilder builder, TimeSpan minWaitTime, TimeSpan maxWaitTime, Func<Task<long>> getPositionToStartFrom) 
+    public static TBuilder UsePollingEventStream<TBuilder>(this TBuilder builder, TimeSpan minWaitTime, TimeSpan maxWaitTime, Func<Task<long>>? getPositionToStartFrom = null) 
         where TBuilder : IAllowPollingEventStreamBuilder, IEventSourcingExtensionsBuilderInfrastructure =>
         builder.WithOption<TBuilder, PollingEventStreamOptionsExtension>(e => e with
         {
