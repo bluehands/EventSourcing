@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Reflection;
 using EventSourcing.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace EventSourcing;
 
@@ -86,7 +87,7 @@ public record EventSourcingOptionsExtension(
 
     public void ApplyServices(IServiceCollection serviceCollection)
     {
-        serviceCollection.AddSingleton<EventSourcingContext>();
+        serviceCollection.TryAddSingleton<EventSourcingContext>();
         RegisterEventPayloads(PayloadAssemblies ?? new []{Assembly.GetEntryAssembly()});
         RegisterPayloadMappers(PayloadMapperAssemblies ?? new []{Assembly.GetEntryAssembly()});
 
@@ -96,7 +97,7 @@ public record EventSourcingOptionsExtension(
         }
         else
         {
-            serviceCollection.AddTransient<ICorruptedEventHandler, LogAndIgnoreCorruptedEventHandler>();
+            serviceCollection.TryAddTransient<ICorruptedEventHandler, LogAndIgnoreCorruptedEventHandler>();
         }
     }
 

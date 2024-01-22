@@ -76,17 +76,7 @@ static class BrokerNotificationEventStream
         var ordinal = GetOrdinal(reader);
         while (await reader.ReadAsync())
         {
-            Event @event;
-            try
-            {
-                @event = Read(reader, ordinal);
-            }
-            catch (Exception e)
-            {
-                //Log.ASR.Error(e, "Failed to deserialize message, skipped");
-                continue;
-            }
-
+            var @event = Read(reader, ordinal);
             yield return @event;
         }
     }
@@ -206,9 +196,9 @@ static class ChangeListener
                 dependency.OnChange += (_, e) =>
                 {
                     if (e.Info == SqlNotificationInfo.Invalid)
-                        _log?.LogError($"Sql dependency error: {e.Type}, {e.Info}, {e.Source}. Sql command might not be valid for sql dependency.");
+                        _log?.LogError("Sql dependency error: {SqlNotificationEventType}, {SqlNotificationEventInfo}, {SqlNotificationEventSource}. Sql command might not be valid for sql dependency.", e.Type, e.Info, e.Source);
 
-                    _log?.LogDebug($"Sql dependency change received: {e.Type}, {e.Info}, {e.Source}");
+                    _log?.LogDebug("Sql dependency change received: {SqlNotificationEventType}, {SqlNotificationEventInfo}, {SqlNotificationEventSource}", e.Type, e.Info, e.Source);
                     tcs.TrySetResult(e.Info);
                 };
 
