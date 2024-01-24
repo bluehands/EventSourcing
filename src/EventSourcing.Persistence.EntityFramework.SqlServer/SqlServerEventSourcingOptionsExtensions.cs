@@ -8,20 +8,21 @@ public static class SqlServerEventSourcingOptionsExtensions
 {
     public static EventSourcingOptionsBuilder UseSqlServerEventStore(this EventSourcingOptionsBuilder optionsBuilder, string connectionString, Action<SqlServerEventStoreOptionsBuilder>? sqlServerOptionsAction = null)
     {
-        var sqlBuilder = new SqlServerEventStoreOptionsBuilder(optionsBuilder);
-        sqlBuilder.UseConnectionString(connectionString);
+        var sqlBuilder = new SqlServerEventStoreOptionsBuilder(optionsBuilder)
+            .ConnectionString(connectionString);
         sqlServerOptionsAction?.Invoke(sqlBuilder);
 
-        SetDefaultEventStreamIfNotConfigured(optionsBuilder, sqlBuilder);
-        return optionsBuilder;
+        return optionsBuilder
+            .SetDefaultEventStreamIfNotConfigured(sqlBuilder);
     }
 
-    static void SetDefaultEventStreamIfNotConfigured(EventSourcingOptionsBuilder optionsBuilder,
-        SqlServerEventStoreOptionsBuilder sqlBuilder)
+    static EventSourcingOptionsBuilder SetDefaultEventStreamIfNotConfigured(this EventSourcingOptionsBuilder optionsBuilder, SqlServerEventStoreOptionsBuilder sqlBuilder)
     {
         if (!optionsBuilder.EventStreamOptionsConfigured())
         {
             sqlBuilder.UseBrokerNotificationEventStream();
         }
+
+        return optionsBuilder;
     }
 }

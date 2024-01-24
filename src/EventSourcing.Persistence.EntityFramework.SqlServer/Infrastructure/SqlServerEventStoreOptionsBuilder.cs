@@ -6,7 +6,7 @@ namespace EventSourcing.Persistence.EntityFramework.SqlServer.Infrastructure;
 public class SqlServerEventStoreOptionsBuilder(EventSourcingOptionsBuilder optionsBuilder)
     : EventSourcingOptionsExtensionBuilder<SqlServerEventStoreOptionsBuilder>(optionsBuilder), IAllowPollingEventStreamBuilder
 {
-    public SqlServerEventStoreOptionsBuilder UseConnectionString(string connectionString) =>
+    public SqlServerEventStoreOptionsBuilder ConnectionString(string connectionString) =>
         WithOption<Internal.SqlServerEventStoreOptionsExtension>(options => options with
         {
             ConnectionString = connectionString

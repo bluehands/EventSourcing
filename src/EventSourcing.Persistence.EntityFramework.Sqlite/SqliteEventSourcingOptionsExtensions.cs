@@ -8,20 +8,23 @@ public static class SqliteEventSourcingOptionsExtensions
 {
     public static EventSourcingOptionsBuilder UseSqliteEventStore(this EventSourcingOptionsBuilder optionsBuilder, string connectionString, Action<SqliteEventStoreOptionsBuilder>? sqliteOptionsAction = null)
     {
-        var sqlBuilder = new SqliteEventStoreOptionsBuilder(optionsBuilder);
-        sqlBuilder.UseConnectionString(connectionString);
+        var sqlBuilder = new SqliteEventStoreOptionsBuilder(optionsBuilder)
+            .ConnectionString(connectionString);
+        
         sqliteOptionsAction?.Invoke(sqlBuilder);
 
-        SetDefaultEventStreamIfNotConfigured(optionsBuilder, sqlBuilder);
-        return optionsBuilder;
+        return optionsBuilder
+            .SetDefaultEventStreamIfNotConfigured(sqlBuilder);
     }
 
-    static void SetDefaultEventStreamIfNotConfigured(EventSourcingOptionsBuilder optionsBuilder, SqliteEventStoreOptionsBuilder sqlExtensionBuilder)
+    static EventSourcingOptionsBuilder SetDefaultEventStreamIfNotConfigured(this EventSourcingOptionsBuilder optionsBuilder, SqliteEventStoreOptionsBuilder sqlExtensionBuilder)
     {
         if (!optionsBuilder.EventStreamOptionsConfigured())
         {
             sqlExtensionBuilder.UsePollingEventStream();
         }
+
+        return optionsBuilder;
     }
 
     public static EventSourcingOptionsBuilder UseInMemoryEventStore(this EventSourcingOptionsBuilder optionsBuilder, Action<InMemoryEventStoreOptionsBuilder>? inMemoryOptionsAction = null, string dbName = "mySharedDb")

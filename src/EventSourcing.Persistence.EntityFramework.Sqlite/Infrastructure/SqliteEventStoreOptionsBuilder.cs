@@ -7,7 +7,7 @@ namespace EventSourcing.Persistence.EntityFramework.Sqlite.Infrastructure;
 public class SqliteEventStoreOptionsBuilder(EventSourcingOptionsBuilder optionsBuilder)
     : EventSourcingOptionsExtensionBuilder<SqliteEventStoreOptionsBuilder>(optionsBuilder), IAllowPollingEventStreamBuilder
 {
-    public SqliteEventStoreOptionsBuilder UseConnectionString(string connectionString) =>
+    public SqliteEventStoreOptionsBuilder ConnectionString(string connectionString) =>
         WithOption<SqliteEventStoreOptionsExtension>(options => options with
         {
             ConnectionString = connectionString
