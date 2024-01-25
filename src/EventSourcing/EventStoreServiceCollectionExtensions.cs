@@ -12,9 +12,19 @@ public static class EventStoreServiceCollectionExtensions
         var builder = EventSourcingOptionsBuilder.WithCoreOptions();
         configure(builder);
 
+        foreach (var eventSourcingOptionsExtension in builder.Options.Extensions)
+        {
+            eventSourcingOptionsExtension.SetDefaults(builder);
+        }
+
 		foreach (var eventSourcingOptionsExtension in builder.Options.Extensions)
         {
             eventSourcingOptionsExtension.ApplyServices(serviceCollection);
+        }
+
+        foreach (var eventSourcingOptionsExtension in builder.Options.Extensions)
+        {
+            eventSourcingOptionsExtension.AddDefaultServices(serviceCollection);
         }
 
         return serviceCollection;

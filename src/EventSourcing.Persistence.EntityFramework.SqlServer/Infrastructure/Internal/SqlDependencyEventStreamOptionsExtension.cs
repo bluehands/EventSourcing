@@ -9,9 +9,17 @@ public record SqlDependencyEventStreamOptionsExtension(uint? MaxRowsPerSelect) :
     {
     }
 
+    public void SetDefaults(EventSourcingOptionsBuilder builder)
+    {
+    }
+
     public void ApplyServices(IServiceCollection serviceCollection)
     {
         BrokerNotificationEventStream.AddEventStream(serviceCollection, MaxRowsPerSelect ?? 10000);
         serviceCollection.AddSingleton<IObservable<EventSourcing.Event>>(sp => sp.GetRequiredService<EventStream<EventSourcing.Event>>());
+    }
+
+    public void AddDefaultServices(IServiceCollection serviceCollection)
+    {
     }
 }

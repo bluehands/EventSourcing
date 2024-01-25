@@ -11,6 +11,10 @@ public record SqlServerEventStoreOptionsExtension(string? ConnectionString) : IE
     {
     }
 
+    public void SetDefaults(EventSourcingOptionsBuilder builder)
+    {
+    }
+
     public void ApplyServices(IServiceCollection serviceCollection)
     {
         serviceCollection.AddDbContext<EventStoreContext>(options =>
@@ -18,5 +22,9 @@ public record SqlServerEventStoreOptionsExtension(string? ConnectionString) : IE
         );
 
         serviceCollection.AddEntityFrameworkServices();
+    }
+
+    public void AddDefaultServices(IServiceCollection serviceCollection)
+    {
     }
 }

@@ -7,6 +7,6 @@ public static class EntityFrameworkServiceCollectionExtension
 {
     public static IServiceCollection AddEntityFrameworkServices(this IServiceCollection services) =>
         services
-            .AddTransient<IInitializer, DatabaseInitializer>()
+            .AddInitializer<DatabaseInitializer>()
             .AddDefaultServices<Event, string, EventStore, EventStore, JsonEventSerializer, EventDescriptor>();
 }

@@ -85,11 +85,15 @@ public record EventSourcingOptionsExtension(
     {
     }
 
+    public void SetDefaults(EventSourcingOptionsBuilder builder)
+    {
+    }
+
     public void ApplyServices(IServiceCollection serviceCollection)
     {
         serviceCollection.TryAddSingleton<EventSourcingContext>();
-        RegisterEventPayloads(PayloadAssemblies ?? new []{Assembly.GetEntryAssembly()});
-        RegisterPayloadMappers(PayloadMapperAssemblies ?? new []{Assembly.GetEntryAssembly()});
+        RegisterEventPayloads(PayloadAssemblies ?? new []{Defaults.DefaultImplementationAssembly});
+        RegisterPayloadMappers(PayloadMapperAssemblies ?? new []{Defaults.DefaultImplementationAssembly});
 
         if (CorruptedEventsHandlerDescriptor != null)
         {
@@ -101,7 +105,16 @@ public record EventSourcingOptionsExtension(
         }
     }
 
+    public void AddDefaultServices(IServiceCollection serviceCollection)
+    {
+    }
+
     static void RegisterEventPayloads(IEnumerable<Assembly> payloadAssemblies) => EventFactory.Initialize(payloadAssemblies);
 
     static void RegisterPayloadMappers(IEnumerable<Assembly> payloadMapperAssemblies) => EventPayloadMapper.Register(payloadMapperAssemblies);
+}
+
+public static class Defaults
+{
+    public static Assembly DefaultImplementationAssembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
 }

@@ -52,7 +52,8 @@ public class EventStore<TDbEvent, TSerializedPayload> : IEventStore, IEventMappe
     public IEnumerable<TDbEvent> MapToDbEvents(IEnumerable<EventPayload> payloads) =>
         payloads.Select(payload =>
         {
-            var serializedPayload = _payloadSerializer.Serialize(payload);
+            var serializablePayload = EventPayloadMapper.MapToSerializablePayload(payload);
+            var serializedPayload = _payloadSerializer.Serialize(serializablePayload);
             return _eventDescriptor.CreateDbEvent(payload.StreamId, payload.EventType, serializedPayload);
         });
 

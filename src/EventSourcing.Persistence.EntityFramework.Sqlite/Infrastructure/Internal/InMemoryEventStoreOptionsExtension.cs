@@ -11,11 +11,19 @@ public record InMemoryEventStoreOptionsExtension(SqliteConnection? KeepAliveConn
     {
     }
 
+    public void SetDefaults(EventSourcingOptionsBuilder builder)
+    {
+    }
+
     public void ApplyServices(IServiceCollection serviceCollection)
     {
         if (KeepAliveConnection == null || KeepAliveConnection.State != ConnectionState.Open)
             throw new InvalidOperationException("Sqlite keep alive connection has to be set and open");
 
         serviceCollection.AddSingleton(KeepAliveConnection!);
+    }
+
+    public void AddDefaultServices(IServiceCollection serviceCollection)
+    {
     }
 }

@@ -11,6 +11,10 @@ public record SqliteEventStoreOptionsExtension(string? ConnectionString) : IEven
     {
     }
 
+    public void SetDefaults(EventSourcingOptionsBuilder builder)
+    {
+    }
+
     public void ApplyServices(IServiceCollection serviceCollection)
     {
         serviceCollection.AddDbContext<EventStoreContext>(options =>
@@ -18,5 +22,9 @@ public record SqliteEventStoreOptionsExtension(string? ConnectionString) : IEven
         );
 
         serviceCollection.AddEntityFrameworkServices();
+    }
+
+    public void AddDefaultServices(IServiceCollection serviceCollection)
+    {
     }
 }

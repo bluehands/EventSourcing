@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace EventSourcing.Commands.Internal;
+namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
 
 class AsyncLock : SemaphoreSlim
 {

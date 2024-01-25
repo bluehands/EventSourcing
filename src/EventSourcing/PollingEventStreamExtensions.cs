@@ -31,11 +31,19 @@ public record PollingEventStreamOptionsExtension(TimeSpan? MinWaitTime, TimeSpan
     {
     }
 
+    public void SetDefaults(EventSourcingOptionsBuilder builder)
+    {
+    }
+
     public void ApplyServices(IServiceCollection serviceCollection)
     {
         serviceCollection.AddSingleton(sp => new WakeUp(MinWaitTime ?? TimeSpan.Zero, MaxWaitTime ?? TimeSpan.FromMilliseconds(100), sp.GetService<ILogger<WakeUp>>()));
         serviceCollection.AddSingleton(sp => BuildPollingEventStream(sp, GetPositionToStartFrom ?? (() => Task.FromResult(0L))));
         serviceCollection.AddSingleton<IObservable<Event>>(sp => sp.GetRequiredService<EventStream<Event>>());
+    }
+
+    public void AddDefaultServices(IServiceCollection serviceCollection)
+    {
     }
 
     static EventStream<Event> BuildPollingEventStream(IServiceProvider provider, Func<Task<long>> getPositionToStartFrom)

@@ -17,7 +17,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PersistenceTester", "Playgr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing.Test", "EventSourcing.Test\EventSourcing.Test.csproj", "{E3836C1C-4411-4395-A19D-A26BC1EB12B7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing.Commands", "EventSourcing.Commands\EventSourcing.Commands.csproj", "{05A329B3-AFFD-4FE9-A65D-AFBB7271DC18}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing.Funicular.Commands", "EventSourcing.Commands\EventSourcing.Funicular.Commands.csproj", "{05A329B3-AFFD-4FE9-A65D-AFBB7271DC18}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

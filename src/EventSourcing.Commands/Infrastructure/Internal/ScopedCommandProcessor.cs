@@ -1,6 +1,8 @@
 ﻿using System;
 
-namespace EventSourcing.Commands.Internal;
+namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
+
+public delegate ScopedCommandProcessor? GetCommandProcessor(Type commandType);
 
 public sealed class ScopedCommandProcessor : IDisposable
 {
