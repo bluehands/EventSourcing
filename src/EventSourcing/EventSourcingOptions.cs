@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Reflection;
 using EventSourcing.Infrastructure;
+using EventSourcing.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -78,10 +80,11 @@ public class EventSourcingOptionsBuilder : IEventSourcingOptionsBuilderInfrastru
 public record EventSourcingOptionsExtension(
     IReadOnlyCollection<Assembly>? PayloadAssemblies,
     IReadOnlyCollection<Assembly>? PayloadMapperAssemblies,
-    ServiceDescriptor? CorruptedEventsHandlerDescriptor)
+    ServiceDescriptor? CorruptedEventsHandlerDescriptor,
+    ServiceLifetime? EventPayloadMapperLifetime)
     : IEventSourcingOptionsExtension
 {
-    public EventSourcingOptionsExtension() : this(null, null, null)
+    public EventSourcingOptionsExtension() : this(null, null, null, null)
     {
     }
 
@@ -92,8 +95,10 @@ public record EventSourcingOptionsExtension(
     public void ApplyServices(IServiceCollection serviceCollection)
     {
         serviceCollection.TryAddSingleton<EventSourcingContext>();
-        RegisterEventPayloads(PayloadAssemblies ?? new []{Defaults.DefaultImplementationAssembly});
-        RegisterPayloadMappers(PayloadMapperAssemblies ?? new []{Defaults.DefaultImplementationAssembly});
+        serviceCollection.AddSingleton<EventFactory>();
+
+        var payloadAssemblies = PayloadAssemblies ?? new[] { Defaults.DefaultImplementationAssembly };
+        RegisterPayloadMappers(serviceCollection, PayloadMapperAssemblies ?? new[] { Defaults.DefaultImplementationAssembly }, payloadAssemblies, EventPayloadMapperLifetime ?? Defaults.DefaultEventPayloadMapperLifetime);
 
         if (CorruptedEventsHandlerDescriptor != null)
         {
@@ -105,16 +110,37 @@ public record EventSourcingOptionsExtension(
         }
     }
 
-    public void AddDefaultServices(IServiceCollection serviceCollection)
+    public void AddDefaultServices(IServiceCollection serviceCollection, EventSourcingOptions eventSourcingOptions)
     {
     }
 
-    static void RegisterEventPayloads(IEnumerable<Assembly> payloadAssemblies) => EventFactory.Initialize(payloadAssemblies);
+    static void RegisterPayloadMappers(IServiceCollection serviceCollection, IEnumerable<Assembly> payloadMapperAssemblies, IEnumerable<Assembly> payloadAssemblies, ServiceLifetime mapperLifetime)
+    {
+        var mapperDescriptors = typeof(EventPayloadMapper)
+            .GetConcreteDerivedTypes(payloadMapperAssemblies)
+            .Select(t => new ServiceDescriptor(typeof(EventPayloadMapper), t, mapperLifetime));
 
-    static void RegisterPayloadMappers(IEnumerable<Assembly> payloadMapperAssemblies) => EventPayloadMapper.Register(payloadMapperAssemblies);
+        var identityMapperDescriptors = typeof(EventPayload)
+            .GetConcreteDerivedTypes(payloadAssemblies.Distinct())
+            .Select(payloadType =>
+            {
+                var serializableEventPayloadAttribute =
+                    payloadType.GetCustomAttribute<SerializableEventPayloadAttribute>();
+                if (serializableEventPayloadAttribute != null)
+                {
+                    return new ServiceDescriptor(typeof(EventPayloadMapper), typeof(IdentityMapper<>).MakeGenericType(payloadType), mapperLifetime);
+                }
+
+                return null;
+            }).Where(s => s != null);
+
+        serviceCollection.Add(mapperDescriptors.Concat(identityMapperDescriptors)!);
+        serviceCollection.Add(new(typeof(EventPayloadMappers), typeof(EventPayloadMappers), mapperLifetime));
+    }
 }
 
 public static class Defaults
 {
     public static Assembly DefaultImplementationAssembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
+    public static ServiceLifetime DefaultEventPayloadMapperLifetime = ServiceLifetime.Singleton;
 }

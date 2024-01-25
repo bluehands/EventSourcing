@@ -19,7 +19,7 @@ public record SqlDependencyEventStreamOptionsExtension(uint? MaxRowsPerSelect) :
         serviceCollection.AddSingleton<IObservable<EventSourcing.Event>>(sp => sp.GetRequiredService<EventStream<EventSourcing.Event>>());
     }
 
-    public void AddDefaultServices(IServiceCollection serviceCollection)
+    public void AddDefaultServices(IServiceCollection serviceCollection, EventSourcingOptions eventSourcingOptions)
     {
     }
 }

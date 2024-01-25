@@ -12,17 +12,6 @@ public static class SqlServerEventSourcingOptionsExtensions
             .ConnectionString(connectionString);
         sqlServerOptionsAction?.Invoke(sqlBuilder);
 
-        return optionsBuilder
-            .SetDefaultEventStreamIfNotConfigured(sqlBuilder);
-    }
-
-    static EventSourcingOptionsBuilder SetDefaultEventStreamIfNotConfigured(this EventSourcingOptionsBuilder optionsBuilder, SqlServerEventStoreOptionsBuilder sqlBuilder)
-    {
-        if (!optionsBuilder.EventStreamOptionsConfigured())
-        {
-            sqlBuilder.UseBrokerNotificationEventStream();
-        }
-
         return optionsBuilder;
     }
 }

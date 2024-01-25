@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using EventSourcing.Funicular.Commands.JsonPayload;
 using EventSourcing.Infrastructure;
 using EventSourcing.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +20,6 @@ public record FunicularCommandsOptionsExtension(IReadOnlyCollection<Assembly>? C
 
     public void SetDefaults(EventSourcingOptionsBuilder builder)
     {
-        throw new NotImplementedException();
     }
 
     public void ApplyServices(IServiceCollection serviceCollection)
@@ -31,10 +31,10 @@ public record FunicularCommandsOptionsExtension(IReadOnlyCollection<Assembly>? C
         AddCommandProcessors(serviceCollection, CommandProcessorAssemblies ?? new[] { Defaults.DefaultImplementationAssembly });
     }
 
-    public void AddDefaultServices(IServiceCollection serviceCollection)
+    public void AddDefaultServices(IServiceCollection serviceCollection, EventSourcingOptions eventSourcingOptions)
     {
-        //if (!serviceCollection.Any(s => typeof(EventPayloadMapper).IsAssignableFrom(s.ServiceType) && s.ServiceType.GetArgumentOfFirstGenericBaseType(1) == typeof(CommandProcessed)))
-            
+        var lifetime = eventSourcingOptions.FindExtension<EventSourcingOptionsExtension>()?.EventPayloadMapperLifetime ?? Defaults.DefaultEventPayloadMapperLifetime;
+        serviceCollection.Add(new(typeof(EventPayloadMapper), typeof(CommandProcessedMapper), lifetime));
     }
 
     static IServiceCollection AddCommandProcessors(IServiceCollection serviceCollection, IEnumerable<Assembly> commandProcessorAssemblies)

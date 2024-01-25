@@ -2,6 +2,7 @@
 using EventSourcing.Persistence.EntityFramework.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace EventSourcing.Persistence.EntityFramework.SqlServer.Infrastructure.Internal;
 
@@ -13,6 +14,11 @@ public record SqlServerEventStoreOptionsExtension(string? ConnectionString) : IE
 
     public void SetDefaults(EventSourcingOptionsBuilder builder)
     {
+        if (!builder.EventStreamOptionsConfigured())
+        {
+            new SqlServerEventStoreOptionsBuilder(builder)
+                .UseBrokerNotificationEventStream();
+        }
     }
 
     public void ApplyServices(IServiceCollection serviceCollection)
@@ -24,7 +30,7 @@ public record SqlServerEventStoreOptionsExtension(string? ConnectionString) : IE
         serviceCollection.AddEntityFrameworkServices();
     }
 
-    public void AddDefaultServices(IServiceCollection serviceCollection)
+    public void AddDefaultServices(IServiceCollection serviceCollection, EventSourcingOptions eventSourcingOptions)
     {
     }
 }

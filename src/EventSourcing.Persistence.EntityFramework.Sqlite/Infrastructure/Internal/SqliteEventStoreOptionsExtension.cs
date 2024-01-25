@@ -13,6 +13,9 @@ public record SqliteEventStoreOptionsExtension(string? ConnectionString) : IEven
 
     public void SetDefaults(EventSourcingOptionsBuilder builder)
     {
+        if (!builder.EventStreamOptionsConfigured())
+            new SqliteEventStoreOptionsBuilder(builder)
+                .UsePollingEventStream();
     }
 
     public void ApplyServices(IServiceCollection serviceCollection)
@@ -24,7 +27,7 @@ public record SqliteEventStoreOptionsExtension(string? ConnectionString) : IEven
         serviceCollection.AddEntityFrameworkServices();
     }
 
-    public void AddDefaultServices(IServiceCollection serviceCollection)
+    public void AddDefaultServices(IServiceCollection serviceCollection, EventSourcingOptions eventSourcingOptions)
     {
     }
 }

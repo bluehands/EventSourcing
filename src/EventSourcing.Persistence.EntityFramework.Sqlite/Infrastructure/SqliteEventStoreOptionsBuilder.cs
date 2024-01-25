@@ -5,10 +5,10 @@ using EventSourcing.Persistence.EntityFramework.Sqlite.Infrastructure.Internal;
 namespace EventSourcing.Persistence.EntityFramework.Sqlite.Infrastructure;
 
 public class SqliteEventStoreOptionsBuilder(EventSourcingOptionsBuilder optionsBuilder)
-    : EventSourcingOptionsExtensionBuilder<SqliteEventStoreOptionsBuilder>(optionsBuilder), IAllowPollingEventStreamBuilder
+    : EventSourcingOptionsExtensionBuilder<SqliteEventStoreOptionsBuilder, SqliteEventStoreOptionsExtension>(optionsBuilder), IAllowPollingEventStreamBuilder
 {
     public SqliteEventStoreOptionsBuilder ConnectionString(string connectionString) =>
-        WithOption<SqliteEventStoreOptionsExtension>(options => options with
+        WithOption(options => options with
         {
             ConnectionString = connectionString
         });

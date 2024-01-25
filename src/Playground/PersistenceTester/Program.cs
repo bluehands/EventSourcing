@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.Reactive.Linq;
 using EventSourcing;
+using EventSourcing.Funicular.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,10 +18,10 @@ class Program
                 //serviceCollection.AddEventSourcing(b => b.UseSqliteEventStore(@"Data Source=c:\temp\EventStore.db"));
 
                 serviceCollection.AddEventSourcing(
-                    b =>
-                        b.UseSqlServerEventStore(
-                            "Data Source=.\\SQLSERVEREXPRESS;Initial Catalog=TestEventStore2;Integrated Security=True;TrustServerCertificate=True;"
-                        )
+                    eventSourcing =>
+                        eventSourcing
+                            .UseSqlServerEventStore("Data Source=.\\SQLSERVEREXPRESS;Initial Catalog=TestEventStore2;Integrated Security=True;TrustServerCertificate=True;")
+                            .UseFunicularCommands()
                 );
             })
             .ConfigureLogging(builder => builder.AddConsole())
@@ -43,6 +45,9 @@ class Program
 
         await services.StartEventSourcing();
 
+        var commandStream = services.GetRequiredService<CommandStream>();
+        await commandStream.SendCommandAndWaitUntilApplied(new AddTextCommand("Hallo"),  eventStream.Select(e => e.Payload).OfType<CommandProcessed>());
+        
         var eventStore = services.GetRequiredService<IEventStore>();
 
         Console.WriteLine("Reading all events from store...");
@@ -61,7 +66,7 @@ class Program
                 try
                 {
                     var events = Enumerable.Range(0, 1000).Select(i => 
-                            new MyFirstEvent($"Batch {i}", TextGenerator.RandomString(10, 1000)))
+                            new TextAdded("Journal1",$"Batch {i}", TextGenerator.RandomString(10, 1000)))
                         .ToList();
                     var sw = Stopwatch.StartNew();
                     await eventStore.WriteEvents(events);
@@ -93,6 +98,27 @@ public static class TextGenerator
     }
 }
 
+public static class EventTypes
+{
+    public const string TextAdded = "TextAdded";
+}
 
-[SerializableEventPayload("MyFirstEvent")]
-public record MyFirstEvent(string Name, string Text) : EventPayload(new("TestStreamType", "TestStreamId"), "MyFirstEvent");
+public record AddTextCommand(string Text) : Command;
+
+public class AddTextCommandProcessor : SynchronousCommandProcessor<AddTextCommand>
+{
+    public override CommandResult.Processed_ InternalProcessSync(AddTextCommand command) => 
+        new(new TextAdded("MyJournal", "First entry", command.Text), command.Id, FunctionalResult.Ok("Text added"));
+}
+
+public record TextAdded(string JournalId, string Header, string Text) : EventPayload(new("Journal", JournalId), EventTypes.TextAdded);
+
+[SerializableEventPayload(EventTypes.TextAdded)]
+public record TextAddedSerializable(string HeaderProp, string TextProp);
+
+public class TextAddedPayloadMapper : EventPayloadMapper<TextAdded, TextAddedSerializable>
+{
+    protected override TextAdded MapFromSerializablePayload(TextAddedSerializable serialized, StreamId streamId) => new(streamId.Id, serialized.HeaderProp, serialized.TextProp);
+
+    protected override TextAddedSerializable MapToSerializablePayload(TextAdded payload) =>  new(payload.Header, payload.Text);
+}

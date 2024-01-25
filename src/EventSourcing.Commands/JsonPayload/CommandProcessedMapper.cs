@@ -5,9 +5,9 @@ using System.Reactive;
 
 namespace EventSourcing.Funicular.Commands.JsonPayload;
 
-public class CommandProcessedMapper : EventPayloadMapper<CommandProcessed, Commands.CommandProcessed>
+public class CommandProcessedMapper : EventPayloadMapper<Commands.CommandProcessed, CommandProcessed>
 {
-	protected override Commands.CommandProcessed MapFromSerializablePayload(CommandProcessed serialized) =>
+	protected override Commands.CommandProcessed MapFromSerializablePayload(CommandProcessed serialized, StreamId streamId) =>
 		new(CommandId: new(Id: serialized.CommandId),
 			OperationResult: serialized.OperationResult.UnionCase == OperationResultUnionCases.Ok
 				? OperationResult.Ok(value: Unit.Default)

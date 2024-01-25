@@ -2,22 +2,27 @@
 
 namespace EventSourcing.Infrastructure;
 
-public abstract class EventSourcingOptionsExtensionBuilder<TBuilder> : IEventSourcingExtensionsBuilderInfrastructure
-    where TBuilder : EventSourcingOptionsExtensionBuilder<TBuilder>
+public abstract class EventSourcingOptionsExtensionBuilder<TBuilder, TExtension> : IEventSourcingExtensionsBuilderInfrastructure
+    where TBuilder : EventSourcingOptionsExtensionBuilder<TBuilder, TExtension> where TExtension : class, IEventSourcingOptionsExtension, new()
 {
     readonly EventSourcingOptionsBuilder _optionsBuilder;
     public EventSourcingOptionsBuilder OptionsBuilder => _optionsBuilder;
 
-    protected EventSourcingOptionsExtensionBuilder(EventSourcingOptionsBuilder optionsBuilder) => _optionsBuilder = optionsBuilder;
-
-    protected TExtension GetOrCreateExtension<TExtension>() where TExtension : new() =>
-        _optionsBuilder.Options.FindExtension<TExtension>() ??
-        new TExtension();
-
-    protected TBuilder WithOption<TExtension>(Func<TExtension, TExtension> modify) where TExtension : class, IEventSourcingOptionsExtension, new()
+    protected EventSourcingOptionsExtensionBuilder(EventSourcingOptionsBuilder optionsBuilder)
     {
-        var options = modify(GetOrCreateExtension<TExtension>());
+        _optionsBuilder = optionsBuilder;
+        WithOption<TExtension>(e => e);
+    }
+
+    protected TBuilder WithOption(Func<TExtension, TExtension> modify) => WithOption<TExtension>(modify);
+
+    protected TBuilder WithOption<TOptionsExtension>(Func<TOptionsExtension, TOptionsExtension> modify) where TOptionsExtension : class, IEventSourcingOptionsExtension, new()
+    {
+        var options = modify(GetOrCreateExtension<TOptionsExtension>());
         ((IEventSourcingOptionsBuilderInfrastructure)_optionsBuilder).AddOrUpdateExtension(options);
         return (TBuilder)this;
     }
+
+    TOptionsExtension GetOrCreateExtension<TOptionsExtension>() where TOptionsExtension : new() =>
+        _optionsBuilder.Options.FindExtension<TOptionsExtension>() ?? new TOptionsExtension();
 }

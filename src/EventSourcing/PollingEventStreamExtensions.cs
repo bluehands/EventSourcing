@@ -42,7 +42,7 @@ public record PollingEventStreamOptionsExtension(TimeSpan? MinWaitTime, TimeSpan
         serviceCollection.AddSingleton<IObservable<Event>>(sp => sp.GetRequiredService<EventStream<Event>>());
     }
 
-    public void AddDefaultServices(IServiceCollection serviceCollection)
+    public void AddDefaultServices(IServiceCollection serviceCollection, EventSourcingOptions eventSourcingOptions)
     {
     }
 

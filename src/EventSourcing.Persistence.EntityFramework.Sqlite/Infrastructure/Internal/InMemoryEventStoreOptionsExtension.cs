@@ -23,7 +23,7 @@ public record InMemoryEventStoreOptionsExtension(SqliteConnection? KeepAliveConn
         serviceCollection.AddSingleton(KeepAliveConnection!);
     }
 
-    public void AddDefaultServices(IServiceCollection serviceCollection)
+    public void AddDefaultServices(IServiceCollection serviceCollection, EventSourcingOptions eventSourcingOptions)
     {
     }
 }

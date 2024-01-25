@@ -1,30 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using EventSourcing.Internal;
+using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Infrastructure;
 
-public static class EventFactory
+public sealed class EventFactory
 {
-	delegate Event CreateEvent(long version, DateTimeOffset timestamp, EventPayload payload);
+    readonly ILogger<EventFactory>? _logger;
 
-	public static void Initialize(IEnumerable<Assembly> payloadAssemblies) => _eventFactoryByPayloadType = typeof(EventPayload)
-		.GetConcreteDerivedTypes(payloadAssemblies.Distinct())
-		.Select(payloadType =>
-        {
-            var createEvent = BuildCreateEvent(payloadType);
-            var serializableEventPayloadAttribute = payloadType.GetCustomAttribute<SerializableEventPayloadAttribute>();
-            if (serializableEventPayloadAttribute != null)
-            {
-                EventPayloadMapper.AddIdentityMapper(serializableEventPayloadAttribute.EventType, payloadType);
-            }
+    delegate Event CreateEvent(long version, DateTimeOffset timestamp, EventPayload payload);
 
-            return (payloadType, factory: createEvent);
-        }).ToImmutableDictionary(t => t.payloadType, t => t.factory);
+    ImmutableDictionary<Type, CreateEvent> _eventFactoryByPayloadType = ImmutableDictionary<Type, CreateEvent>.Empty;
+
+    public EventFactory(ILogger<EventFactory>? logger = null) => _logger = logger;
 
     static CreateEvent BuildCreateEvent(Type payloadType)
     {
@@ -45,16 +35,15 @@ public static class EventFactory
         return createEvent;
     }
 
-    static ImmutableDictionary<Type, CreateEvent> _eventFactoryByPayloadType = ImmutableDictionary<Type, CreateEvent>.Empty;
-
-	public static Event EventFromPayload(EventPayload eventPayload, long version, DateTimeOffset timestamp)
+    public Event EventFromPayload(EventPayload eventPayload, long version, DateTimeOffset timestamp)
     {
         var payloadType = eventPayload.GetType();
-        if (_eventFactoryByPayloadType.TryGetValue(payloadType, out var createEvent))
-            return createEvent(version, timestamp, eventPayload);
-
-        createEvent = BuildCreateEvent(payloadType);
-        _eventFactoryByPayloadType = _eventFactoryByPayloadType.SetItem(payloadType, createEvent);
+        if (!_eventFactoryByPayloadType.TryGetValue(payloadType, out var createEvent))
+        {
+            _logger?.LogDebug("Creating factory for event payload {PayloadType}", payloadType);
+            createEvent = BuildCreateEvent(payloadType);
+            _eventFactoryByPayloadType = _eventFactoryByPayloadType.SetItem(payloadType, createEvent);
+        }
         return createEvent(version, timestamp, eventPayload);
     }
 }

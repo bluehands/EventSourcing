@@ -34,6 +34,6 @@ public interface IDbEventDescriptor<TDbEvent, TSerializedPayload>
     TSerializedPayload GetPayload(TDbEvent dbEvent);
     long GetPosition(TDbEvent dbEvent);
     DateTimeOffset GetTimestamp(TDbEvent dbEvent);
-
+    StreamId GetStreamId(TDbEvent dbEvent);
     TDbEvent CreateDbEvent(StreamId streamId, string eventType, TSerializedPayload payload);
 }

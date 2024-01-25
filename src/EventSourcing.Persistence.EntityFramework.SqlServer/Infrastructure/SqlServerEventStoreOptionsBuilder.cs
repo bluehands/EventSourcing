@@ -4,10 +4,10 @@ using EventSourcing.Persistence.EntityFramework.SqlServer.Infrastructure.Interna
 namespace EventSourcing.Persistence.EntityFramework.SqlServer.Infrastructure;
 
 public class SqlServerEventStoreOptionsBuilder(EventSourcingOptionsBuilder optionsBuilder)
-    : EventSourcingOptionsExtensionBuilder<SqlServerEventStoreOptionsBuilder>(optionsBuilder), IAllowPollingEventStreamBuilder
+    : EventSourcingOptionsExtensionBuilder<SqlServerEventStoreOptionsBuilder, SqlServerEventStoreOptionsExtension>(optionsBuilder), IAllowPollingEventStreamBuilder
 {
     public SqlServerEventStoreOptionsBuilder ConnectionString(string connectionString) =>
-        WithOption<Internal.SqlServerEventStoreOptionsExtension>(options => options with
+        WithOption(options => options with
         {
             ConnectionString = connectionString
         });
