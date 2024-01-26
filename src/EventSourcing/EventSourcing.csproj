@@ -1,0 +1,60 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+
+		<VersionSuffixLocal />
+		<!--When variable is set we are building a prerelease package-->
+		<VersionSuffixLocal Condition="'$(IsPreRelease)'!='' AND '$(IsPreRelease)'">
+			$(VersionSuffix)
+		</VersionSuffixLocal>
+
+		<!--#region adapt versions here-->
+		<MajorVersion>0</MajorVersion>
+		<MinorAndPatchVersion>1.0</MinorAndPatchVersion>
+		<!--#endregion-->
+
+		<AssemblyVersion>$(MajorVersion).0.0</AssemblyVersion>
+		<Version>$(MajorVersion).$(MinorAndPatchVersion)$(VersionSuffixLocal)</Version>
+		<FileVersion>$(Version)</FileVersion>
+		<PackageVersion>$(Version)</PackageVersion>
+		<PackageId>Bluehands.EventSourcing</PackageId>
+
+		<!-- Descriptions and information-->
+		<Titel>Bluehands.EventSourcing</Titel>
+		<Authors>bluehands</Authors>
+		<PackageDescription>Extensible, functional and flexible multi persistence event sourcing framework for .NET. </PackageDescription>
+		<Copyright>Copyright 2024 bluehands GmbH &amp; C.ommunication KG</Copyright>
+		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<!--<PackageIcon>FunicularSwitch.png</PackageIcon>-->
+		<PackageTags>EventSourcing,CQRS,EventStore</PackageTags>
+		<RepositoryUrl>https://github.com/bluehands/EventSourcing</RepositoryUrl>
+		<RepositoryType>Git</RepositoryType>
+		<RepositoryBranch>main</RepositoryBranch>
+
+		<!-- Package specific settings -->
+		<PackageOutputPath>$(OutputPath)</PackageOutputPath>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<ContentTargetFolders>content</ContentTargetFolders>
+		<SignAssembly>True</SignAssembly>
+		<AssemblyOriginatorKeyFile>..\..\EventSourcing.snk</AssemblyOriginatorKeyFile>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+		<PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
+		<PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
+		<PackageReference Include="System.Reactive" Version="6.0.0" />
+	</ItemGroup>
+
+</Project>
