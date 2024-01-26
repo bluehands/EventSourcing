@@ -12,7 +12,7 @@ public abstract class CommandProcessor
         {
             using var scopedCommandProcessor = getCommandProcessor(command.GetType());
             var processingResult = scopedCommandProcessor != null ?
-                await scopedCommandProcessor.Processor.Process(command).ConfigureAwait(false) :
+                await scopedCommandProcessor.Processor.InternalProcess(command).ConfigureAwait(false) :
                 CommandResult.Unhandled(command.Id, $"No command processor registered for command {command.GetType().Name}");
             return processingResult;
         }
@@ -26,20 +26,19 @@ public abstract class CommandProcessor
         }
     }
 
-    protected abstract Task<CommandResult.Processed_> Process(Command command);
+    protected abstract Task<CommandResult.Processed_> InternalProcess(Command command);
 }
 
 public abstract class CommandProcessor<T> : CommandProcessor where T : Command
 {
-    protected override async Task<CommandResult.Processed_> Process(Command command) => await InternalProcess((T)command).ConfigureAwait(false);
+    protected override async Task<CommandResult.Processed_> InternalProcess(Command command) => await Process((T)command).ConfigureAwait(false);
 
-    public abstract Task<CommandResult.Processed_> InternalProcess(T command);
+    public abstract Task<CommandResult.Processed_> Process(T command);
 }
 
 public abstract class SynchronousCommandProcessor<T> : CommandProcessor<T> where T : Command
 {
-    public override Task<CommandResult.Processed_> InternalProcess(T command) =>
-        Task.FromResult(InternalProcessSync(command));
+    public override Task<CommandResult.Processed_> Process(T command) => Task.FromResult(ProcessSync(command));
 
-    public abstract CommandResult.Processed_ InternalProcessSync(T command);
+    public abstract CommandResult.Processed_ ProcessSync(T command);
 }

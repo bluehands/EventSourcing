@@ -107,7 +107,7 @@ public record AddTextCommand(string Text) : Command;
 
 public class AddTextCommandProcessor : SynchronousCommandProcessor<AddTextCommand>
 {
-    public override CommandResult.Processed_ InternalProcessSync(AddTextCommand command)
+    public override CommandResult.Processed_ ProcessSync(AddTextCommand command)
     {
 
 

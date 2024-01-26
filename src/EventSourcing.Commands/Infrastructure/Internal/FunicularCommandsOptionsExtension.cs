@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using EventSourcing.Funicular.Commands.JsonPayload;
 using EventSourcing.Infrastructure;
 using EventSourcing.Infrastructure.Internal;
@@ -24,10 +23,15 @@ public record FunicularCommandsOptionsExtension(IReadOnlyCollection<Assembly>? C
 
     public void ApplyServices(IServiceCollection serviceCollection)
     {
-        serviceCollection.AddSingleton<CommandStream>()
+        serviceCollection
+            .AddSingleton<CommandStream>()
             .AddSingleton<CommandProcessorSubscription>()
-            .AddInitializer<FunicularCommandsInitializer>();
+            .AddSingleton<EventReplayState>()
+            .AddSingleton<EventSourcingContext, FunicularEventSourcingContext>()
+            .AddInitializer<FunicularCommandsInitializer>()
+            .AddInitializer<AfterEventReplayInitializer>();
 
+        serviceCollection.AddTransient<CommandProcessor<NoopCommand>, NoopCommandProcessor>();
         AddCommandProcessors(serviceCollection, CommandProcessorAssemblies ?? new[] { EventSourcingOptionDefaults.DefaultImplementationAssembly });
     }
 
@@ -70,15 +74,6 @@ public record FunicularCommandsOptionsExtension(IReadOnlyCollection<Assembly>? C
     }
 }
 
-sealed class FunicularCommandsInitializer(CommandProcessorSubscription commandProcessorSubscription) : IInitializer<BeforeEventReplay>
-{
-    public Task Initialize()
-    {
-        commandProcessorSubscription.SubscribeCommandProcessors();
-        return Task.CompletedTask;
-    }
-}
-
 sealed class CommandProcessorSubscription(
     CommandStream commandStream,
     IEventStore eventStore,
@@ -94,18 +89,16 @@ sealed class CommandProcessorSubscription(
         _subscription = commandStream.SubscribeCommandProcessors(commandType =>
         {
             var commandProcessorType = typeof(CommandProcessor<>).MakeGenericType(commandType);
-            try
+
+            var scope = serviceScopeFactory.CreateScope();
+            var processor = (CommandProcessor)scope.ServiceProvider.GetService(commandProcessorType);
+            if (processor == null)
             {
-                var scope = serviceScopeFactory.CreateScope();
-                var processor = (CommandProcessor)scope.ServiceProvider.GetService(commandProcessorType);
-                return new(processor, scope);
-            }
-            catch (Exception e)
-            {
-                logger?.LogError(e, $"Failed to resolve command processor of type {commandProcessorType}");
+                scope.Dispose();
+                return null;
             }
 
-            return null;
+            return new(processor, scope);
         }, eventStore, logger, wakeUp);
     }
 

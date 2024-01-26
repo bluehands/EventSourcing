@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
@@ -21,14 +22,24 @@ public class EventSourcingContext(
             var initializerType = initializer.GetType();
             var phaseAttributes = initializerType.AssertInitializationPhaseAttributes();
             return phaseAttributes.Select(attribute => (attribute.phaseAttribute, attribute.phaseType, initializer));
-        }).OrderBy(t => t.phaseAttribute.Order);
+        })
+        .GroupBy(t => (t.phaseType, t.phaseAttribute.Order))
+        .OrderBy(t => t.Key.Order);
 
-        foreach (var (_, phaseType, initializer) in orderedInitializers)
+        foreach (var initializersOfPhase in orderedInitializers)
+        {
+            await Initialize(initializersOfPhase.Key.phaseType, initializersOfPhase.Select(i => i.initializer));
+        }
+    }
+
+    protected virtual async Task Initialize(Type phase, IEnumerable<IInitializer> initializers)
+    {
+        await Task.WhenAll(initializers.Select(async initializer =>
         {
             var initializerName = initializer.GetType().Name;
-            logger?.LogInformation("Running initializer {Initializer} in phase {InitializationPhase}.", initializerName, phaseType.Name);
+            logger?.LogInformation("Running initializer {Initializer} in phase {InitializationPhase}.", initializerName, phase.Name);
             await initializer.Initialize();
             logger?.LogInformation("{Initializer} done.", initializerName);
-        }
+        }));
     }
 }
