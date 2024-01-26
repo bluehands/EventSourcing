@@ -24,11 +24,11 @@
 		<Version>$(MajorVersion).$(MinorAndPatchVersion)$(VersionSuffixLocal)</Version>
 		<FileVersion>$(Version)</FileVersion>
 		<PackageVersion>$(Version)</PackageVersion>
-		<PackageId>EventSourcing</PackageId>
+		<PackageId>Bluehands.EventSourcing</PackageId>
 
 		<!-- Descriptions and information-->
-		<Titel>EventSourcing</Titel>
-		<Authors>bluehands GmbH &amp; C.ommunication KG</Authors>
+		<Titel>Bluehands.EventSourcing</Titel>
+		<Authors>bluehands</Authors>
 		<PackageDescription>Extensible, functional and flexible multi persistence event sourcing framework for .NET. </PackageDescription>
 		<Copyright>Copyright 2024 bluehands GmbH &amp; C.ommunication KG</Copyright>
 		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>

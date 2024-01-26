@@ -24,10 +24,10 @@
 		<Version>$(MajorVersion).$(MinorAndPatchVersion)$(VersionSuffixLocal)</Version>
 		<FileVersion>$(Version)</FileVersion>
 		<PackageVersion>$(Version)</PackageVersion>
-		<PackageId>EventSourcing.Persistence.EntityFramework</PackageId>
+		<PackageId>Bluehands.EventSourcing.Persistence.EntityFramework</PackageId>
 
 		<!-- Descriptions and information-->
-		<Titel>EventSourcing.Persistence.EntityFramework</Titel>
+		<Titel>Bluehands.EventSourcing.Persistence.EntityFramework</Titel>
 		<Authors>bluehands GmbH &amp; C.ommunication KG</Authors>
 		<PackageDescription>Common functionality for entity framework based persistence implementations for EventSourcing</PackageDescription>
 		<Copyright>Copyright 2024 bluehands GmbH &amp; C.ommunication KG</Copyright>

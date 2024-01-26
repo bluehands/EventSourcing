@@ -5,6 +5,49 @@
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
+	
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+
+		<VersionSuffixLocal />
+		<!--When variable is set we are building a prerelease package-->
+		<VersionSuffixLocal Condition="'$(IsPreRelease)'!='' AND '$(IsPreRelease)'">
+			$(VersionSuffix)
+		</VersionSuffixLocal>
+
+		<!--#region adapt versions here-->
+		<MajorVersion>0</MajorVersion>
+		<MinorAndPatchVersion>1.0</MinorAndPatchVersion>
+		<!--#endregion-->
+
+		<AssemblyVersion>$(MajorVersion).0.0</AssemblyVersion>
+		<Version>$(MajorVersion).$(MinorAndPatchVersion)$(VersionSuffixLocal)</Version>
+		<FileVersion>$(Version)</FileVersion>
+		<PackageVersion>$(Version)</PackageVersion>
+		<PackageId>Bluehands.EventSourcing.Funicular.Commands</PackageId>
+
+		<!-- Descriptions and information-->
+		<Titel>Bluehands.EventSourcing.Funicular.Commands</Titel>
+		<Authors>bluehands GmbH &amp; C.ommunication KG</Authors>
+		<PackageDescription>Functional command pattern for Bluehands.EventSourcing</PackageDescription>
+		<Copyright>Copyright 2024 bluehands GmbH &amp; C.ommunication KG</Copyright>
+		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<!--<PackageIcon>FunicularSwitch.png</PackageIcon>-->
+		<PackageTags>Commands,Processor,EventSourcing,CQRS</PackageTags>
+		<RepositoryUrl>https://github.com/bluehands/EventSourcing</RepositoryUrl>
+		<RepositoryType>Git</RepositoryType>
+		<RepositoryBranch>main</RepositoryBranch>
+
+		<!-- Package specific settings -->
+		<PackageOutputPath>$(OutputPath)</PackageOutputPath>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<ContentTargetFolders>content</ContentTargetFolders>
+		<SignAssembly>True</SignAssembly>
+		<AssemblyOriginatorKeyFile>..\..\EventSourcing.snk</AssemblyOriginatorKeyFile>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="FunicularSwitch.Generators" Version="3.2.0">
