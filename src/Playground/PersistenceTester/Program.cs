@@ -15,14 +15,18 @@ class Program
         using var host = Host.CreateDefaultBuilder()
             .ConfigureServices(serviceCollection =>
             {
-                //serviceCollection.AddEventSourcing(b => b.UseSqliteEventStore(@"Data Source=c:\temp\EventStore.db"));
-
-                serviceCollection.AddEventSourcing(
-                    eventSourcing =>
-                        eventSourcing
-                            .UseSqlServerEventStore("Data Source=.\\SQLSERVEREXPRESS;Initial Catalog=TestEventStore2;Integrated Security=True;TrustServerCertificate=True;")
-                            .UseFunicularCommands()
+                serviceCollection.AddEventSourcing(b =>
+                    b
+                        .UseSqliteEventStore(@"Data Source=c:\temp\EventStore.db")
+                        .UseFunicularCommands()
                 );
+
+                //serviceCollection.AddEventSourcing(
+                //    eventSourcing =>
+                //        eventSourcing
+                //            .UseSqlServerEventStore("Data Source=.\\SQLSERVEREXPRESS;Initial Catalog=TestEventStore2;Integrated Security=True;TrustServerCertificate=True;")
+                //            .UseFunicularCommands()
+                //);
             })
             .ConfigureLogging(builder => builder.AddConsole())
             .Build();
@@ -57,30 +61,30 @@ class Program
                 Console.WriteLine($"Read {@event.Position} events from store");
         }
 
-        //var cancellationToken = services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
-        //try
-        //{
-        //    while (!cancellationToken.IsCancellationRequested)
-        //    {
-        //        await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-        //        try
-        //        {
-        //            var events = Enumerable.Range(0, 1000).Select(i => 
-        //                    new TextAdded("Journal1",$"Batch {i}", TextGenerator.RandomString(10, 1000)))
-        //                .ToList();
-        //            var sw = Stopwatch.StartNew();
-        //            await eventStore.WriteEvents(events);
-        //            Console.WriteLine($"Wrote {events.Count} events in {sw.ElapsedMilliseconds} ms");
-        //        }
-        //        catch (Exception)
-        //        {
-        //            Console.WriteLine("Failed to write event");
-        //        }
-        //    }
-        //}
-        //catch (OperationCanceledException)
-        //{
-        //}
+        var cancellationToken = services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                try
+                {
+                    var events = Enumerable.Range(0, 1000).Select(i =>
+                            new TextAdded("Journal1", $"Batch {i}", TextGenerator.RandomString(10, 1000)))
+                        .ToList();
+                    var sw = Stopwatch.StartNew();
+                    await eventStore.WriteEvents(events);
+                    Console.WriteLine($"Wrote {events.Count} events in {sw.ElapsedMilliseconds} ms");
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("Failed to write event");
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 }
 

@@ -38,8 +38,6 @@ public class WakeUp
             var nextWaitTime = _currentWaitTime.Add(_currentWaitTime == TimeSpan.Zero ? TimeSpan.FromTicks(_maxWaitTime.Ticks / 10) : _currentWaitTime);
             _currentWaitTime = nextWaitTime < _maxWaitTime ? nextWaitTime : _maxWaitTime;
         }
-        if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
-            _logger.LogDebug($"Wait time set to {_currentWaitTime}");
     }
 
     public void WorkIsScheduled() => _resetEvent.Reset();
