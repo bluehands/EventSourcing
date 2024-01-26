@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using EventSourcing.Funicular.Commands.JsonPayload;
 using EventSourcing.Infrastructure;
-using EventSourcing.Internal;
+using EventSourcing.Infrastructure.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -28,12 +28,12 @@ public record FunicularCommandsOptionsExtension(IReadOnlyCollection<Assembly>? C
             .AddSingleton<CommandProcessorSubscription>()
             .AddInitializer<FunicularCommandsInitializer>();
 
-        AddCommandProcessors(serviceCollection, CommandProcessorAssemblies ?? new[] { Defaults.DefaultImplementationAssembly });
+        AddCommandProcessors(serviceCollection, CommandProcessorAssemblies ?? new[] { EventSourcingOptionDefaults.DefaultImplementationAssembly });
     }
 
     public void AddDefaultServices(IServiceCollection serviceCollection, EventSourcingOptions eventSourcingOptions)
     {
-        var lifetime = eventSourcingOptions.FindExtension<EventSourcingOptionsExtension>()?.EventPayloadMapperLifetime ?? Defaults.DefaultEventPayloadMapperLifetime;
+        var lifetime = eventSourcingOptions.FindExtension<EventSourcingOptionsExtension>()?.EventPayloadMapperLifetime ?? EventSourcingOptionDefaults.DefaultEventPayloadMapperLifetime;
         serviceCollection.Add(new(typeof(EventPayloadMapper), typeof(CommandProcessedMapper), lifetime));
     }
 
@@ -70,8 +70,7 @@ public record FunicularCommandsOptionsExtension(IReadOnlyCollection<Assembly>? C
     }
 }
 
-sealed class FunicularCommandsInitializer(CommandProcessorSubscription commandProcessorSubscription)
-    : IInitializer<BeforeEventsReplay>
+sealed class FunicularCommandsInitializer(CommandProcessorSubscription commandProcessorSubscription) : IInitializer<BeforeEventReplay>
 {
     public Task Initialize()
     {

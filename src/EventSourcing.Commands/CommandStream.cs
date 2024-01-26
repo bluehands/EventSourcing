@@ -8,10 +8,10 @@ using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
-using EventSourcing.Internal;
 using Microsoft.Extensions.Logging;
 using AsyncLock = EventSourcing.Funicular.Commands.Infrastructure.Internal.AsyncLock;
 using EventSourcing.Funicular.Commands.Infrastructure.Internal;
+using EventSourcing.Infrastructure.Internal;
 
 namespace EventSourcing.Funicular.Commands;
 

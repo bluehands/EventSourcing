@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 
-namespace EventSourcing.Internal;
+namespace EventSourcing.Infrastructure.Internal;
 
 public class EventPayloadMappers
 {
@@ -16,12 +16,11 @@ public class EventPayloadMappers
             {
                 var serializableEventPayloadType = mapper
                     .GetType()
-                    .GetArgumentOfFirstGenericBaseType(1);
+                    .GetArgumentOfFirstGenericBaseType(t => t.GetGenericTypeDefinition() == typeof(EventPayloadMapper<,>), argumentIndex: 1);
                 var tuple = new
                 {
                     mapper,
-                    attribute = serializableEventPayloadType
-                        .GetCustomAttribute<SerializableEventPayloadAttribute>()
+                    attribute = serializableEventPayloadType.GetCustomAttribute<SerializableEventPayloadAttribute>()
                 };
 
                 if (tuple.attribute == null)

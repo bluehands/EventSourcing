@@ -30,10 +30,11 @@ public interface IEventSerializer<TSerialized>
 
 public interface IDbEventDescriptor<TDbEvent, TSerializedPayload>
 {
+    long GetPosition(TDbEvent dbEvent);
+    StreamId GetStreamId(TDbEvent dbEvent);
     string GetEventType(TDbEvent dbEvent);
     TSerializedPayload GetPayload(TDbEvent dbEvent);
-    long GetPosition(TDbEvent dbEvent);
     DateTimeOffset GetTimestamp(TDbEvent dbEvent);
-    StreamId GetStreamId(TDbEvent dbEvent);
+
     TDbEvent CreateDbEvent(StreamId streamId, string eventType, TSerializedPayload payload);
 }

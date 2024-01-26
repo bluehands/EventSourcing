@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Nito.AsyncEx;
 
-namespace EventSourcing.Internal;
+namespace EventSourcing.Infrastructure.Internal;
 
 public class WakeUp
 {

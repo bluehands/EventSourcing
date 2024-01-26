@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using EventSourcing.Infrastructure;
-using EventSourcing.Internal;
+using EventSourcing.Infrastructure.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

@@ -5,7 +5,7 @@ using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace EventSourcing.Internal;
+namespace EventSourcing.Infrastructure.Internal;
 
 public static class PollingObservable
 {

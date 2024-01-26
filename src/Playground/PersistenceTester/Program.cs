@@ -107,8 +107,13 @@ public record AddTextCommand(string Text) : Command;
 
 public class AddTextCommandProcessor : SynchronousCommandProcessor<AddTextCommand>
 {
-    public override CommandResult.Processed_ InternalProcessSync(AddTextCommand command) => 
-        new(new TextAdded("MyJournal", "First entry", command.Text), command.Id, FunctionalResult.Ok("Text added"));
+    public override CommandResult.Processed_ InternalProcessSync(AddTextCommand command)
+    {
+
+
+        return new(new TextAdded("MyJournal", "First entry", command.Text), command.Id,
+            FunctionalResult.Ok("Text added"));
+    }
 }
 
 public record TextAdded(string JournalId, string Header, string Text) : EventPayload(new("Journal", JournalId), EventTypes.TextAdded);

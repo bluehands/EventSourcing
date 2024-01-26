@@ -15,5 +15,4 @@ class EventDescriptor : IDbEventDescriptor<Event, string>
     public StreamId GetStreamId(Event dbEvent) => new(dbEvent.StreamType, dbEvent.StreamId);
 
     public Event CreateDbEvent(StreamId streamId, string eventType, string payload) => new(0, streamId.StreamType, streamId.Id, eventType, payload, DateTimeOffset.Now);
-    
 }

@@ -20,7 +20,7 @@ public abstract partial class CommandResult(CommandId commandId, string? message
         {
         }
 
-        public Processed_(IReadOnlyCollection<EventPayload> resultEvents, CommandId commandId, FunctionalResult functionalResult) : base(commandId, functionalResult.GetMessage)
+        public Processed_(IReadOnlyCollection<EventPayload> resultEvents, CommandId commandId, FunctionalResult functionalResult) : base(commandId, functionalResult.Message)
         {
             FunctionalResult = functionalResult;
             ResultEvents = resultEvents;

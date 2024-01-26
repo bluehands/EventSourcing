@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace EventSourcing.Internal;
+namespace EventSourcing.Infrastructure.Internal;
 
 static class TypeExtension
 {
@@ -14,8 +14,8 @@ static class TypeExtension
 			.Where(t => !t.IsAbstract && t.IsSubclassOf(type))
 			.ToArray();
 
-	public static Type GetArgumentOfFirstGenericBaseType(this Type type, int argumentIndex = 0)
-		=> type.GetArgumentsOfFirstGenericBaseType()[argumentIndex];
+	public static Type GetArgumentOfFirstGenericBaseType(this Type type, Func<Type, bool>? predicate = null, int argumentIndex = 0)
+		=> type.GetArgumentsOfFirstGenericBaseType(predicate)[argumentIndex];
 
 	public static Type[] GetArgumentsOfFirstGenericBaseType(this Type type, Func<Type, bool>? predicate = null)
 	{

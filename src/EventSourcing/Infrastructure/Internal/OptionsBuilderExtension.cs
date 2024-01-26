@@ -1,7 +1,6 @@
 ﻿using System;
-using EventSourcing.Infrastructure;
 
-namespace EventSourcing.Internal;
+namespace EventSourcing.Infrastructure.Internal;
 
 static class OptionsBuilderExtension
 {
