@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Infrastructure.Internal;
 
-public class EventStreamStarter(EventStream<Event>? eventStream = null, ILogger<EventStreamStarter>? logger = null) : IInitializer<EventReplay>
+public class EventStreamStarter(EventStream<Event>? eventStream = null, ILogger<EventStreamStarter>? logger = null) : IInitializer<EventReplayStarting>
 {
     public Task Initialize()
     {

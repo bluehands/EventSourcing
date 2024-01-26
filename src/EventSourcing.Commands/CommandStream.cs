@@ -44,7 +44,7 @@ public static class CommandStreamExtension
 {
     public static IDisposable SubscribeCommandProcessors(this IObservable<Command> commands, GetCommandProcessor getCommandProcessor, IEventStore eventStore, ILogger? logger, WakeUp? eventPollWakeUp) =>
         commands
-            .Process(getCommandProcessor)
+            .Process(getCommandProcessor, logger)
             .SelectMany(async processingResult =>
             {
                 var commandProcessed = processingResult.ToCommandProcessedEvent();
@@ -94,29 +94,63 @@ public static class CommandStreamExtension
         eventPollWakeUp?.ThereIsWorkToDo();
     }
 
-    public static IObservable<CommandResult> Process(this IObservable<Command> commands, GetCommandProcessor getCommandProcessor) =>
+    public static IObservable<CommandResult> Process(this IObservable<Command> commands,
+        GetCommandProcessor getCommandProcessor, ILogger? logger) =>
         commands
-            .SelectMany(c => CommandProcessor.Process(c, getCommandProcessor));
+            .SelectMany(async c =>
+            {
+                if (IsDebugEnabled(logger)) logger?.LogDebug("Executing {Command}...", c);
+                var result = await CommandProcessor.Process(c, getCommandProcessor).ConfigureAwait(false);
+                if (IsDebugEnabled(logger)) logger?.LogDebug("Execution finished with {CommandResult}.", result);
+                return result;
+            });
+
+    static bool IsDebugEnabled(ILogger? logger) => logger?.IsEnabled(LogLevel.Debug) ?? false;
 
     public static async Task<OperationResult<Unit>> SendCommandAndWaitUntilApplied(this CommandStream commandStream,
         Command command, IObservable<CommandProcessed> commandProcessedEvents)
+    {
+        var commandProcessed = await SendAndWaitForProcessedEvent(commandStream, command, commandProcessedEvents).ConfigureAwait(false);
+        return commandProcessed.OperationResult;
+    }
+
+    public static async Task<Event> SendAndWaitForProcessedEvent(this CommandStream commandStream, Command command, IObservable<Event> events)
+    {
+        var processed = events
+            .FirstAsync(c => c.Payload is CommandProcessed p && p.CommandId == command.Id)
+            .ToTask(CancellationToken.None, Scheduler.Default); //this is needed if we might be called from sync / async mixtures (https://blog.stephencleary.com/2012/12/dont-block-in-asynchronous-code.html)
+        await commandStream.SendCommand(command).ConfigureAwait(false);
+
+        var commandProcessed = await processed.ConfigureAwait(false);
+        return commandProcessed;
+    }
+
+    public static async Task<CommandProcessed> SendAndWaitForProcessedEvent(this CommandStream commandStream, Command command, IObservable<CommandProcessed> commandProcessedEvents)
     {
         var processed = commandProcessedEvents
             .FirstAsync(c => c.CommandId == command.Id)
             .ToTask(CancellationToken.None, Scheduler.Default); //this is needed if we might be called from sync / async mixtures (https://blog.stephencleary.com/2012/12/dont-block-in-asynchronous-code.html)
         await commandStream.SendCommand(command).ConfigureAwait(false);
 
-        return (await processed.ConfigureAwait(false)).OperationResult;
+        var commandProcessed = await processed.ConfigureAwait(false);
+        return commandProcessed;
     }
 
     public static CommandProcessed ToCommandProcessedEvent(this CommandResult r)
     {
-        var operationResult = r.Match(
-            processed: p => p.FunctionalResult.Match(ok: _ => OperationResult.Ok(Unit.Default), failed: failed => OperationResult.Error<Unit>(failed.Failure)),
-            unhandled: u => OperationResult.InternalError<Unit>(u.Message),
-            faulted: f => OperationResult.InternalError<Unit>($"Command execution failed with exception: {f.Exception}"),
-            cancelled: c => OperationResult.Cancelled<Unit>(c.ToString()));
-        return new(r.CommandId, operationResult, r.Message);
+        var t = r.Match(
+            processed: p => (
+                operationResult: p.FunctionalResult.Match(
+                    ok: _ => OperationResult.Ok(Unit.Default),
+                    failed: failed => OperationResult.Error<Unit>(failed.Failure)
+                    )
+                , message: (string?)p.FunctionalResult.Message
+            ),
+            unhandled: u => (operationResult: OperationResult.InternalError<Unit>(u.Message), null),
+            faulted: f => (operationResult: OperationResult.InternalError<Unit>(f.ToString()), null),
+            cancelled: c => (operationResult: OperationResult.Cancelled<Unit>(c.ToString()), null)
+        );
+        return new(r.CommandId, t.operationResult, t.message);
     }
 }
 

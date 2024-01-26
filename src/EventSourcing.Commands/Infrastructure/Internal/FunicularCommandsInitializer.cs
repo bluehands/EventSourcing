@@ -19,7 +19,7 @@ public class FunicularEventSourcingContext(EventReplayState eventReplayState, IE
     }
 }
 
-sealed class FunicularCommandsInitializer(CommandProcessorSubscription commandProcessorSubscription, EventReplayState eventReplayState) : IInitializer<BeforeEventReplay>
+sealed class FunicularCommandsInitializer(CommandProcessorSubscription commandProcessorSubscription, EventReplayState eventReplayState) : IInitializer<EventReplayStarted>
 {
     public Task Initialize()
     {

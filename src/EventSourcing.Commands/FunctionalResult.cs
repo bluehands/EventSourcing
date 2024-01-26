@@ -9,4 +9,6 @@ public abstract partial record FunctionalResult()
     public sealed record Failed_(Failure Failure) : FunctionalResult();
 
     public string Message => this.Match(ok => ok.ResultMessage, failed => failed.Failure.Message);
+
+    public sealed override string ToString() => $"{GetType().Name.TrimEnd('_')}: {Message}";
 }

@@ -10,9 +10,9 @@ namespace EventSourcing.Persistence.EntityFramework.SqlServer.Infrastructure;
 
 static class SqlStatements
 {
-    public static string SelectQuery(uint maxRows) =>
+    public const string SelectQuery =
         $"""
-         SELECT TOP {maxRows}
+         SELECT
          	[{nameof(Event.Position)}],
          	[{nameof(Event.EventType)}],
          	[{nameof(Event.StreamId)}],
@@ -22,7 +22,7 @@ static class SqlStatements
          FROM dbo.Events
          WHERE {nameof(Event.Position)} > @{nameof(Event.Position)}
          ORDER BY {nameof(Event.Position)}
-         """;
+        """;
 }
 
 static class BrokerNotificationEventStream
@@ -41,17 +41,20 @@ static class BrokerNotificationEventStream
         }
     }
 
-    public static void AddEventStream(IServiceCollection services, uint maxRowsPerSelect)
+    public static void AddEventStream(IServiceCollection services, uint maxRowsPerSelect, Func<Task<long>> getPositionToStartFrom)
     {
         services.AddSingleton(sp =>
         {
             var scope = sp.CreateScope();
             var eventMapper = scope.ServiceProvider.GetRequiredService<IEventMapper<Event>>();
+            var logger = scope.ServiceProvider.GetService<ILogger<SqlDependencyChangeListener>>();
 
-            var innerStream = ChangeListener.GetChangeStream(new SqlServerExecutor(sp), (lastPosition, connection) =>
+            //TODO: load existing in buffers, because right now alle events are read at once when stream starts
+            var innerStream = SqlDependencyChangeListener
+                .GetChangeStream(new SqlServerExecutor(sp), (lastPosition, connection) =>
                     {
                         var cmd = connection.CreateCommand();
-                        cmd.CommandText = SqlStatements.SelectQuery(maxRowsPerSelect);
+                        cmd.CommandText = SqlStatements.SelectQuery;
                         cmd.Parameters.Add(new($"@{nameof(Event.Position)}", SqlDbType.BigInt)
                         {
                             Value = lastPosition
@@ -64,7 +67,8 @@ static class BrokerNotificationEventStream
                         var result = await eventMapper.MapFromDbEvents(dbEvents).ToListAsync();
                         var nextState = result.Count > 0 ? result[^1].Position : state;
                         return (result, nextState);
-                    }, 0L)
+                    }, getPositionToStartFrom,
+                    logger)
                 .SelectMany(l => l);
 
             return new EventStream<EventSourcing.Event>(innerStream, scope);
@@ -108,13 +112,14 @@ interface IDbExecutor
     Task<T> Execute<T>(Func<SqlConnection, Task<T>> executeWithConnection);
 }
 
-static class ChangeListener
+class SqlDependencyChangeListener
 {
     public static IObservable<T> GetChangeStream<T, TState>(
         IDbExecutor dbExecutor,
         Func<TState, SqlConnection, SqlCommand> createCommand,
         Func<SqlDataReader, TState, SqlNotificationInfo?, Task<(T result, TState nextState)>> read,
-        TState initialState) =>
+        Func<Task<TState>> initialState,
+        ILogger<SqlDependencyChangeListener>? logger) =>
         Observable.Create<T>(async (observer, cancellationToken) =>
         {
             await dbExecutor.Execute(con =>
@@ -124,41 +129,44 @@ static class ChangeListener
                 return Task.FromResult(42);
             });
 
-            var listener = new SqlDependencyListener<T, TState>(dbExecutor, initialState, createCommand, read, observer, cancellationToken);
+            var listener = new SqlDependencyListener<T, TState>(dbExecutor, initialState, createCommand, read, observer, cancellationToken, logger);
             await listener.Run();
         });
 
     class SqlDependencyListener<T, TState>
     {
         readonly IDbExecutor _dbExecutor;
+        readonly Func<Task<TState>> _initialState;
         readonly Func<TState, SqlConnection, SqlCommand> _createCommand;
         readonly Func<SqlDataReader, TState, SqlNotificationInfo?, Task<(T result, TState nextState)>> _read;
         readonly IObserver<T> _observer;
         readonly CancellationToken _cancellationToken;
-        TState _currentState;
-        readonly ILogger<SqlDependencyListener<T, TState>>? _log;
+        TState _currentState = default!;
+        readonly ILogger<SqlDependencyChangeListener>? _log;
 
         public SqlDependencyListener(
             IDbExecutor dbExecutor,
-            TState initialState,
+            Func<Task<TState>> initialState,
             Func<TState, SqlConnection, SqlCommand> createCommand,
             Func<SqlDataReader, TState, SqlNotificationInfo?, Task<(T result, TState nextState)>> read,
             IObserver<T> observer,
             CancellationToken cancellationToken,
-            ILogger<SqlDependencyListener<T, TState>>? log = null)
+            ILogger<SqlDependencyChangeListener>? log)
         {
             _dbExecutor = dbExecutor;
+            _initialState = initialState;
             _createCommand = createCommand;
             _read = read;
             _observer = observer;
             _cancellationToken = cancellationToken;
             _log = log;
-            _currentState = initialState;
+            
         }
 
         public async Task Run()
         {
             SqlNotificationInfo? notificationInfo = null;
+            _currentState = await _initialState();
             while (!_cancellationToken.IsCancellationRequested)
             {
                 try
@@ -169,7 +177,7 @@ static class ChangeListener
                 {
                     break;
                 }
-                catch (Exception e)
+                catch (Exception? e)
                 {
                     _log?.LogWarning(e, "SqlDependency query failed, retrying in 5 seconds");
                     try

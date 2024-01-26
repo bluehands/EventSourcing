@@ -2,7 +2,7 @@
 
 namespace EventSourcing.Infrastructure.Internal;
 
-static class OptionsBuilderExtension
+static class OptionsBuilderExtensions
 {
     public static TExtension GetOrCreateExtension<TExtension>(this EventSourcingOptionsBuilder optionsBuilder) where TExtension : new() =>
         optionsBuilder.Options.FindExtension<TExtension>() ??

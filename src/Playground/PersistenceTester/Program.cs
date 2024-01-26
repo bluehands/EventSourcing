@@ -57,30 +57,30 @@ class Program
                 Console.WriteLine($"Read {@event.Position} events from store");
         }
 
-        var cancellationToken = services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
-        try
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-                try
-                {
-                    var events = Enumerable.Range(0, 1000).Select(i => 
-                            new TextAdded("Journal1",$"Batch {i}", TextGenerator.RandomString(10, 1000)))
-                        .ToList();
-                    var sw = Stopwatch.StartNew();
-                    await eventStore.WriteEvents(events);
-                    Console.WriteLine($"Wrote {events.Count} events in {sw.ElapsedMilliseconds} ms");
-                }
-                catch (Exception)
-                {
-                    Console.WriteLine("Failed to write event");
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
+        //var cancellationToken = services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
+        //try
+        //{
+        //    while (!cancellationToken.IsCancellationRequested)
+        //    {
+        //        await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+        //        try
+        //        {
+        //            var events = Enumerable.Range(0, 1000).Select(i => 
+        //                    new TextAdded("Journal1",$"Batch {i}", TextGenerator.RandomString(10, 1000)))
+        //                .ToList();
+        //            var sw = Stopwatch.StartNew();
+        //            await eventStore.WriteEvents(events);
+        //            Console.WriteLine($"Wrote {events.Count} events in {sw.ElapsedMilliseconds} ms");
+        //        }
+        //        catch (Exception)
+        //        {
+        //            Console.WriteLine("Failed to write event");
+        //        }
+        //    }
+        //}
+        //catch (OperationCanceledException)
+        //{
+        //}
     }
 }
 
@@ -107,13 +107,8 @@ public record AddTextCommand(string Text) : Command;
 
 public class AddTextCommandProcessor : SynchronousCommandProcessor<AddTextCommand>
 {
-    public override CommandResult.Processed_ ProcessSync(AddTextCommand command)
-    {
-
-
-        return new(new TextAdded("MyJournal", "First entry", command.Text), command.Id,
-            FunctionalResult.Ok("Text added"));
-    }
+    public override CommandResult.Processed_ ProcessSync(AddTextCommand command) => 
+        command.ToOkResult(new TextAdded("MyJournal", "First entry", command.Text), "Added journal entry");
 }
 
 public record TextAdded(string JournalId, string Header, string Text) : EventPayload(new("Journal", JournalId), EventTypes.TextAdded);

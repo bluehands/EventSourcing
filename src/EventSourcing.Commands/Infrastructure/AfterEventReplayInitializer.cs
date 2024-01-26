@@ -3,8 +3,7 @@ using EventSourcing.Infrastructure;
 
 namespace EventSourcing.Funicular.Commands.Infrastructure;
 
-
-[InitializationPhase(InitializationPhaseOrders.BeforeEventReplay + 100)]
+[InitializationPhase(InitializationPhaseOrders.EventReplayStarting + 100)]
 public class AfterEventReplay : IInitializationPhase;
 
 public class AfterEventReplayInitializer : IInitializer<AfterEventReplay>

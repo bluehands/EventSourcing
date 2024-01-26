@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Frozen;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Linq.Expressions;
+using EventSourcing.Infrastructure.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Infrastructure;
@@ -12,9 +15,21 @@ public sealed class EventFactory
 
     delegate Event CreateEvent(long version, DateTimeOffset timestamp, EventPayload payload);
 
-    ImmutableDictionary<Type, CreateEvent> _eventFactoryByPayloadType = ImmutableDictionary<Type, CreateEvent>.Empty;
+    FrozenDictionary<Type, CreateEvent> _eventFactoryByPayloadType;
 
-    public EventFactory(ILogger<EventFactory>? logger = null) => _logger = logger;
+    public EventFactory(IEnumerable<EventPayloadMapper> payloadMappers, ILogger<EventFactory>? logger = null)
+    {
+        _logger = logger;
+        _eventFactoryByPayloadType = WarmupFactoryCache(payloadMappers);
+    }
+
+    static FrozenDictionary<Type, CreateEvent> WarmupFactoryCache(IEnumerable<EventPayloadMapper> payloadMappers)
+    {
+        var payloadTypes = payloadMappers.Select(p => p.GetType()
+            .GetArgumentOfFirstGenericBaseType(t => t.GetGenericTypeDefinition() == typeof(EventPayloadMapper<,>)));
+        return payloadTypes
+            .ToFrozenDictionary(p => p, BuildCreateEvent);
+    }
 
     static CreateEvent BuildCreateEvent(Type payloadType)
     {
@@ -42,7 +57,10 @@ public sealed class EventFactory
         {
             _logger?.LogDebug("Creating factory for event payload {PayloadType}", payloadType);
             createEvent = BuildCreateEvent(payloadType);
-            _eventFactoryByPayloadType = _eventFactoryByPayloadType.SetItem(payloadType, createEvent);
+            _eventFactoryByPayloadType = _eventFactoryByPayloadType
+                .ToImmutableDictionary()
+                .SetItem(payloadType, createEvent)
+                .ToFrozenDictionary();
         }
         return createEvent(version, timestamp, eventPayload);
     }

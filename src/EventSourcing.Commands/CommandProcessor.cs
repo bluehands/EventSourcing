@@ -11,9 +11,13 @@ public abstract class CommandProcessor
         try
         {
             using var scopedCommandProcessor = getCommandProcessor(command.GetType());
-            var processingResult = scopedCommandProcessor != null ?
-                await scopedCommandProcessor.Processor.InternalProcess(command).ConfigureAwait(false) :
-                CommandResult.Unhandled(command.Id, $"No command processor registered for command {command.GetType().Name}");
+            CommandResult? processingResult;
+            if (scopedCommandProcessor != null)
+                // ReSharper disable once AccessToDisposedClosure
+                processingResult = await Task.Run(() => scopedCommandProcessor.Processor.InternalProcess(command))
+                    .ConfigureAwait(false);
+            else
+                processingResult = CommandResult.Unhandled(command.Id, $"No command processor registered for command {command.GetType().Name}");
             return processingResult;
         }
         catch (OperationCanceledException)

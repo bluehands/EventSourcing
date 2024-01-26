@@ -5,10 +5,9 @@ using FunicularSwitch.Generators;
 namespace EventSourcing.Funicular.Commands;
 
 [UnionType]
-public abstract partial class CommandResult(CommandId commandId, string? message)
+public abstract partial class CommandResult(CommandId commandId)
 {
     public CommandId CommandId { get; } = commandId;
-    public string? Message { get; } = message;
 
     public sealed class Processed_ : CommandResult
     {
@@ -20,30 +19,31 @@ public abstract partial class CommandResult(CommandId commandId, string? message
         {
         }
 
-        public Processed_(IReadOnlyCollection<EventPayload> resultEvents, CommandId commandId, FunctionalResult functionalResult) : base(commandId, functionalResult.Message)
+        public Processed_(IReadOnlyCollection<EventPayload> resultEvents, CommandId commandId, FunctionalResult functionalResult) : base(commandId)
         {
             FunctionalResult = functionalResult;
             ResultEvents = resultEvents;
         }
 
-        public override string ToString() => $"Command {CommandId} processed with result {FunctionalResult}, Produced events count: {ResultEvents.Count}";
+        public override string ToString() => $"Command '{CommandId}', FunctionalResult: '{FunctionalResult}', Produced events count: {ResultEvents.Count}";
     }
 
-    public sealed class Faulted_(Exception exception, CommandId commandId, string message) : CommandResult(commandId, message)
+    public sealed class Faulted_(Exception exception, CommandId commandId, string message) : CommandResult(commandId)
     {
         public Exception Exception { get; } = exception;
+        public string Message { get; } = message;
 
         public override string ToString() => $"Command {CommandId} faulted: {Message} - {Exception}";
     }
 
-    public sealed class Unhandled_(CommandId commandId, string message) : CommandResult(commandId, message)
+    public sealed class Unhandled_(CommandId commandId, string message) : CommandResult(commandId)
     {
-        public new string Message { get; } = message;
+        public string Message { get; } = message;
 
         public override string ToString() => $"Command {CommandId} unhandled: {Message}";
     }
 
-    public sealed class Cancelled_(CommandId commandId) : CommandResult(commandId, $"Command {commandId} cancelled")
+    public sealed class Cancelled_(CommandId commandId) : CommandResult(commandId)
     {
         public override string ToString() => $"Command {CommandId} cancelled";
     }

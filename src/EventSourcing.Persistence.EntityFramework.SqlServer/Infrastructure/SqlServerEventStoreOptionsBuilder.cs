@@ -12,9 +12,10 @@ public class SqlServerEventStoreOptionsBuilder(EventSourcingOptionsBuilder optio
             ConnectionString = connectionString
         });
 
-    public SqlServerEventStoreOptionsBuilder UseBrokerNotificationEventStream(uint maxRowsPerSelect = 10000) =>
+    public SqlServerEventStoreOptionsBuilder UseBrokerNotificationEventStream(Func<Task<long>>? getPositionToStartFrom = null, uint maxRowsPerSelect = 10000) =>
         WithOption<SqlDependencyEventStreamOptionsExtension>(e => e with
         {
-            MaxRowsPerSelect = maxRowsPerSelect
+            MaxRowsPerSelect = maxRowsPerSelect,
+            GetPositionToStartFrom = getPositionToStartFrom
         });
 }

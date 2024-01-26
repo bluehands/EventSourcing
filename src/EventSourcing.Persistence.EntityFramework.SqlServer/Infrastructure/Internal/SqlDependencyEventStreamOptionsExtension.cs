@@ -3,9 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace EventSourcing.Persistence.EntityFramework.SqlServer.Infrastructure.Internal;
 
-public record SqlDependencyEventStreamOptionsExtension(uint? MaxRowsPerSelect) : IEventStreamOptionsExtension
+public record SqlDependencyEventStreamOptionsExtension(uint? MaxRowsPerSelect, Func<Task<long>>? GetPositionToStartFrom) : IEventStreamOptionsExtension
 {
-    public SqlDependencyEventStreamOptionsExtension() : this(default(uint?))
+    public SqlDependencyEventStreamOptionsExtension() : this(null, null)
     {
     }
 
@@ -15,7 +15,7 @@ public record SqlDependencyEventStreamOptionsExtension(uint? MaxRowsPerSelect) :
 
     public void ApplyServices(IServiceCollection serviceCollection)
     {
-        BrokerNotificationEventStream.AddEventStream(serviceCollection, MaxRowsPerSelect ?? 10000);
+        BrokerNotificationEventStream.AddEventStream(serviceCollection, MaxRowsPerSelect ?? 10000, GetPositionToStartFrom ?? (() =>Task.FromResult(0L)));
         serviceCollection.AddSingleton<IObservable<EventSourcing.Event>>(sp => sp.GetRequiredService<EventStream<EventSourcing.Event>>());
     }
 

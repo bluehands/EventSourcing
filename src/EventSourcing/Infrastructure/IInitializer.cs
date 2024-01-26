@@ -28,7 +28,8 @@ public static class InitializationPhaseOrders
 {
     public const int SchemaInitialization = 0;
     public const int BeforeEventReplay = 100;
-    public const int EventReplay = 200;
+    public const int EventReplayStarting = 200;
+    public const int EventReplayStarted = 300;
 }
 
 [InitializationPhase(InitializationPhaseOrders.SchemaInitialization)]
@@ -37,10 +38,13 @@ public sealed class SchemaInitialization : IInitializationPhase;
 [InitializationPhase(InitializationPhaseOrders.BeforeEventReplay)]
 public sealed class BeforeEventReplay : IInitializationPhase;
 
-[InitializationPhase(InitializationPhaseOrders.EventReplay)]
-public sealed class EventReplay : IInitializationPhase;
+[InitializationPhase(InitializationPhaseOrders.EventReplayStarting)]
+public sealed class EventReplayStarting : IInitializationPhase;
 
-public static class InitializerServiceCollectionExtension
+[InitializationPhase(InitializationPhaseOrders.EventReplayStarted)]
+public sealed class EventReplayStarted : IInitializationPhase;
+
+public static class InitializerServiceCollectionExtensions
 {
     public static IServiceCollection AddInitializer<T>(this IServiceCollection serviceCollection)
         where T : class, IInitializer

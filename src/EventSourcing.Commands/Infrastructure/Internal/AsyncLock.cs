@@ -11,7 +11,7 @@ class AsyncLock : SemaphoreSlim
     }
 }
 
-static class SemaphoreSlimExtension
+static class SemaphoreSlimExtensions
 {
     public static async Task<T> ExecuteGuarded<T>(this SemaphoreSlim semaphore, Func<Task<T>> f)
     {
