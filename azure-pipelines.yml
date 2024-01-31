@@ -1,3 +1,8 @@
+parameters:
+  - name: buildPrerelease
+    type: boolean
+    default: false
+
 trigger:
 - main
 
@@ -8,7 +13,7 @@ variables:
   solution: '**/*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
-# IsPrerelease: $[ne(variables['Build.SourceBranchName'], 'main')] -> defined outside to allow override
+  IsPrerelease: $[or(ne(variables['Build.SourceBranchName'], 'main'), ${{buildPrerelease}})]
   VersionSuffix: -$(Build.SourceBranchName)-$(Build.BuildNumber)
 
 steps:
