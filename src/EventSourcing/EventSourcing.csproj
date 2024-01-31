@@ -21,9 +21,9 @@
 		<!--#endregion-->
 
 		<AssemblyVersion>$(MajorVersion).0.0</AssemblyVersion>
-		<Version>$(MajorVersion).$(MinorAndPatchVersion)$(VersionSuffixLocal)</Version>
+		<Version>$(MajorVersion).$(MinorAndPatchVersion)</Version>
 		<FileVersion>$(Version)</FileVersion>
-		<PackageVersion>$(Version)</PackageVersion>
+		<PackageVersion>$(Version)$(VersionSuffixLocal)</PackageVersion>
 		<PackageId>Bluehands.EventSourcing</PackageId>
 
 		<!-- Descriptions and information-->

@@ -15,18 +15,18 @@ class Program
         using var host = Host.CreateDefaultBuilder()
             .ConfigureServices(serviceCollection =>
             {
-                serviceCollection.AddEventSourcing(b =>
-                    b
-                        .UseSqliteEventStore(@"Data Source=c:\temp\EventStore.db")
-                        .UseFunicularCommands()
-                );
-
-                //serviceCollection.AddEventSourcing(
-                //    eventSourcing =>
-                //        eventSourcing
-                //            .UseSqlServerEventStore("Data Source=.\\SQLSERVEREXPRESS;Initial Catalog=TestEventStore2;Integrated Security=True;TrustServerCertificate=True;")
-                //            .UseFunicularCommands()
+                //serviceCollection.AddEventSourcing(b =>
+                //    b
+                //        .UseSqliteEventStore(@"Data Source=c:\temp\EventStore.db")
+                //        .UseFunicularCommands()
                 //);
+
+                serviceCollection.AddEventSourcing(
+                    eventSourcing =>
+                        eventSourcing
+                            .UseSqlServerEventStore("Data Source=.\\SQLSERVEREXPRESS;Initial Catalog=TestEventStore2;Integrated Security=True;TrustServerCertificate=True;")
+                            .UseFunicularCommands()
+                );
             })
             .ConfigureLogging(builder => builder.AddConsole())
             .Build();

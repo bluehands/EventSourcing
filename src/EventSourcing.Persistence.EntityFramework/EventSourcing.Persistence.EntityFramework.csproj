@@ -21,14 +21,14 @@
 		<!--#endregion-->
 
 		<AssemblyVersion>$(MajorVersion).0.0</AssemblyVersion>
-		<Version>$(MajorVersion).$(MinorAndPatchVersion)$(VersionSuffixLocal)</Version>
+		<Version>$(MajorVersion).$(MinorAndPatchVersion)</Version>
 		<FileVersion>$(Version)</FileVersion>
-		<PackageVersion>$(Version)</PackageVersion>
+		<PackageVersion>$(Version)$(VersionSuffixLocal)</PackageVersion>
 		<PackageId>Bluehands.EventSourcing.Persistence.EntityFramework</PackageId>
 
 		<!-- Descriptions and information-->
 		<Titel>Bluehands.EventSourcing.Persistence.EntityFramework</Titel>
-		<Authors>bluehands GmbH &amp; C.ommunication KG</Authors>
+		<Authors>bluehands</Authors>
 		<PackageDescription>Common functionality for entity framework based persistence implementations for EventSourcing</PackageDescription>
 		<Copyright>Copyright 2024 bluehands GmbH &amp; C.ommunication KG</Copyright>
 		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>

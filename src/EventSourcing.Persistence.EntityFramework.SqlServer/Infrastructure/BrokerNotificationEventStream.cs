@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Reactive;
 using System.Reactive.Linq;
 using EventSourcing.Infrastructure;
 using Microsoft.Data.SqlClient;
@@ -10,6 +11,20 @@ namespace EventSourcing.Persistence.EntityFramework.SqlServer.Infrastructure;
 
 static class SqlStatements
 {
+    public static string AssertBrokerFeatureEnabled(string databaseName) =>
+        $"""
+         DECLARE @DBName sysname;
+         SET @DBName = '{databaseName}'
+         
+         IF NOT EXISTS (Select is_broker_enabled from sys.databases WHERE name = @DBName and is_broker_enabled = 1)
+         BEGIN
+           DECLARE @SQL varchar(1000);
+           SET @SQL = 'ALTER DATABASE ['+@DBName+'] SET ENABLE_BROKER WITH ROLLBACK IMMEDIATE;'
+           print(@sql)
+           exec(@sql)
+         END
+         """;
+
     public const string SelectQuery =
         $"""
          SELECT
@@ -122,11 +137,26 @@ class SqlDependencyChangeListener
         ILogger<SqlDependencyChangeListener>? logger) =>
         Observable.Create<T>(async (observer, cancellationToken) =>
         {
-            await dbExecutor.Execute(con =>
+            await dbExecutor.Execute(async connection =>
             {
+                var assertBrokerFeatureEnabledSql = SqlStatements.AssertBrokerFeatureEnabled(connection.Database);
+                try
+                {
+                    if (logger?.IsEnabled(LogLevel.Debug) ?? false) logger.LogDebug("Executing command to make sure broker feature enabled: {EnableBrokerSql}", assertBrokerFeatureEnabledSql);
+                    await connection.OpenAsync(cancellationToken);
+                    await using var command = connection.CreateCommand();
+                    command.CommandText = assertBrokerFeatureEnabledSql;
+                    await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    logger?.LogError(e, "Failed to enable SQL Server broker feature. Try to enable manually: {EnableBrokerSql}", assertBrokerFeatureEnabledSql);
+                    throw;
+                }
+
                 //TODO: call stop when disposed????
-                SqlDependency.Start(con.ConnectionString);
-                return Task.FromResult(42);
+                SqlDependency.Start(connection.ConnectionString);
+                return Unit.Default;
             });
 
             var listener = new SqlDependencyListener<T, TState>(dbExecutor, initialState, createCommand, read, observer, cancellationToken, logger);
