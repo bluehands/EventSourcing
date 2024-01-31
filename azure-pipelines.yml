@@ -13,7 +13,7 @@ variables:
   solution: '**/*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
-  IsPrerelease: $[or(ne(variables['Build.SourceBranchName'], 'main'), ${{buildPrerelease}})]
+  IsPrerelease: $[or(ne(variables['Build.SourceBranchName'], 'main'), ${{parameters.buildPrerelease}})]
   VersionSuffix: -$(Build.SourceBranchName)-$(Build.BuildNumber)
 
 steps:
