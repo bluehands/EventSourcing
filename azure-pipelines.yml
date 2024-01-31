@@ -26,6 +26,7 @@ steps:
 - task: VSBuild@1
   inputs:
     solution: '$(solution)'
+    msbuildArgs: '/p:ContinuousIntegrationBuild=true'
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
 
