@@ -14,7 +14,8 @@ class Program
             .ConfigureServices(serviceCollection =>
             {
                 serviceCollection.AddEventSourcing(options =>
-                    options.UseSqliteEventStore(@"Data Source=c:\temp\EventStore.db"));
+                    options.UseSqliteEventStore(@"Data Source=c:\temp\EventStore.db")
+                );
 
                 serviceCollection.AddSingleton<Tester>();
                 serviceCollection.AddInitializer<BeforeReplayInitializer>();
@@ -37,7 +38,7 @@ public class Tester(IEventStore eventStore, IObservable<Event> eventStream)
 {
     public async Task Run()
     {
-        await eventStore.WriteEvents([new TaskAdded("myfirsttask", "trifft sich vorbereiten", "event sourcing fertig basteln")]);
+        await eventStore.WriteEvents([new TaskAdded("myfirsttask", "trifft sich vorbereiten", new ("event sourcing fertig basteln", "Alex"))]);
     }
 
     public void SubscribeEvents() {
@@ -65,8 +66,18 @@ public static class StreamIds
 
 }
 
-[SerializableEventPayload(EventTypes.TaskAdded)]
-public record TaskAdded(string TaskId, string Name, string Description) : EventPayload(StreamIds.Task(TaskId), EventTypes.TaskAdded)
+public record TaskDescription(string Description, string Author);
+
+
+public record TaskAdded : EventPayload
 {
+    public TaskAdded(string taskId, string name, TaskDescription description) : base(StreamIds.Task(taskId), EventTypes.TaskAdded)
+    {
+        Name = name;
+        Description = description;
+    }
+
     public string TaskId => StreamId.Id;
+    public string Name { get;  }
+    public TaskDescription Description { get; }
 }

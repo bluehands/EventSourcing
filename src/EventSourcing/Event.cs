@@ -9,7 +9,7 @@ public abstract record Event(long Position, DateTimeOffset Timestamp, EventPaylo
     public string Type => Payload.EventType;
 
     public override string ToString() =>
-        $"{nameof(StreamId)}: {StreamId}, {nameof(Type)}: {Type}, {nameof(Position)}: {Position}, {nameof(Timestamp)}: {Timestamp}, {nameof(Payload)}: {Payload}";
+        $"{nameof(Position)}: {Position}, {nameof(Timestamp)}: {Timestamp}, {nameof(Payload)}: {Payload}";
 }
 
 public sealed record Event<T>(long Position, DateTimeOffset Timestamp, T Payload)
