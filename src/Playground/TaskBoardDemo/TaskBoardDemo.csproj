@@ -7,4 +7,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Bluehands.EventSourcing" Version="0.1.0-main-20240131.15" />
+    <PackageReference Include="Bluehands.EventSourcing.Persistence.Sqlite" Version="0.1.0-main-20240131.15" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
+  </ItemGroup>
+
 </Project>
