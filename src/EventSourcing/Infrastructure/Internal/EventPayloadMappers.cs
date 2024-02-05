@@ -16,7 +16,8 @@ public class EventPayloadMappers
             {
                 var serializableEventPayloadType = mapper
                     .GetType()
-                    .GetArgumentOfFirstGenericBaseType(t => t.GetGenericTypeDefinition() == typeof(EventPayloadMapper<,>), argumentIndex: 1);
+                    .GetArgumentOfFirstGenericBaseType(
+                        t => t.GetGenericTypeDefinition() == typeof(EventPayloadMapper<,>), argumentIndex: 1);
                 var tuple = new
                 {
                     mapper,
@@ -37,7 +38,7 @@ public class EventPayloadMappers
     {
         if (!_mappersByEventType.TryGetValue(eventType, out var mapper))
         {
-            throw new($"No payload mapper registered for event type {eventType}");
+            throw new(NoPayloadMapperMessage(eventType));
         }
 
         return mapper.InternalMapFromSerializablePayload(serializedPayload, streamId, deserializePayload);
@@ -48,9 +49,16 @@ public class EventPayloadMappers
         var eventType = payload.EventType;
         if (!_mappersByEventType.TryGetValue(eventType, out var mapper))
         {
-            throw new($"No payload mapper registered for event type {eventType}");
+            throw new(NoPayloadMapperMessage(eventType));
         }
 
         return mapper.InternalMapToSerializablePayload(payload);
     }
+
+    static string NoPayloadMapperMessage(string eventType) =>
+        $"""
+         No payload mapper registered for event type {eventType}.
+         Please define serializable payload type marked with [SerializablePayloadType("{eventType}")] attribute and implement mapper derived from EventPayloadMapper<,>.
+         SerializablePayloadType attribute can be used on payload types directly but that is recommended for testing and prototyping purposes only.
+         """;
 }
