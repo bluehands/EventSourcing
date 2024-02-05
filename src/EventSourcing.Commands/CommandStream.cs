@@ -48,10 +48,9 @@ public static class CommandStreamExtension
             .SelectMany(async processingResult =>
             {
                 var commandProcessed = processingResult.ToCommandProcessedEvent();
-                var commandProcessedPayload = new List<IEventPayload>() { commandProcessed };
                 var payloads = processingResult is CommandResult.Processed_ p
-                    ? p.ResultEvents.Concat(commandProcessedPayload).ToList()
-                    : commandProcessedPayload;
+                    ? [.. p.ResultEvents, commandProcessed]
+                    : new[] { (IEventPayload)commandProcessed };
                 try
                 {
                     await InternalWriteEvents(eventStore, payloads, eventPollWakeUp).ConfigureAwait(false);

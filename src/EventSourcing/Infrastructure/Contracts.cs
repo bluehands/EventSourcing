@@ -6,9 +6,9 @@ namespace EventSourcing.Infrastructure;
 
 public interface IEventReader<out TDbEvent>
 {
-    IAsyncEnumerable<TDbEvent> ReadEvents(StreamId streamId);
+    IAsyncEnumerable<TDbEvent> ReadEvents(StreamId streamId, long? fromPositionInclusive);
 
-    IAsyncEnumerable<TDbEvent> ReadEvents(long fromPositionInclusive);
+    IAsyncEnumerable<TDbEvent> ReadEvents(long? fromPositionInclusive);
 }
 
 public interface IEventWriter<in TDbEvent>
