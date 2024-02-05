@@ -10,7 +10,7 @@ namespace EventSourcing;
 public interface IEventStore
 {
     IAsyncEnumerable<Event> ReadEvents(long fromPositionInclusive);
-    Task WriteEvents(IReadOnlyCollection<EventPayload> payloads);
+    Task WriteEvents(IReadOnlyCollection<IEventPayload> payloads);
 }
 
 public class EventStore<TDbEvent, TSerializedPayload> : IEventStore, IEventMapper<TDbEvent>
@@ -48,13 +48,13 @@ public class EventStore<TDbEvent, TSerializedPayload> : IEventStore, IEventMappe
         return MapFromDbEvents(dbEvents);
     }
 
-    public Task WriteEvents(IReadOnlyCollection<EventPayload> payloads)
+    public Task WriteEvents(IReadOnlyCollection<IEventPayload> payloads)
     {
         var events = MapToDbEvents(payloads);
         return _eventWriter.WriteEvents(events);
     }
 
-    public IEnumerable<TDbEvent> MapToDbEvents(IEnumerable<EventPayload> payloads) =>
+    public IEnumerable<TDbEvent> MapToDbEvents(IEnumerable<IEventPayload> payloads) =>
         payloads.Select(payload =>
         {
             var serializablePayload = _payloadMappers.MapToSerializablePayload(payload);
@@ -66,7 +66,7 @@ public class EventStore<TDbEvent, TSerializedPayload> : IEventStore, IEventMappe
     {
         await foreach (var dbEvent in dbEvents)
         {
-            EventPayload eventPayload;
+            IEventPayload eventPayload;
 
             var eventType = _eventDescriptor.GetEventType(dbEvent);
             var streamId = _eventDescriptor.GetStreamId(dbEvent);

@@ -18,7 +18,7 @@ public interface IEventWriter<in TDbEvent>
 
 public interface IEventMapper<TDbEvent>
 {
-    IEnumerable<TDbEvent> MapToDbEvents(IEnumerable<EventPayload> payloads);
+    IEnumerable<TDbEvent> MapToDbEvents(IEnumerable<IEventPayload> payloads);
     IAsyncEnumerable<Event> MapFromDbEvents(IAsyncEnumerable<TDbEvent> dbEvents);
 }
 

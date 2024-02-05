@@ -48,6 +48,10 @@
 		<AssemblyOriginatorKeyFile>..\..\EventSourcing.snk</AssemblyOriginatorKeyFile>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 	</PropertyGroup>
+	
+	<ItemGroup>
+	  <Compile Include="..\Shared\Instrastructure\Internal\TypeExtensions.cs" Link="Infrastructure\Internal\TypeExtensions.cs" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="FunicularSwitch.Generators" Version="3.2.0">

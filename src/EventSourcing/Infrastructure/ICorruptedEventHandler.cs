@@ -13,13 +13,13 @@ namespace EventSourcing.Infrastructure;
 /// </summary>
 public interface ICorruptedEventHandler
 {
-    EventPayload? OnDeserializeOrMappingError(Exception error, long eventPosition, string eventType, DateTimeOffset timestamp, object serializedPayload);
+    IEventPayload? OnDeserializeOrMappingError(Exception error, long eventPosition, string eventType, DateTimeOffset timestamp, object serializedPayload);
 }
 
 public class LogAndIgnoreCorruptedEventHandler(ILogger<LogAndIgnoreCorruptedEventHandler>? logger = null)
     : ICorruptedEventHandler
 {
-    public EventPayload? OnDeserializeOrMappingError(Exception error, long eventPosition, string eventType,
+    public IEventPayload? OnDeserializeOrMappingError(Exception error, long eventPosition, string eventType,
         DateTimeOffset timestamp, object serializedPayload)
     {
         logger?.LogError(error, $"Deserialize / map event at position {eventPosition} failed. EventType: {eventType}, Timestamp: {timestamp}, Serialized payload: {serializedPayload}");

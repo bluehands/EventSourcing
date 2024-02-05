@@ -32,7 +32,7 @@ public class EventPayloadMappers
             .ToImmutableDictionary(t => t.attribute.EventType, t => t.mapper);
     }
 
-    public EventPayload MapFromSerializedPayload(StreamId streamId, string eventType, object serializedPayload,
+    public IEventPayload MapFromSerializedPayload(StreamId streamId, string eventType, object serializedPayload,
         Func<Type, object, object>? deserializePayload = null)
     {
         if (!_mappersByEventType.TryGetValue(eventType, out var mapper))
@@ -43,7 +43,7 @@ public class EventPayloadMappers
         return mapper.InternalMapFromSerializablePayload(serializedPayload, streamId, deserializePayload);
     }
 
-    public object MapToSerializablePayload(EventPayload payload)
+    public object MapToSerializablePayload(IEventPayload payload)
     {
         var eventType = payload.EventType;
         if (!_mappersByEventType.TryGetValue(eventType, out var mapper))

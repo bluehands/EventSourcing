@@ -48,7 +48,7 @@ public static class CommandStreamExtension
             .SelectMany(async processingResult =>
             {
                 var commandProcessed = processingResult.ToCommandProcessedEvent();
-                var commandProcessedPayload = new List<EventPayload>() { commandProcessed };
+                var commandProcessedPayload = new List<IEventPayload>() { commandProcessed };
                 var payloads = processingResult is CommandResult.Processed_ p
                     ? p.ResultEvents.Concat(commandProcessedPayload).ToList()
                     : commandProcessedPayload;
@@ -66,7 +66,7 @@ public static class CommandStreamExtension
             .Subscribe();
 
     static async Task OnEventWriteError(IEventStore eventStore,
-        IEnumerable<EventPayload> payloads,
+        IEnumerable<IEventPayload> payloads,
         Exception e,
         CommandResult commandResult,
         WakeUp? eventPollWakeUp,
@@ -88,7 +88,7 @@ public static class CommandStreamExtension
         }
     }
 
-    static async Task InternalWriteEvents(IEventStore eventStore, IReadOnlyCollection<EventPayload> payloads, WakeUp? eventPollWakeUp)
+    static async Task InternalWriteEvents(IEventStore eventStore, IReadOnlyCollection<IEventPayload> payloads, WakeUp? eventPollWakeUp)
     {
         await eventStore.WriteEvents(payloads).ConfigureAwait(false);
         eventPollWakeUp?.ThereIsWorkToDo();

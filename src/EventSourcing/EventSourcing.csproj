@@ -29,7 +29,7 @@
 		<!-- Descriptions and information-->
 		<Titel>Bluehands.EventSourcing</Titel>
 		<Authors>bluehands</Authors>
-		<PackageDescription>Extensible, functional and flexible multi persistence event sourcing framework for .NET. </PackageDescription>
+		<PackageDescription>Extensible, unobtrusive, functional and flexible multi persistence event sourcing framework for .NET. </PackageDescription>
 		<Copyright>Copyright 2024 bluehands GmbH &amp; C.ommunication KG</Copyright>
 		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -48,6 +48,10 @@
 		<AssemblyOriginatorKeyFile>..\..\EventSourcing.snk</AssemblyOriginatorKeyFile>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Include="..\Shared\Instrastructure\Internal\TypeExtensions.cs" Link="Infrastructure\Internal\TypeExtensions.cs" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
