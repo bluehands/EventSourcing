@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 
@@ -8,7 +8,7 @@ namespace EventSourcing.Infrastructure.Internal;
 
 public class EventPayloadMappers
 {
-    readonly ImmutableDictionary<string, EventPayloadMapper> _mappersByEventType;
+    readonly FrozenDictionary<string, EventPayloadMapper> _mappersByEventType;
 
     public EventPayloadMappers(IEnumerable<EventPayloadMapper> mappers)
     {
@@ -30,7 +30,7 @@ public class EventPayloadMappers
 
                 return tuple;
             })
-            .ToImmutableDictionary(t => t.attribute.EventType, t => t.mapper);
+            .ToFrozenDictionary(t => t.attribute.EventType, t => t.mapper);
     }
 
     public IEventPayload MapFromSerializedPayload(StreamId streamId, string eventType, object serializedPayload,
