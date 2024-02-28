@@ -52,7 +52,7 @@ public record EventSourcingOptionsExtension(
             .GetConcreteDerivedTypes(payloadMapperAssemblies)
             .Select(t => new ServiceDescriptor(typeof(EventPayloadMapper), t, mapperLifetime));
 
-        var identityMapperDescriptors = typeof(EventPayload)
+        var identityMapperDescriptors = typeof(IEventPayload)
             .GetConcreteDerivedTypes(payloadAssemblies.Distinct())
             .Select(payloadType =>
             {

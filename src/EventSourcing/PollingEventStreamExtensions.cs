@@ -55,7 +55,7 @@ public record PollingEventStreamOptionsExtension(TimeSpan? MinWaitTime, TimeSpan
 
         var events = PollingObservable.Poll(
             getPositionToStartFrom,
-            eventReader.ReadEvents,
+            l =>  eventReader.ReadEvents(l),
             wakeUp,
             provider.GetService<ILogger<EventStream<Event>>>()
         );

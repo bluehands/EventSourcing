@@ -55,7 +55,7 @@ class Program
         var eventStore = services.GetRequiredService<IEventStore>();
 
         Console.WriteLine("Reading all events from store...");
-        await foreach (var @event in eventStore.ReadEvents(0))
+        await foreach (var @event in eventStore.ReadEvents())
         {
             if (@event.Position % 1000 == 0)
                 Console.WriteLine($"Read {@event.Position} events from store");

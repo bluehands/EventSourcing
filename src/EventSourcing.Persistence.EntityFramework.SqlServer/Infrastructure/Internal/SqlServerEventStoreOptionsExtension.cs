@@ -1,4 +1,5 @@
 ﻿using EventSourcing.Infrastructure;
+using EventSourcing.Infrastructure.Internal;
 using EventSourcing.Persistence.EntityFramework.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

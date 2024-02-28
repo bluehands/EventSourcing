@@ -11,15 +11,15 @@ public abstract partial class CommandResult(CommandId commandId)
 
     public sealed class Processed_ : CommandResult
     {
-        public IReadOnlyCollection<EventPayload> ResultEvents { get; }
+        public IReadOnlyCollection<IEventPayload> ResultEvents { get; }
 
         public FunctionalResult FunctionalResult { get; }
 
-        public Processed_(EventPayload resultEvent, CommandId commandId, FunctionalResult functionalResult) : this(new[] { resultEvent }, commandId, functionalResult)
+        public Processed_(IEventPayload resultEvent, CommandId commandId, FunctionalResult functionalResult) : this(new[] { resultEvent }, commandId, functionalResult)
         {
         }
 
-        public Processed_(IReadOnlyCollection<EventPayload> resultEvents, CommandId commandId, FunctionalResult functionalResult) : base(commandId)
+        public Processed_(IReadOnlyCollection<IEventPayload> resultEvents, CommandId commandId, FunctionalResult functionalResult) : base(commandId)
         {
             FunctionalResult = functionalResult;
             ResultEvents = resultEvents;

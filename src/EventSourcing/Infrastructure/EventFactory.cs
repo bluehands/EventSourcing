@@ -13,7 +13,7 @@ public sealed class EventFactory
 {
     readonly ILogger<EventFactory>? _logger;
 
-    delegate Event CreateEvent(long version, DateTimeOffset timestamp, EventPayload payload);
+    delegate Event CreateEvent(long version, DateTimeOffset timestamp, IEventPayload payload);
 
     FrozenDictionary<Type, CreateEvent> _eventFactoryByPayloadType;
 
@@ -36,7 +36,7 @@ public sealed class EventFactory
         var eventType = typeof(Event<>).MakeGenericType(payloadType);
         var versionParam = Expression.Parameter(typeof(long));
         var timestampParam = Expression.Parameter(typeof(DateTimeOffset));
-        var payloadParam = Expression.Parameter(typeof(EventPayload));
+        var payloadParam = Expression.Parameter(typeof(IEventPayload));
 
         var expression = Expression.Lambda<CreateEvent>(
             Expression.New(eventType.GetConstructors().Single(),
@@ -50,7 +50,7 @@ public sealed class EventFactory
         return createEvent;
     }
 
-    public Event EventFromPayload(EventPayload eventPayload, long version, DateTimeOffset timestamp)
+    public Event EventFromPayload(IEventPayload eventPayload, long version, DateTimeOffset timestamp)
     {
         var payloadType = eventPayload.GetType();
         if (!_eventFactoryByPayloadType.TryGetValue(payloadType, out var createEvent))

@@ -13,7 +13,7 @@ public class HandleBadCasesTest
     {
         var test = await TestHelper.SetupEventSourcing<TestService>();
 
-        var receivedEvents = await test.SendAndWait(new EventPayload[]
+        var receivedEvents = await test.SendAndWait(new IEventPayload[]
         {
             new UnreadableEntryAdded("1", "Next entry"),
             new EntryAdded("1", "Hallo diary")
@@ -30,7 +30,7 @@ public class HandleBadCasesTest
         );
 
         var receivedEvents = await test
-            .SendAndWait(new EventPayload[]
+            .SendAndWait(new IEventPayload[]
             {
                 new EntryAdded("1", "Hallo diary"),
                 new UnreadableEntryAdded("1", "Next entry")
@@ -76,7 +76,7 @@ class TestService
         _eventStore = eventStore;
     }
 
-    public async Task<IList<Event>> SendAndWait(IReadOnlyCollection<EventPayload> payloads, int? numberOfExpectedEvents = null)
+    public async Task<IList<Event>> SendAndWait(IReadOnlyCollection<IEventPayload> payloads, int? numberOfExpectedEvents = null)
     {
         await _eventStore.WriteEvents(payloads);
 
@@ -89,7 +89,7 @@ class TestService
 
 public class MapToErrorPayloadHandler : ICorruptedEventHandler
 {
-    public EventPayload OnDeserializeOrMappingError(Exception error, long eventPosition, string eventType,
+    public IEventPayload OnDeserializeOrMappingError(Exception error, long eventPosition, string eventType,
         DateTimeOffset timestamp, object serializedPayload) =>
         new CorruptedEvent(eventType, serializedPayload);
 

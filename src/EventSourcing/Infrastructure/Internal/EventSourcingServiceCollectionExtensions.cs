@@ -2,7 +2,7 @@
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace EventSourcing.Infrastructure;
+namespace EventSourcing.Infrastructure.Internal;
 
 public static class EventSourcingServiceCollectionExtensions
 {
