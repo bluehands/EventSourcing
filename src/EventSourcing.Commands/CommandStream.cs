@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using AsyncLock = EventSourcing.Funicular.Commands.Infrastructure.Internal.AsyncLock;
 using EventSourcing.Funicular.Commands.Infrastructure.Internal;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace EventSourcing.Funicular.Commands;
 
@@ -37,20 +36,6 @@ public sealed class CommandStream : IObservable<Command>, IDisposable
         _lock.Dispose();
         _innerStream.Dispose();
     }
-}
-
-public class ScopedEventStore(IEventStore eventStore, IServiceScope scope) : IEventStore, IDisposable
-{
-    public void Dispose()
-    {
-        scope.Dispose();
-    }
-
-    public IAsyncEnumerable<Event> ReadEvents(long? fromPositionInclusive = null) => eventStore.ReadEvents(fromPositionInclusive);
-
-    public IAsyncEnumerable<Event> ReadEvents(StreamId streamId, long? fromPositionInclusive = null) => eventStore.ReadEvents(streamId, fromPositionInclusive);
-
-    public Task WriteEvents(IReadOnlyCollection<IEventPayload> payloads) => eventStore.WriteEvents(payloads);
 }
 
 public static class CommandStreamExtension
