@@ -1,7 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Reactive.Linq;
+using System.Reflection.Metadata.Ecma335;
 using EventSourcing;
 using EventSourcing.Funicular.Commands;
+using EventSourcing.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -27,6 +29,8 @@ class Program
                             .UseSqlServerEventStore("Data Source=.\\SQLSERVEREXPRESS;Initial Catalog=TestEventStore2;Integrated Security=True;TrustServerCertificate=True;")
                             .UseFunicularCommands()
                 );
+
+                serviceCollection.AddInitializer<EventListener>();
             })
             .ConfigureLogging(builder => builder.AddConsole())
             .Build();
@@ -41,11 +45,6 @@ class Program
     static async Task TryIt(IServiceProvider services)
     {
         var eventStream = services.GetRequiredService<IObservable<Event>>();
-        using var subscription = eventStream.Subscribe(@event =>
-        {
-            if (@event.Position % 1000 == 0)
-                Console.WriteLine($"Received: {@event.Type} ({@event.Position})");
-        });
 
         await services.StartEventSourcing();
 
@@ -54,12 +53,12 @@ class Program
         
         var eventStore = services.GetRequiredService<IEventStore>();
 
-        Console.WriteLine("Reading all events from store...");
-        await foreach (var @event in eventStore.ReadEvents())
-        {
-            if (@event.Position % 1000 == 0)
-                Console.WriteLine($"Read {@event.Position} events from store");
-        }
+        //Console.WriteLine("Reading all events from store...");
+        //await foreach (var @event in eventStore.ReadEvents())
+        //{
+        //    if (@event.Position % 1000 == 0)
+        //        Console.WriteLine($"Read {@event.Position} events from store");
+        //}
 
         var cancellationToken = services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
         try
@@ -85,6 +84,19 @@ class Program
         catch (OperationCanceledException)
         {
         }
+    }
+}
+
+public class EventListener(IObservable<Event> eventStream) : IBeforeEventReplayInitializer
+{
+    public Task Initialize()
+    {
+        eventStream.Subscribe(@event =>
+        {
+            if (@event.Position % 1000 == 0)
+                Console.WriteLine($"Received: {@event.Type} ({@event.Position})");
+        });
+        return Task.CompletedTask;
     }
 }
 

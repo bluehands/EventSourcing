@@ -28,8 +28,7 @@ public record FunicularCommandsOptionsExtension(IReadOnlyCollection<Assembly>? C
             .AddSingleton<CommandProcessorSubscription>()
             .AddSingleton<EventReplayState>()
             .AddSingleton<EventSourcingContext, FunicularEventSourcingContext>()
-            .AddInitializer<FunicularCommandsInitializer>()
-            .AddInitializer<AfterEventReplayInitializer>();
+            .AddInitializer<FunicularCommandsInitializer>();
 
         serviceCollection.AddTransient<CommandProcessor<NoopCommand>, NoopCommandProcessor>();
         AddCommandProcessors(serviceCollection, CommandProcessorAssemblies ?? new[] { EventSourcingOptionDefaults.DefaultImplementationAssembly });
@@ -76,7 +75,6 @@ public record FunicularCommandsOptionsExtension(IReadOnlyCollection<Assembly>? C
 
 sealed class CommandProcessorSubscription(
     CommandStream commandStream,
-    IEventStore eventStore,
     IServiceScopeFactory serviceScopeFactory,
     WakeUp? wakeUp = null,
     ILogger<CommandStream>? logger = null)
@@ -99,7 +97,12 @@ sealed class CommandProcessorSubscription(
             }
 
             return new(processor, scope);
-        }, eventStore, logger, wakeUp);
+        }, () =>
+        {
+            var scope = serviceScopeFactory.CreateScope();
+            return new(scope.ServiceProvider.GetRequiredService<IEventStore>(), scope);
+
+        }, logger, wakeUp);
     }
 
     public void Dispose() => _subscription?.Dispose();
