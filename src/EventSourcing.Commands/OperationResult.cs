@@ -42,5 +42,5 @@ public abstract partial record Failure(string Message)
         }
     }
 
-    public override string ToString() => $"{GetType().Name}: {Message}";
+    public override string ToString() => $"{GetType().Name.TrimEnd('_')}: {Message}";
 }
