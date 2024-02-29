@@ -1,6 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Reactive.Linq;
-using System.Reflection.Metadata.Ecma335;
 using EventSourcing;
 using EventSourcing.Funicular.Commands;
 using EventSourcing.Infrastructure;
@@ -49,7 +47,7 @@ class Program
         await services.StartEventSourcing();
 
         var commandStream = services.GetRequiredService<CommandStream>();
-        await commandStream.SendCommandAndWaitUntilApplied(new AddTextCommand("Hallo"),  eventStream.Select(e => e.Payload).OfType<CommandProcessed>());
+        await commandStream.SendCommandAndWaitUntilApplied(new AddTextCommand("Hallo"),  eventStream);
         
         var eventStore = services.GetRequiredService<IEventStore>();
 
