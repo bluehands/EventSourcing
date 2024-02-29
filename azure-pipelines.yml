@@ -1,7 +1,7 @@
 parameters:
   - name: buildPrerelease
     type: boolean
-    default: false
+    default: true
 
 trigger:
 - main
