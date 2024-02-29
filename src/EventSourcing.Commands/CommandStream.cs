@@ -40,28 +40,17 @@ public sealed class CommandStream : IObservable<Command>, IDisposable
 
 public static class CommandStreamExtension
 {
-    public static async Task<OperationResult<Unit>> SendCommandAndWaitUntilApplied(this CommandStream commandStream,
-        Command command, IObservable<CommandProcessed> commandProcessedEvents)
+    public static async Task<OperationResult<Unit>> SendCommandAndWaitUntilApplied(this CommandStream commandStream, Command command, IObservable<Event> eventStream)
     {
-        var commandProcessed = await SendAndWaitForProcessedEvent(commandStream, command, commandProcessedEvents).ConfigureAwait(false);
-        return commandProcessed.OperationResult;
+        var commandProcessed = await SendAndWaitForProcessedEvent(commandStream, command, eventStream).ConfigureAwait(false);
+        return commandProcessed.Payload.OperationResult;
     }
 
-    public static async Task<Event> SendAndWaitForProcessedEvent(this CommandStream commandStream, Command command, IObservable<Event> events)
+    public static async Task<Event<CommandProcessed>> SendAndWaitForProcessedEvent(this CommandStream commandStream, Command command, IObservable<Event> events)
     {
         var processed = events
-            .FirstAsync(c => c.Payload is CommandProcessed p && p.CommandId == command.Id)
-            .ToTask(CancellationToken.None, Scheduler.Default); //this is needed if we might be called from sync / async mixtures (https://blog.stephencleary.com/2012/12/dont-block-in-asynchronous-code.html)
-        await commandStream.SendCommand(command).ConfigureAwait(false);
-
-        var commandProcessed = await processed.ConfigureAwait(false);
-        return commandProcessed;
-    }
-
-    public static async Task<CommandProcessed> SendAndWaitForProcessedEvent(this CommandStream commandStream, Command command, IObservable<CommandProcessed> commandProcessedEvents)
-    {
-        var processed = commandProcessedEvents
-            .FirstAsync(c => c.CommandId == command.Id)
+            .OfType<Event<CommandProcessed>>()
+            .FirstAsync(e => e.Payload.CommandId == command.Id)
             .ToTask(CancellationToken.None, Scheduler.Default); //this is needed if we might be called from sync / async mixtures (https://blog.stephencleary.com/2012/12/dont-block-in-asynchronous-code.html)
         await commandStream.SendCommand(command).ConfigureAwait(false);
 

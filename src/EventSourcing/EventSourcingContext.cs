@@ -39,7 +39,7 @@ public class EventSourcingContext(
             var initializerName = initializer.GetType().Name;
             logger?.LogInformation("Running initializer {Initializer} in phase {InitializationPhase}.", initializerName, phase.Name);
             await initializer.Initialize();
-            logger?.LogInformation("{Initializer} done.", initializerName);
+            logger?.LogInformation("{Initializer} initialize done.", initializerName);
         }));
     }
 }

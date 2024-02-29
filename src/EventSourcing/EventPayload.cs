@@ -2,8 +2,8 @@
 
 public interface IEventPayload
 {
-    StreamId StreamId { get; init; }
-    string EventType { get; init; }
+    StreamId StreamId { get; }
+    string EventType { get; }
 }
 
 public abstract record EventPayload(StreamId StreamId, string EventType) : IEventPayload;
