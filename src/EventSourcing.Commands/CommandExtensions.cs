@@ -53,4 +53,20 @@ public static partial class OperationResultExtensions
                 ok => command.ToProcessedResult(ok, FunctionalResult.Ok(successMessage?.Invoke(ok) ?? command.DefaultOkMessage())),
                 failure => command.ToFailureResult(failure, failure.Message)
             );
+
+    public static CommandResult.Processed_
+        ToProcessedResultMulti<TCollection>(this OperationResult<(TCollection eventPayloads, string successMessage)> operationResult, Command command) where TCollection : IReadOnlyCollection<IEventPayload>
+        => operationResult
+            .Match(
+                ok => command.ToProcessedResult(ok.eventPayloads, FunctionalResult.Ok(ok.successMessage)),
+                failure => command.ToFailureResult(failure, failure.Message)
+            );
+
+    public static CommandResult.Processed_
+        ToProcessedResult<T>(this OperationResult<(T eventPayload, string successMessage)> operationResult, Command command) where T : EventPayload
+        => operationResult
+            .Match(
+                ok => command.ToProcessedResult(ok.eventPayload, FunctionalResult.Ok(ok.successMessage)),
+                failure => command.ToFailureResult(failure, failure.Message)
+            );
 }
