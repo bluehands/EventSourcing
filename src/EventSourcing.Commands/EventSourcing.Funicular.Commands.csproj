@@ -65,4 +65,8 @@
 	  <ProjectReference Include="..\EventSourcing\EventSourcing.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Extensions\" />
+	</ItemGroup>
+
 </Project>

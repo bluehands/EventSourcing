@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using EventSourcing.Funicular.Commands.Infrastructure;
 
 namespace EventSourcing.Funicular.Commands.JsonPayload;
 

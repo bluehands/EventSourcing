@@ -44,3 +44,18 @@ public abstract partial record Failure(string Message)
 
     public override string ToString() => $"{GetType().Name.TrimEnd('_')}: {Message}";
 }
+
+public static class FailureExtension
+{
+    [MergeError]
+    public static Failure Merge(this Failure f1, Failure f2)
+    {
+        IReadOnlyCollection<Failure> children;
+        if (f1 is Failure.Multiple_ m)
+            children = f2 is Failure.Multiple_ m2 ? [..m.Failures, ..m2.Failures] : [..m.Failures, f2];
+        else
+            children = f2 is Failure.Multiple_ m2 ? [f1, ..m2.Failures] : [f1, f2];
+
+        return Failure.Multiple(children);
+    }
+}

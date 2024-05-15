@@ -24,7 +24,8 @@ public record FunicularCommandsOptionsExtension(IReadOnlyCollection<Assembly>? C
     public void ApplyServices(IServiceCollection serviceCollection)
     {
         serviceCollection
-            .AddSingleton<CommandStream>()
+            .AddSingleton<CommandBus>()
+            .AddSingleton<ICommandBus>(sp => sp.GetRequiredService<CommandBus>())
             .AddSingleton<CommandProcessorSubscription>()
             .AddSingleton<EventReplayState>()
             .AddSingleton<EventSourcingContext, FunicularEventSourcingContext>()
@@ -42,8 +43,6 @@ public record FunicularCommandsOptionsExtension(IReadOnlyCollection<Assembly>? C
 
     static IServiceCollection AddCommandProcessors(IServiceCollection serviceCollection, IEnumerable<Assembly> commandProcessorAssemblies)
     {
-        serviceCollection.AddSingleton<CommandStream>();
-
         var tuples = typeof(CommandProcessor)
             .GetConcreteDerivedTypes(commandProcessorAssemblies)
             .Select(processorType =>
@@ -74,17 +73,17 @@ public record FunicularCommandsOptionsExtension(IReadOnlyCollection<Assembly>? C
 }
 
 sealed class CommandProcessorSubscription(
-    CommandStream commandStream,
+    CommandBus commandBus,
     IServiceScopeFactory serviceScopeFactory,
     WakeUp? wakeUp = null,
-    ILogger<CommandStream>? logger = null)
+    ILogger<CommandBus>? logger = null)
     : IDisposable
 {
     IDisposable? _subscription;
 
     internal void SubscribeCommandProcessors()
     {
-        _subscription = commandStream.SubscribeCommandProcessors(commandType =>
+        _subscription = commandBus.SubscribeCommandProcessors(commandType =>
         {
             var commandProcessorType = typeof(CommandProcessor<>).MakeGenericType(commandType);
 
