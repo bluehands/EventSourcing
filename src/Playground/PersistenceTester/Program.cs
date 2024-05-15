@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using EventSourcing;
 using EventSourcing.Funicular.Commands;
+using EventSourcing.Funicular.Commands.Infrastructure;
 using EventSourcing.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -46,7 +47,7 @@ class Program
 
         await services.StartEventSourcing();
 
-        var commandStream = services.GetRequiredService<CommandStream>();
+        var commandStream = services.GetRequiredService<ICommandBus>();
         await commandStream.SendCommandAndWaitUntilApplied(new AddTextCommand("Hallo"),  eventStream);
         
         var eventStore = services.GetRequiredService<IEventStore>();
