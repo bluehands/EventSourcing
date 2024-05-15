@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+using EventSourcing.Funicular.Commands;
 using EventSourcing.Infrastructure.Internal;
 using Microsoft.Extensions.Logging;
 

@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using EventSourcing;
 using EventSourcing.Funicular.Commands;
-using EventSourcing.Funicular.Commands.Infrastructure;
 using EventSourcing.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
