@@ -13,6 +13,8 @@ namespace EventSourcing.Infrastructure;
 /// <typeparam name="TPhase"></typeparam>
 public interface IInitializer<TPhase> : IInitializer where TPhase : IInitializationPhase;
 
+public interface IBeforeEventReplayInitializer : IInitializer<BeforeEventReplay>;
+
 [AttributeUsage(AttributeTargets.Class)]
 public class InitializationPhaseAttribute(int order) : Attribute
 {

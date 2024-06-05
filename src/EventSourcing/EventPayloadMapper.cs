@@ -3,9 +3,9 @@
 namespace EventSourcing;
 
 public abstract class EventPayloadMapper<TEventPayload, TSerializablePayload> : EventPayloadMapper
-    where TEventPayload : EventPayload
+    where TEventPayload : IEventPayload
 {
-    internal override EventPayload InternalMapFromSerializablePayload(object eventStoreEvent, StreamId streamId,
+    internal override IEventPayload InternalMapFromSerializablePayload(object eventStoreEvent, StreamId streamId,
         Func<Type, object, object>? deserializePayload = null)
     {
         var serializablePayload = deserializePayload?.Invoke(typeof(TSerializablePayload), eventStoreEvent) ?? eventStoreEvent;
@@ -13,7 +13,7 @@ public abstract class EventPayloadMapper<TEventPayload, TSerializablePayload> : 
         return fromEvent;
     }
 
-    internal override object InternalMapToSerializablePayload(EventPayload payload)
+    internal override object InternalMapToSerializablePayload(IEventPayload payload)
     {
         var outgoingEvent = (TEventPayload)payload;
         var serializableEvent = MapToSerializablePayload(outgoingEvent)!;
@@ -27,14 +27,14 @@ public abstract class EventPayloadMapper<TEventPayload, TSerializablePayload> : 
 
 public abstract class EventPayloadMapper
 {
-    internal abstract EventPayload InternalMapFromSerializablePayload(object eventStoreEvent,
+    internal abstract IEventPayload InternalMapFromSerializablePayload(object eventStoreEvent,
         StreamId streamId,
         Func<Type, object, object>? deserializePayload = null);
 
-    internal abstract object InternalMapToSerializablePayload(EventPayload payload);
+    internal abstract object InternalMapToSerializablePayload(IEventPayload payload);
 }
 
-sealed class IdentityMapper<T> : EventPayloadMapper<T, T> where T : EventPayload
+sealed class IdentityMapper<T> : EventPayloadMapper<T, T> where T : IEventPayload
 {
     protected override T MapFromSerializablePayload(T serialized, StreamId streamId) => serialized;
 

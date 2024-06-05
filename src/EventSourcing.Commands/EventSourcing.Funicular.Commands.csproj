@@ -17,7 +17,7 @@
 
 		<!--#region adapt versions here-->
 		<MajorVersion>0</MajorVersion>
-		<MinorAndPatchVersion>1.0</MinorAndPatchVersion>
+		<MinorAndPatchVersion>2.0</MinorAndPatchVersion>
 		<!--#endregion-->
 
 		<AssemblyVersion>$(MajorVersion).0.0</AssemblyVersion>
@@ -48,9 +48,13 @@
 		<AssemblyOriginatorKeyFile>..\..\EventSourcing.snk</AssemblyOriginatorKeyFile>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 	</PropertyGroup>
+	
+	<ItemGroup>
+	  <Compile Include="..\Shared\Instrastructure\Internal\TypeExtensions.cs" Link="Infrastructure\Internal\TypeExtensions.cs" />
+	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="FunicularSwitch.Generators" Version="3.2.0">
+		<PackageReference Include="FunicularSwitch.Generators" Version="3.3.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -59,6 +63,10 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\EventSourcing\EventSourcing.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Extensions\" />
 	</ItemGroup>
 
 </Project>

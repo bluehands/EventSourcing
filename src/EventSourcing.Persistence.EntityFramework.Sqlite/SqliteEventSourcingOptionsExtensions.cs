@@ -1,4 +1,4 @@
-﻿using EventSourcing.Infrastructure;
+﻿using EventSourcing.Infrastructure.Internal;
 using EventSourcing.Persistence.EntityFramework.Sqlite.Infrastructure;
 
 // ReSharper disable once CheckNamespace

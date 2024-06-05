@@ -1,12 +1,10 @@
-﻿using System.Threading.Tasks;
-using EventSourcing.Infrastructure;
+﻿using EventSourcing.Infrastructure;
 
 namespace EventSourcing.Funicular.Commands.Infrastructure;
 
 [InitializationPhase(InitializationPhaseOrders.EventReplayStarting + 100)]
 public class AfterEventReplay : IInitializationPhase;
 
-public class AfterEventReplayInitializer : IInitializer<AfterEventReplay>
+public interface IAfterEventReplayInitializer : IInitializer<AfterEventReplay>
 {
-    public virtual Task Initialize() => Task.CompletedTask;
 }

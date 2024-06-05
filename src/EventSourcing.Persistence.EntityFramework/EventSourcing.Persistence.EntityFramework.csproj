@@ -17,7 +17,7 @@
 
 		<!--#region adapt versions here-->
 		<MajorVersion>0</MajorVersion>
-		<MinorAndPatchVersion>1.0</MinorAndPatchVersion>
+		<MinorAndPatchVersion>2.0</MinorAndPatchVersion>
 		<!--#endregion-->
 
 		<AssemblyVersion>$(MajorVersion).0.0</AssemblyVersion>
@@ -50,12 +50,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.1" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.1">
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.5" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.5">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.1" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.5" />
 	</ItemGroup>
 
 	<ItemGroup>

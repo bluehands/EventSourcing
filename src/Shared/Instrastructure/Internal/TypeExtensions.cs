@@ -11,7 +11,7 @@ static class TypeExtensions
 	public static Type[] GetConcreteDerivedTypes(this Type type, IEnumerable<Assembly> assemblies) =>
 		assemblies
 			.SelectMany(a => a.GetTypes())
-			.Where(t => !t.IsAbstract && t.IsSubclassOf(type))
+			.Where(t => !t.IsAbstract && type.IsAssignableFrom(t))
 			.ToArray();
 
 	public static Type GetArgumentOfFirstGenericBaseType(this Type type, Func<Type, bool>? predicate = null, int argumentIndex = 0)

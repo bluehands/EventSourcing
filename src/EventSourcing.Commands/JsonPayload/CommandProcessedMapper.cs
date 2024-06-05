@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive;
+using EventSourcing.Funicular.Commands;
 
 namespace EventSourcing.Funicular.Commands.JsonPayload;
 
