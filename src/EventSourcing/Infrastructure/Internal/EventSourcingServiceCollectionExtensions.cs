@@ -18,11 +18,10 @@ public static class EventSourcingServiceCollectionExtensions
         services.TryAddTransient<IEventSerializer<TSerializedPayload>, TEventSerializer>();
         services.TryAddTransient<IDbEventDescriptor<TDbEvent, TSerializedPayload>, TEventDescriptor>();
         services.TryAddTransient<IEventStore, EventStore<TDbEvent, TSerializedPayload>>();
+        services.TryAddTransient<IReadOnlyEventStore, EventStore<TDbEvent, TSerializedPayload>>();
         services.TryAddTransient<IEventMapper<TDbEvent>, EventStore<TDbEvent, TSerializedPayload>>();
         return services;
     }
-
-
 
     public static bool EventStreamOptionsConfigured(this EventSourcingOptionsBuilder optionsBuilder) => optionsBuilder.Options.Extensions.OfType<IEventStreamOptionsExtension>().Any();
 }
