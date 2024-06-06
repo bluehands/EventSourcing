@@ -1,5 +1,9 @@
+<img src="EventSourceror.jpg" width="58" style="float:left">
+
 # EventSourcing
 Extensible, unobstrusive, functional and flexible multi persistence event sourcing framework for .NET. Unobstrusive means that your are free to model your domain objects, aggregates or whatever the way you like it based on an event stream that is simply abstracted as `IObservable<Event>`.
+
+Currently packages are available in prerelease versions only. Nevertheless they are the essence of event sourcing implementations running in production at different scale for several years at various persistence types, so feel encouraged to have a look :). 
 
 ## Basic Usage
 
@@ -86,6 +90,18 @@ If you prefer not to insert competing events into your store this would have to 
 ## Persistence providers
   - [Bluehands.EventSourcing.Persistence.Sqlite]([https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.Sqlite)
   - [Bluehands.EventSourcing.Persistence.SqlServer]([https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.SqlServer)
+
+Sqlite and SqlServer persistence packages are based on [Bluehands.EventSourcing.Persistence.EntityFramework](https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.EntityFramework/) package. We use a very straight forward event store schema here (single table, no normalization). If you're fine with that, it's trivial to use an other entity framework provider to support a new persistence.
+
+To write your own persistence provider, perhaps to have a more optimized storage schema for specific needs or even to abstract from an existing event store like [EventStoreDb](https://www.eventstore.com/) you might want to take [EventSourcing.Persistence.EntityFramework](https://github.com/bluehands/EventSourcing/tree/main/src/EventSourcing.Persistence.EntityFramework) as a template project. Persistence requirements are designed to be minimal:
+ - store events in deterministic order 
+ - read events from position x
+ - read events stream from position x
+ 
+ Those requirements are represented by [`IEventReader`](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/EventSourcing/Infrastructure/Contracts.cs#L7) and [`IEventWriter`](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/EventSourcing/Infrastructure/Contracts.cs#L14) interfaces which a provider has to implement.
+ 
+ ## Contribute
+ We are happy to accept pull requests. Feel free to open issues and ask questions. It would be great to have more people contributing to functional event sourcing in .NET!
 
 
 
