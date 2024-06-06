@@ -18,7 +18,8 @@ public static class Program
                 .UseFunicularCommands();
         });
 
-		services.AddInitializer<Talks>(serviceLifetime: ServiceLifetime.Singleton, asSelf: true);
+		services
+            .AddInitializer<Talks>(serviceLifetime: ServiceLifetime.Singleton, asSelf: true);
 
         services.AddGraphQLApi();
 
