@@ -9,7 +9,9 @@ In the example app domain events are serialized to the event store directly (see
 
 ### Try it
 
-Start the sample app navigate to Meetup project folder and type:
+Clone [Bluehands.EventSourcing](https://github.com/bluehands/EventSourcing).
+
+To start the sample app navigate to src/Playground/Meetup/Meetup project folder and type:
 ```powershell
 dotnet run --urls http://localhost:60868
 ```
