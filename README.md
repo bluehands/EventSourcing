@@ -1,7 +1,7 @@
 <img src="EventSourceror.jpg" width="58" style="float:left">
 
 # EventSourcing
-Extensible, unobstrusive, functional and flexible multi persistence event sourcing framework for .NET. Unobstrusive means that your are free to model your domain objects, aggregates or whatever the way you like it based on an event stream that is simply abstracted as `IObservable<Event>`.
+Extensible, unobstrusive, functional and flexible multi persistence event sourcing framework for .NET. Unobstrusive means that you are free to model your domain objects, aggregates or whatever the way you like it based on an event stream that is simply abstracted as `IObservable<Event>`.
 
 Currently packages are available in prerelease versions only. Nevertheless they are the essence of event sourcing implementations running in production at different scale for several years at various persistence types, so feel encouraged to have a look :). 
 
@@ -30,6 +30,18 @@ The following services will be available from your service provider:
 
  - **```IEventStore```** Offers methods to read and write events. Use ```IReadOnlyEventStore``` if write access is not required.
  - **```IObservable<Event>```** Event stream offering push based notifications when new events arrive.
+ 
+ To configure further options on your event store, like the position to start from, use:
+ 
+ ```csharp
+services.AddEventSourcing(options => options
+    .UseSqliteEventStore(@"Data Source=.\EventStore.db",
+        storeOptions => storeOptions.UsePollingEventStream(            
+            getPositionToStartFrom: () => Task.FromResult(142L) //get your starting position
+        )
+    )
+);
+ ``` 
 
 ## Lifecycle
 To actually start listening to events on your event stream (and to allow for example persistence providers to initialize) use:
