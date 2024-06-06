@@ -1,5 +1,5 @@
 using EventSourcing;
-using EventSourcing.Infrastructure.Internal;
+using EventSourcing.Infrastructure;
 
 namespace Meetup;
 
@@ -10,8 +10,6 @@ public static class Program
 		var builder = WebApplication.CreateBuilder(args);
 		var services = builder.Services;
 		
-		//services.AddLogging(l => l.AddConsole());
-
 		services.AddEventSourcing(es =>
         {
             es
@@ -20,10 +18,9 @@ public static class Program
                 .UseFunicularCommands();
         });
 
-		services.AddGraphQLApi();
+		services.AddInitializer<Talks>(serviceLifetime: ServiceLifetime.Singleton, asSelf: true);
 
-		services.AddSingleton<Talks>()
-			.AddSingleton<IInitializer>(sp => sp.GetRequiredService<Talks>());
+        services.AddGraphQLApi();
 
 		var app = builder.Build();
 
