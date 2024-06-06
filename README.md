@@ -91,7 +91,7 @@ As for the command layer you are basically free to build your projections the wa
 
 When using event sourcing it is crucial to understand 'whatever happened in the past', means your events will be in your store just like you wrote them with Version 1 of your application. To keep your domain event flexible and your persisted events compatible you should use separate types for both of them and map using the [EventPayloadMapper](https://github.com/bluehands/EventSourcing/blob/main/src/EventSourcing/EventPayloadMapper.cs) mechanism. But things go wrong. Basically there are two types of read failures, permanent failures due do events that cannot be deserialized anymore and temporary failures that might occur if for example the database is unavailable.
 Currently temporary failures (exceptions that occur when reading from persistence) are retried forever to guarantee a stable event stream. A policy will be injectable here in future version.
-Default behavior for deserialization failures is that currupted events are skipped. An ICorruptedEventHandler can be registered to adapt this behavior (look at this [test case](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/EventSourcing.Test/HandleBadCasesTest.cs) for an example). 
+Default behavior for deserialization failures is that currupted events are skipped. An ```ICorruptedEventHandler``` can be registered to adapt this behavior (look at this [test case](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/EventSourcing.Test/HandleBadCasesTest.cs) for an example). 
 
 ## Concurrency
 
