@@ -16,7 +16,7 @@ dotnet add package Bluehands.EventSourcing
 Choose a persistence implementation that fits your needs. To start with the sqlite store is often a good choice.
 
 ```
-dotnet add package Bluehands.EventSourcing.Persistence.EntityFramework.Sqlite
+dotnet add package Bluehands.EventSourcing.Persistence.Sqlite
 ```
 
 Add event sourcing services:
