@@ -7,7 +7,7 @@ Currently packages are available in prerelease versions only. Nevertheless they 
 
 ## Basic Usage
 
-Install package bluehands.EventSourcing from [NuGet](https://www.nuget.org/packages/Bluehands.EventSourcing):
+Install package Bluehands.EventSourcing from [NuGet](https://www.nuget.org/packages/Bluehands.EventSourcing):
 
 ```
 dotnet add package Bluehands.EventSourcing
@@ -68,15 +68,15 @@ A little meetup planner example is implemented [here](https://github.com/bluehan
 
 ## Extensibility
 
-Packages are designed to be easily extensible to support other persistence types, event serialization formats (like binary payload serialization) or new lifecycle phases (see AfterEventReplayPhase introduced by Bluehands.EventSourcing.Funicular.Commands). Exensibility patterns are inspired by the ones used in current EntityFramework versions.
+Packages are designed to be easily extensible to support other persistence types, event serialization formats (like binary payload serialization) or new lifecycle phases (see ```AfterEventReplayPhase``` introduced by Bluehands.EventSourcing.Funicular.Commands). Exensibility patterns are inspired by the ones used in current EntityFramework versions.
 
 ## Command layer
 
-Your are basically free to model a command layer (or not) on top of your event sourcing infrastructure. [Bluehands.EventSourcing.Funicular.Commands package](https://www.nuget.org/packages/Bluehands.EventSourcing.Funicular.Commands) is a proposal of such a command layer offering the following features:
+Your are basically free to model a command layer (or not) on top of your event sourcing infrastructure. [Bluehands.EventSourcing.Funicular.Commands](https://www.nuget.org/packages/Bluehands.EventSourcing.Funicular.Commands) package is a proposal of such a command layer offering the following features:
 
  - 'Functional approach': A command processor / handler is just a function that produces events given an intention (command).
  - Use a [Result](https://github.com/bluehands/Funicular-Switch) type to ease validation and error handling in your command processors. See [RegisterParticipantCommandProcessor](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Commands.cs#L21) for an example.
- - Possibility for the issuer of a command to wait until the effect of his command (the events) where processed by a particular projection. This is especially useful for scenarios were a non CQS[^1] api should be kept stable while evolving the underlying infrastructure towards event sourcing. Have a look a the [Meetup app api](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Api.cs#L13) for an example of the `SendCommandAndWaitUntilApplied` method.
+ - Possibility for the issuer of a command to wait until the effect of his command (the events) where processed by a particular projection. This is especially useful for scenarios were a non CQS[^1] api should be kept stable while evolving the underlying infrastructure towards event sourcing. Have a look a the [Meetup app api](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Api.cs#L13) for an example of the ```SendCommandAndWaitUntilApplied``` method.
 
 [^1]: An API that does not respect the '[Command Query Separation](https://de.wikipedia.org/wiki/Command-Query-Separation)' principle. So commands actually return data, i.e. UpdateSomething returns the updated entity.
 
@@ -89,7 +89,7 @@ As for the command layer you are basically free to build your projections the wa
 
 ## Error handling
 
-When using event sourcing it is crucial to understand 'whatever happened in the past', means your events will be in your store just like you wrote them with Version 1 of your application. To keep your domain event flexible and your persisted events compatible you should use separate types for both of them and map using the [EventPayloadMapper](https://github.com/bluehands/EventSourcing/blob/main/src/EventSourcing/EventPayloadMapper.cs) mechanism. But things go wrong. Basically there are two types of read failures, permanent failures due do events that cannot be deserialized anymore and temporary failures that might occur if for example the database is unavailable.
+When using event sourcing it is crucial to understand 'whatever happened in the past'. Events will be in your store just like you wrote them with Version 1 of your application. To keep your domain event flexible and your persisted events compatible you should use separate types for both of them and map using the [EventPayloadMapper](https://github.com/bluehands/EventSourcing/blob/main/src/EventSourcing/EventPayloadMapper.cs) mechanism. But things go wrong. Basically there are two types of read failures, permanent failures due do events that cannot be deserialized anymore and temporary failures that might occur if for example the database is unavailable.
 Currently temporary failures (exceptions that occur when reading from persistence) are retried forever to guarantee a stable event stream. A policy will be injectable here in future version.
 Default behavior for deserialization failures is that currupted events are skipped. An ```ICorruptedEventHandler``` can be registered to adapt this behavior (look at this [test case](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/EventSourcing.Test/HandleBadCasesTest.cs) for an example). 
 
@@ -114,6 +114,3 @@ To write your own persistence provider, perhaps to have a more optimized storage
  
  ## Contribute
  We are happy to accept pull requests. Feel free to open issues and ask questions. It would be great to have more people contributing to functional event sourcing in .NET!
-
-
-
