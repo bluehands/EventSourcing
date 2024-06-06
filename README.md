@@ -47,6 +47,9 @@ class SomethingToBeDoneBeforeEventReplay : IInializer<BeforeEventReplay>
 services.AddInitializer<SomethingToBeDoneBeforeEventReplay>();
 ```
 
+### Example
+A little meetup planner example is implemented [here](https://github.com/bluehands/EventSourcing/blob/main/src/Playground/Meetup/Meetup)
+
 ### Extensibility
 
 Packages are designed to be easily extensible to support other persistence types, event serialization formats (like binary payload serialization) or new lifecycle phases (see AfterEventReplayPhase introduced by Bluehands.EventSourcing.Funicular.Commands). Exensibility patterns are inspired by the ones used in current EntityFramework versions.

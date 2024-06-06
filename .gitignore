@@ -396,3 +396,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+/src/Playground/Meetup/Meetup/EventStore.db
+/src/Playground/Meetup/Meetup/EventStore.db-shm
+/src/Playground/Meetup/Meetup/EventStore.db-wal

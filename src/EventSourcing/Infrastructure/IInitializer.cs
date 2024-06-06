@@ -48,11 +48,21 @@ public sealed class EventReplayStarted : IInitializationPhase;
 
 public static class InitializerServiceCollectionExtensions
 {
-    public static IServiceCollection AddInitializer<T>(this IServiceCollection serviceCollection)
+    public static IServiceCollection AddInitializer<T>(this IServiceCollection serviceCollection, ServiceLifetime serviceLifetime = ServiceLifetime.Transient, bool asSelf = false)
         where T : class, IInitializer
     {
         AssertInitializationPhaseAttributes(typeof(T));
-        return serviceCollection.AddTransient<IInitializer, T>();
+        if (asSelf)
+        {
+            serviceCollection.Add(new (typeof(T), typeof(T), serviceLifetime));
+            serviceCollection.Add(new(typeof(IInitializer), factory: sp => sp.GetRequiredService<T>(), serviceLifetime));
+        }
+        else
+        {
+            serviceCollection.Add(new (typeof(IInitializer), typeof(T), serviceLifetime));
+        }
+
+        return serviceCollection;
     }
 
     internal static IReadOnlyCollection<(Type phaseType, InitializationPhaseAttribute phaseAttribute)> AssertInitializationPhaseAttributes(this Type initializerType)
