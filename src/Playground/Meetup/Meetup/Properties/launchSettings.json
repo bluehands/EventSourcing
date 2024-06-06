@@ -2,6 +2,7 @@
   "profiles": {
     "Meetup": {
       "commandName": "Project",
+      "launchBrowser": true,
       "launchUrl": "https://localhost:60868/graphql",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
@@ -16,14 +17,6 @@
         "ASPNETCORE_URLS": "https://localhost:60868"
       },
       "distributionName": ""
-    },
-    "Meetup2": {
-      "commandName": "Project",
-      "launchUrl": "https://localhost:60869/graphql",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "https://localhost:60869"
     }
   }
 }

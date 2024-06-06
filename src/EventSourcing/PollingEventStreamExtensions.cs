@@ -9,16 +9,30 @@ namespace EventSourcing;
 
 public interface IAllowPollingEventStreamBuilder;
 
+public static class PollingEventStreamDefaults
+{
+    public static readonly TimeSpan MinWaitTime = TimeSpan.Zero;
+    public static readonly TimeSpan MaxWaitTime = TimeSpan.FromMilliseconds(100);
+}
+
 public static class PollingEventStreamExtensions
 {
-    public static TBuilder UsePollingEventStream<TBuilder>(this TBuilder builder, TimeSpan minWaitTime, TimeSpan maxWaitTime, Func<Task<long>>? getPositionToStartFrom = null) 
+    public static TBuilder UsePollingEventStream<TBuilder>(this TBuilder builder, TimeSpan minWaitTime,
+        TimeSpan maxWaitTime, Func<Task<long>>? getPositionToStartFrom = null)
         where TBuilder : IAllowPollingEventStreamBuilder, IEventSourcingExtensionsBuilderInfrastructure =>
-        builder.WithOption<TBuilder, PollingEventStreamOptionsExtension>(e => e with
-        {
-            MinWaitTime = minWaitTime,
-            MaxWaitTime = maxWaitTime,
-            GetPositionToStartFrom = getPositionToStartFrom
-        });
+        builder.WithOption<TBuilder, PollingEventStreamOptionsExtension>(_ => new(
+            MinWaitTime: minWaitTime,
+            MaxWaitTime: maxWaitTime,
+            GetPositionToStartFrom: getPositionToStartFrom)
+        );
+
+    public static TBuilder UsePollingEventStream<TBuilder>(this TBuilder builder, Func<Task<long>> getPositionToStartFrom)
+        where TBuilder : IAllowPollingEventStreamBuilder, IEventSourcingExtensionsBuilderInfrastructure =>
+        builder.WithOption<TBuilder, PollingEventStreamOptionsExtension>(_ => new(
+            MinWaitTime: null,
+            MaxWaitTime: null,
+            GetPositionToStartFrom: getPositionToStartFrom)
+        );
 
     public static TBuilder UsePollingEventStream<TBuilder>(this TBuilder builder) 
         where TBuilder : IAllowPollingEventStreamBuilder, IEventSourcingExtensionsBuilderInfrastructure =>
@@ -37,7 +51,7 @@ public record PollingEventStreamOptionsExtension(TimeSpan? MinWaitTime, TimeSpan
 
     public void ApplyServices(IServiceCollection serviceCollection)
     {
-        serviceCollection.AddSingleton(sp => new WakeUp(MinWaitTime ?? TimeSpan.Zero, MaxWaitTime ?? TimeSpan.FromMilliseconds(100), sp.GetService<ILogger<WakeUp>>()));
+        serviceCollection.AddSingleton(sp => new WakeUp(MinWaitTime ?? PollingEventStreamDefaults.MinWaitTime, MaxWaitTime ?? PollingEventStreamDefaults.MaxWaitTime, sp.GetService<ILogger<WakeUp>>()));
         serviceCollection.AddSingleton(sp => BuildPollingEventStream(sp, GetPositionToStartFrom ?? (() => Task.FromResult(0L))));
         serviceCollection.AddSingleton<IObservable<Event>>(sp => sp.GetRequiredService<EventStream<Event>>());
     }
