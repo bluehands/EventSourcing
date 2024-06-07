@@ -5,7 +5,8 @@ This is a minimal example demonstrating how event sourcing packages with the opt
 Our asp net core web application offers a graphql api with query, mutation and subscription endpoints. Multiple instances of the app can be run and every instance is notified via the event stream and updates its state accordingly.
 
 ### Discaimler
-In the example app domain events are serialized to the event store directly (see `SerializableEventPayload` attribute on event records). This is recommended only for rapid prototyping / testing purposes only. If you move to production separate domain and persisted events and use an [EventPayloadMapper](https://github.com/bluehands/EventSourcing/blob/main/src/EventSourcing/EventPayloadMapper.cs) to map between the two representations. That way you are free to restrucutre / rename you domain event while keeping you serialized contracts compatible. 
+In the example app domain events are serialized to the event store directly (see `SerializableEventPayload` attribute on event records). This is recommended only for rapid prototyping / testing purposes only. If you move to production separate domain and persisted events and use an [EventPayloadMapper](https://github.com/bluehands/EventSourcing/blob/main/src/EventSourcing/EventPayloadMapper.cs) to map between the two representations. That way you are free to restructure / rename you domain event while keeping you serialized contracts compatible. 
+Also, in a real world application one would use different projections at the api and for validation at the command layer. 
 
 ### Try it
 
@@ -28,7 +29,7 @@ query getTalks {
     title
     attendees {
       name
-      onWaitList
+      isOnWaitList
     }
     talkPublished
     maxAttendees
@@ -60,7 +61,7 @@ subscription {
       title
       attendees {
         name
-        onWaitList
+        isOnWaitList
       }
     }
   }

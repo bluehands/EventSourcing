@@ -15,7 +15,7 @@ public static class EventTypes
 
 public interface ITalkEvent
 {
-	string TalkId { get; init; }
+	string TalkId { get; }
 }
 
 [SerializableEventPayload(EventTypes.UserGroupTalkAdded)]

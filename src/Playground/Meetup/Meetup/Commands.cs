@@ -16,20 +16,20 @@ public class NewUserGroupTalkCommandProcessor : SynchronousCommandProcessor<NewU
 	}
 }
 
-public record RegisterParticipant(string TalkId, string Name, string MailAddress) : Command;
+public record RegisterAttendee(string TalkId, string Name, string MailAddress) : Command;
 
-public class RegisterParticipantCommandProcessor(Talks talks) : SynchronousCommandProcessor<RegisterParticipant>
+public class RegisterAttendeeCommandProcessor(TalksProjection talks) : SynchronousCommandProcessor<RegisterAttendee>
 {
-	public override CommandResult.Processed_ ProcessSync(RegisterParticipant command)
+	public override CommandResult.Processed_ ProcessSync(RegisterAttendee command)
 	{
 		var @event =
-			from talk in talks.Current.Talks.Get(command.TalkId)
+			from talk in talks.Current.TalksById.Get(command.TalkId)
 			from validRegistration in talk.Validate(RegistrationOk)
 			select new AttendeeRegistered(command.TalkId, command.Name, command.MailAddress, DateTimeOffset.Now);
 
 		return @event.ToProcessedResult(command);
 
-		IEnumerable<Failure> RegistrationOk(Talks.Talk talk)
+		IEnumerable<Failure> RegistrationOk(Talk talk)
 		{
 			if (talk.Attendees.Any(a => a.Name == command.Name))
 				yield return Failure.Conflict($"{command.Name} already registered.");

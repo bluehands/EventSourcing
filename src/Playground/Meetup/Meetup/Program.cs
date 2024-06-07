@@ -10,16 +10,13 @@ public static class Program
 		var builder = WebApplication.CreateBuilder(args);
 		var services = builder.Services;
 		
-		services.AddEventSourcing(es =>
-        {
-            es
-                //.UseSqlServerEventStore(@"Data Source=BALLARD;Initial Catalog=Meetup;Integrated Security=True;TrustServerCertificate=True")
-                .UseSqliteEventStore(@"Data Source=.\EventStore.db")
-                .UseFunicularCommands();
-        });
+		services.AddEventSourcing(es => es
+            //.UseSqlServerEventStore(@"Data Source=BALLARD;Initial Catalog=Meetup;Integrated Security=True;TrustServerCertificate=True")
+            .UseSqliteEventStore(@"Data Source=.\EventStore.db")
+            .UseFunicularCommands());
 
 		services
-            .AddInitializer<Talks>(serviceLifetime: ServiceLifetime.Singleton, asSelf: true);
+            .AddInitializer<TalksProjection>(serviceLifetime: ServiceLifetime.Singleton, asSelf: true);
 
         services.AddGraphQLApi();
 

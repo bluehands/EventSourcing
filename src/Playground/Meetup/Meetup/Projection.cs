@@ -7,55 +7,62 @@ using EventSourcing.Infrastructure;
 
 namespace Meetup;
 
-public class Talks(IObservable<Event> eventStream) : Projection<Talks.State>(eventStream, new(ImmutableDictionary<string, Talk>.Empty), Apply)
+public record Attendee(string Name, bool IsOnWaitList);
+
+public record Talk(
+    string Id,
+    string Title,
+    int MaxAttendees,
+    ImmutableList<Attendee> Attendees,
+    DateTimeOffset TalkPublished,
+    TimeSpan? BookedUpWithin)
 {
-    public record State(ImmutableDictionary<string, Talk> Talks);
-
-    public record Talk(string Id, string Title, int MaxAttendees, ImmutableList<Attendee> Attendees, DateTimeOffset TalkPublished, TimeSpan? BookedUpWithin)
+    public Talk AttendeeRegistered(AttendeeRegistered registered)
     {
-        public Talk ParticipantRegistered(AttendeeRegistered registered)
+        var bookedUpWithin = Attendees.Count == MaxAttendees - 1
+            ? (registered.RegisteredAt - TalkPublished)
+            : BookedUpWithin;
+
+        var isOnWaitList = Attendees.Count >= MaxAttendees;
+        return this with
         {
-            var bookedUpWithin = Attendees.Count == MaxAttendees - 1
-                ? (registered.RegisteredAt - TalkPublished)
-                : BookedUpWithin;
-
-            var isOnWaitList = Attendees.Count > MaxAttendees;
-            return this with
-            {
-                Attendees = Attendees.Add(new(registered.Name, isOnWaitList)),
-                BookedUpWithin = bookedUpWithin
-            };
-        }
+            Attendees = Attendees.Add(new(registered.Name, isOnWaitList)),
+            BookedUpWithin = bookedUpWithin
+        };
     }
+}
 
-    public record Attendee(string Name, bool OnWaitList);
+public record Talks(ImmutableDictionary<string, Talk> TalksById)
+{
+    public Talks SetTalk(Talk updatedTalk) => new(TalksById.SetItem(updatedTalk.Id, updatedTalk));
+}
 
-    static State Apply(State current, Event @event)
+public class TalksProjection(IObservable<Event> eventStream) : Projection<Talks>(eventStream, new(ImmutableDictionary<string, Talk>.Empty), ApplyEvent)
+{
+    static Talks ApplyEvent(Talks current, Event @event)
     {
         switch (@event.Payload)
         {
             case UserGroupTalkAdded added:
-            {
-                var updatedTalk = new Talk(
-                    added.TalkId,
-                    added.Title, 
-                    added.MaxAttendees,
-                    [],
-                    @event.Timestamp,
-                    null);
-                return SetTalk(current, updatedTalk);
-            }
-            case AttendeeRegistered registered when current.Talks.TryGetValue(registered.TalkId, out var talk):
-            {
-                var updatedTalk = talk.ParticipantRegistered(registered);
-                return SetTalk(current, updatedTalk);
-            }
+                {
+                    var updatedTalk = new Talk(
+                        added.TalkId,
+                        added.Title,
+                        added.MaxAttendees,
+                        [],
+                        @event.Timestamp,
+                        null);
+                    return current.SetTalk(updatedTalk);
+                }
+            case AttendeeRegistered registered when current.TalksById.TryGetValue(registered.TalkId, out var talk):
+                {
+                    var updatedTalk = talk.AttendeeRegistered(registered);
+                    return current.SetTalk(updatedTalk);
+                }
             default:
                 return current;
         }
     }
-
-    static State SetTalk(State current, Talk updatedTalk) => new (current.Talks.SetItem(updatedTalk.Id, updatedTalk));
 }
 
 public abstract class Projection<T> : IDisposable, IInitializer<BeforeEventReplay> where T : notnull
