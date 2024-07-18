@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <PackageReference Include="Bluehands.EventSourcing" Version="0.2.0-merge-20240606.3" />
-    <PackageReference Include="Bluehands.EventSourcing.Funicular.Commands" Version="0.2.0-merge-20240606.3" />
     <PackageReference Include="Bluehands.EventSourcing.Persistence.Sqlite" Version="0.2.0-merge-20240606.3" />
     <PackageReference Include="Bluehands.EventSourcing.Persistence.SqlServer" Version="0.2.0-merge-20240606.3" />
     <PackageReference Include="FunicularSwitch" Version="6.1.0" />

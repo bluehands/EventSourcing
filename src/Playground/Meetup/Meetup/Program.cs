@@ -1,5 +1,4 @@
 using EventSourcing;
-using EventSourcing.Infrastructure;
 
 namespace Meetup;
 
@@ -13,18 +12,15 @@ public static class Program
 		services.AddEventSourcing(es => es
             //.UseSqlServerEventStore(@"Data Source=BALLARD;Initial Catalog=Meetup;Integrated Security=True;TrustServerCertificate=True")
             .UseSqliteEventStore(@"Data Source=.\EventStore.db")
-            .UseFunicularCommands());
+        );
 
-		services
-            .AddInitializer<TalksProjection>(serviceLifetime: ServiceLifetime.Singleton, asSelf: true);
-
-        services.AddGraphQLApi();
+		services.AddGraphQLApi();
 
 		var app = builder.Build();
 
 		app
 			.UseRouting()
-			.UseWebSockets()
+            .UseWebSockets()
 			.UseEndpoints(endpoints => endpoints.MapGraphQL());
 
 		await app.Services.StartEventSourcing();
