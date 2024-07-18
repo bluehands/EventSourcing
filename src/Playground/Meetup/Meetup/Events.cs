@@ -18,10 +18,10 @@ public interface ITalkEvent
 	string TalkId { get; }
 }
 
-[SerializableEventPayload(EventTypes.UserGroupTalkAdded)]
+[SerializableEventPayload(EventTypes.UserGroupTalkAdded)] //The 'domain' payload is serialized to the event store directly, use during development and for rapid prototyping only!!
+                                                          //See AttendeeRegistered and SerializedPayloads.AttendeeRegistered as an example for separating domain events from serialization concerns.
 public record UserGroupTalkAdded(string TalkId, string Title, int MaxAttendees) 
 	: EventPayload(StreamIds.UserGroupTalk(TalkId), EventTypes.UserGroupTalkAdded), ITalkEvent;
 
-[SerializableEventPayload(EventTypes.AttendeeRegistered)]
 public record AttendeeRegistered(string TalkId, string Name, string MailAddress, DateTimeOffset RegisteredAt) 
 	: EventPayload(StreamIds.UserGroupTalk(TalkId), EventTypes.AttendeeRegistered), ITalkEvent;
