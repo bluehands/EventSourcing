@@ -23,5 +23,6 @@ public interface ITalkEvent
 public record UserGroupTalkAdded(string TalkId, string Title, int MaxAttendees) 
 	: EventPayload(StreamIds.UserGroupTalk(TalkId), EventTypes.UserGroupTalkAdded), ITalkEvent;
 
+
 public record AttendeeRegistered(string TalkId, string Name, string MailAddress, DateTimeOffset RegisteredAt) 
 	: EventPayload(StreamIds.UserGroupTalk(TalkId), EventTypes.AttendeeRegistered), ITalkEvent;

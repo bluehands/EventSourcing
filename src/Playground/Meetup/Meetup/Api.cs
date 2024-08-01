@@ -5,15 +5,29 @@ namespace Meetup;
 
 public class Mutation
 {
-    public async Task<string> NewUserGroupTalk([Service] IEventStore eventStore, string title, int maxAttendees)
+    public async Task<string> NewUserGroupTalk([Service] IEventStore eventStore, [Service]TalksProjection talks, string title, int maxAttendees)
     {
+        if (talks.Current.Talks.Values.Any(t => t.Title == title))
+            throw new GraphQLException($"Talk with title {title} already exists");
+
         await eventStore.WriteEvents([new UserGroupTalkAdded(Guid.NewGuid().ToString(), title, maxAttendees)]);
         return "Talk added";
+    }
+
+    public async Task<string> RegisterAttendee([Service] IEventStore eventStore, [Service]TalksProjection talks, string talkId, string attendeeName, string mailAddress)
+    {
+        if (!talks.Current.Talks.TryGetValue(talkId, out var talk))
+            throw new GraphQLException($"Talk {talkId} does not exist");
+
+        await eventStore.WriteEvents([new AttendeeRegistered(talkId, attendeeName, mailAddress, DateTimeOffset.Now)]);
+        return $"{attendeeName} registered for talk {talk.Title}";
     }
 }
 
 public class Query
 {
+    public IQueryable<Talk> GetTalks([Service] TalksProjection talks) => talks.Current.Talks.Values.AsQueryable();
+
     public async Task<IQueryable<EventInfo>> GetEvents([Service] IEventStore eventStore) =>
         (await eventStore.ReadEvents().Select(MapToEventInfo).ToListAsync()).AsQueryable();
 
@@ -25,9 +39,10 @@ public record EventInfo(string StreamType, string StreamId, long Position, DateT
 public class Subscription
 {
     [Subscribe(With = nameof(SubscribeToEvents))]
-    public EventInfo OnEventReceived([EventMessage] EventInfo eventInfo) => eventInfo;
+    public IEnumerable<Talk> OnEventReceived([EventMessage] IEnumerable<Talk> eventInfo) => eventInfo;
 
-    public IObservable<EventInfo> SubscribeToEvents(
-        [Service] IObservable<Event> eventStream,
-        CancellationToken cancellationToken) => eventStream.Select(Query.MapToEventInfo);
+    public IObservable<IEnumerable<Talk>> SubscribeToEvents(
+        [Service] TalksProjection talks,
+        CancellationToken cancellationToken) => talks.Changes.Select(c => c.state.Talks.Values);
+
 }

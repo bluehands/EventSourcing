@@ -32,6 +32,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{3D801EE3-2
 		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Util.DiffGenerator", "..\..\ScriptRunner\src\Util\DiffGenerator\Util.DiffGenerator.csproj", "{338A0E28-B5A0-449C-9218-4F081216C4EF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -70,6 +72,10 @@ Global
 		{A558C943-63B2-47F0-B277-F2BC3348B3FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A558C943-63B2-47F0-B277-F2BC3348B3FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A558C943-63B2-47F0-B277-F2BC3348B3FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{338A0E28-B5A0-449C-9218-4F081216C4EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{338A0E28-B5A0-449C-9218-4F081216C4EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{338A0E28-B5A0-449C-9218-4F081216C4EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{338A0E28-B5A0-449C-9218-4F081216C4EF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -79,6 +85,7 @@ Global
 		{BDF491D5-451E-4B68-9817-23FE0940C254} = {83A22E42-1D58-4080-B455-3F2A59ED75FB}
 		{6D0A308C-7E88-4FBC-B96D-BFA63E5AB152} = {BDF491D5-451E-4B68-9817-23FE0940C254}
 		{A558C943-63B2-47F0-B277-F2BC3348B3FC} = {1F559C7F-C0CD-49FD-B571-9DCDAAE84CD1}
+		{338A0E28-B5A0-449C-9218-4F081216C4EF} = {1F559C7F-C0CD-49FD-B571-9DCDAAE84CD1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F4CE31E1-9E41-4898-BCB5-03320C45E4D9}

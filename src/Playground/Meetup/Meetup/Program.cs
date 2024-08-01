@@ -1,4 +1,5 @@
 using EventSourcing;
+using EventSourcing.Infrastructure;
 
 namespace Meetup;
 
@@ -15,6 +16,8 @@ public static class Program
         );
 
 		services.AddGraphQLApi();
+
+        services.AddInitializer<TalksProjection>(ServiceLifetime.Singleton, asSelf: true);
 
 		var app = builder.Build();
 
