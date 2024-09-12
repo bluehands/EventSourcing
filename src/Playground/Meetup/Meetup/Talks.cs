@@ -3,20 +3,19 @@ using EventSourcing;
 
 namespace Meetup;
 
-public record Talk(string Id, string Title, int MaxAttendees, ImmutableList<Attendee> Attendees)
+public record Talk(string Id, string Title, int MaxAttendees, ImmutableList<Attendee> Attendees, ImmutableList<Attendee> WaitList)
 {
-    public Talk AddAttendee(Attendee attendee) => this with { Attendees = Attendees.Add(attendee) };
+    public Talk AddAttendee(Attendee attendee) =>
+        Attendees.Count < MaxAttendees
+            ? this with { Attendees = Attendees.Add(attendee) }
+            : this with { WaitList = WaitList.Add(attendee) };
 }
 
 public record Attendee(string Name, string MailAddress);
 
-public class TalksProjection : Projection<TalksProjection.State>
+public class TalksProjection(IObservable<Event> eventStream)
+    : Projection<TalksProjection.State>(eventStream, State.Empty, Apply)
 {
-    public TalksProjection(IObservable<Event> eventStream)
-        : base(eventStream, State.Empty, Apply)
-    {
-    }
-
     static State Apply(State current, Event @event)
     {
         var version = @event.Position;
@@ -24,8 +23,12 @@ public class TalksProjection : Projection<TalksProjection.State>
         {
             case UserGroupTalkAdded talkAdded:
                 {
-                    var newTalk = new Talk(talkAdded.TalkId, talkAdded.Title, talkAdded.MaxAttendees, ImmutableList<Attendee>.Empty);
+                    var newTalk = new Talk(talkAdded.TalkId, talkAdded.Title, talkAdded.MaxAttendees, ImmutableList<Attendee>.Empty, ImmutableList<Attendee>.Empty);
                     return current.AddTalk(newTalk, version);
+                }
+            case UserGroupTalkDescriptionUpdated descriptionUpdated:
+                {
+                    return current.UpdateTalk(descriptionUpdated.TalkId, t => t with { Title = descriptionUpdated.Title }, version);
                 }
             case AttendeeRegistered attendeeRegistered:
                 {

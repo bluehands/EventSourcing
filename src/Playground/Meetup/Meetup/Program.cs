@@ -18,6 +18,7 @@ public static class Program
 		services.AddGraphQLApi();
 
         services.AddInitializer<TalksProjection>(ServiceLifetime.Singleton, asSelf: true);
+        services.AddInitializer<ChangeLog>(ServiceLifetime.Singleton, asSelf: true);
 
 		var app = builder.Build();
 
