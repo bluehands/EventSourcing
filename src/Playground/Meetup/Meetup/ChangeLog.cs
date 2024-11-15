@@ -1,10 +1,20 @@
 ﻿using System.Collections.Immutable;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using EventSourcing.Funicular.Commands.Infrastructure;
 using EventSourcing.Infrastructure;
 using Util.DiffGenerator;
 
 namespace Meetup;
+
+public class AfterReplay(TalksProjection talksProjection) : IAfterEventReplayInitializer
+{
+    public Task Initialize()
+    {
+        Console.WriteLine($"Replay done. Talks: {talksProjection.Current.Talks.Count}");
+        return Task.CompletedTask;
+    }
+}
 
 public class ChangeLog : IBeforeEventReplayInitializer, IDisposable
 {
@@ -34,6 +44,7 @@ public class ChangeLog : IBeforeEventReplayInitializer, IDisposable
 
     public Task Initialize()
     {
+        Console.WriteLine("Before replay");
         _subscription = _changes.Connect();
         return Task.CompletedTask;
     }

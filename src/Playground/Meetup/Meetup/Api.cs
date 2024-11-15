@@ -1,5 +1,7 @@
-﻿using System.Reactive.Linq;
+﻿using System.Net.Mail;
+using System.Reactive.Linq;
 using EventSourcing;
+using EventSourcing.Funicular.Commands;
 
 namespace Meetup;
 
@@ -24,13 +26,16 @@ public class Mutation
         return $"Description of talk '{talk.Title}' updated";
     }
 
-    public async Task<string> RegisterAttendee([Service] IEventStore eventStore, [Service]TalksProjection talks, string talkId, string attendeeName, string mailAddress)
+    public async Task<string> RegisterAttendee([Service] ICommandBus commandBus, [Service]TalksProjection talks, string talkId, string attendeeName, string mailAddress)
     {
-        if (!talks.Current.Talks.TryGetValue(talkId, out var talk))
-            throw new GraphQLException($"Talk {talkId} does not exist");
+        var result = await commandBus.SendCommandAndWaitUntilApplied(new RegisterAttendeeCommand(talkId, attendeeName, mailAddress)
+            , talks.Changes.Select(s => s.@event));
 
-        await eventStore.WriteEvents([new AttendeeRegistered(talkId, attendeeName, mailAddress, DateTimeOffset.Now)]);
-        return $"{attendeeName} registered for talk '{talk.Title}'";
+        //await commandBus.WriteEvents([new AttendeeRegistered(talkId, attendeeName, mailAddress, DateTimeOffset.Now)]);
+        return result.Match(ok =>
+        {
+            return "Attendee registered";
+        }, error => throw new GraphQLException(error.Message));
     }
 }
 

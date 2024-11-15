@@ -13,12 +13,14 @@ public static class Program
 		services.AddEventSourcing(es => es
             //.UseSqlServerEventStore(@"Data Source=BALLARD;Initial Catalog=Meetup;Integrated Security=True;TrustServerCertificate=True")
             .UseSqliteEventStore(@"Data Source=.\EventStore.db")
+            .UseFunicularCommands()
         );
 
 		services.AddGraphQLApi();
 
         services.AddInitializer<TalksProjection>(ServiceLifetime.Singleton, asSelf: true);
         services.AddInitializer<ChangeLog>(ServiceLifetime.Singleton, asSelf: true);
+        services.AddInitializer<AfterReplay>();
 
 		var app = builder.Build();
 
