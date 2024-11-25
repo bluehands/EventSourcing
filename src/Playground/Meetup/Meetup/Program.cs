@@ -11,7 +11,7 @@ public static class Program
 		var services = builder.Services;
 		
 		services.AddEventSourcing(es => es
-            //.UseSqlServerEventStore(@"Data Source=BALLARD;Initial Catalog=Meetup;Integrated Security=True;TrustServerCertificate=True")
+            //.UseSqlServerEventStore(@"Data Source=.\SQLSERVEREXPRESS;Initial Catalog=Meetup;Integrated Security=True;TrustServerCertificate=True")
             .UseSqliteEventStore(@"Data Source=.\EventStore.db")
             .UseFunicularCommands());
 

@@ -3,7 +3,6 @@ using EventSourcing.Infrastructure.Internal;
 using EventSourcing.Persistence.EntityFramework.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace EventSourcing.Persistence.EntityFramework.SqlServer.Infrastructure.Internal;
 
@@ -25,7 +24,10 @@ public record SqlServerEventStoreOptionsExtension(string? ConnectionString) : IE
     public void ApplyServices(IServiceCollection serviceCollection)
     {
         serviceCollection.AddDbContext<EventStoreContext>(options =>
-            options.UseSqlServer(ConnectionString, o => o.MigrationsAssembly(typeof(Marker).Assembly.GetName().Name!))
+            options
+                .UseSqlServer(ConnectionString, 
+                    o => o.MigrationsAssembly(typeof(Marker).Assembly.GetName().Name!))
+                .AddInterceptors([new ExclusiveWriteInterceptor()])
         );
 
         serviceCollection.AddEntityFrameworkServices();
