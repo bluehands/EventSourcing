@@ -2,7 +2,7 @@
 
 namespace EventSourcing.Funicular.Commands.Infrastructure;
 
-[InitializationPhase(InitializationPhaseOrders.EventReplayStarting + 100)]
+[InitializationPhase(InitializationPhaseOrders.EventReplayStarted + 100)]
 public class AfterEventReplay : IInitializationPhase;
 
 public interface IAfterEventReplayInitializer : IInitializer<AfterEventReplay>
