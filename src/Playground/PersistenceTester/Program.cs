@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using EventSourcing;
 using EventSourcing.Funicular.Commands;
+using EventSourcing.Funicular.Commands.Defaults;
 using EventSourcing.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,14 +19,14 @@ class Program
                 //serviceCollection.AddEventSourcing(b =>
                 //    b
                 //        .UseSqliteEventStore(@"Data Source=c:\temp\EventStore.db")
-                //        .UseFunicularCommands()
+                //        .UseDefaultFunicularCommands()
                 //);
 
                 serviceCollection.AddEventSourcing(
                     eventSourcing =>
                         eventSourcing
                             .UseSqlServerEventStore("Data Source=.\\SQLSERVEREXPRESS;Initial Catalog=TestEventStore2;Integrated Security=True;TrustServerCertificate=True;")
-                            .UseFunicularCommands()
+                            .UseDefaultFunicularCommands()
                 );
 
                 serviceCollection.AddInitializer<EventListener>();
@@ -121,7 +122,7 @@ public record AddTextCommand(string Text) : Command;
 
 public class AddTextCommandProcessor : SynchronousCommandProcessor<AddTextCommand>
 {
-    public override CommandResult.Processed_ ProcessSync(AddTextCommand command) => 
+    public override CommandResult<Failure>.Processed_ ProcessSync(AddTextCommand command) => 
         command.ToOkResult(new TextAdded("MyJournal", "First entry", command.Text), "Added journal entry");
 }
 

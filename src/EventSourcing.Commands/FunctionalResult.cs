@@ -3,12 +3,9 @@
 namespace EventSourcing.Funicular.Commands;
 
 [UnionType(CaseOrder = CaseOrder.AsDeclared)]
-public abstract partial record FunctionalResult()
+public abstract partial record FunctionalResult<TFailure>
 {
-    public sealed record Ok_(string ResultMessage) : FunctionalResult();
-    public sealed record Failed_(Failure Failure) : FunctionalResult();
+    public sealed record Ok_(string ResultMessage) : FunctionalResult<TFailure>;
 
-    public string Message => this.Match(ok => ok.ResultMessage, failed => failed.Failure.Message);
-
-    public sealed override string ToString() => $"{GetType().Name.TrimEnd('_')}: {Message}";
+    public sealed record Failed_(TFailure Failure) : FunctionalResult<TFailure>;
 }

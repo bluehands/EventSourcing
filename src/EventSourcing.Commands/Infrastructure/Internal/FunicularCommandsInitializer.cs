@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reactive;
 using System.Threading.Tasks;
 using EventSourcing.Infrastructure;
 using EventSourcing.Infrastructure.Internal;
@@ -8,7 +9,10 @@ using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
 
-public class FunicularEventSourcingContext(EventReplayState eventReplayState, IServiceScopeFactory scopeFactory, ILogger<EventSourcingContext>? logger = null) 
+public class FunicularEventSourcingContext(
+    IEventReplayState eventReplayState,
+    IServiceScopeFactory scopeFactory,
+    ILogger<EventSourcingContext>? logger = null) 
     : EventSourcingContext(scopeFactory, logger)
 {
     protected override async Task Initialize(Type phase, IEnumerable<IInitializer> initializers)
@@ -20,7 +24,11 @@ public class FunicularEventSourcingContext(EventReplayState eventReplayState, IS
     }
 }
 
-sealed class FunicularCommandsInitializer(CommandProcessorSubscription commandProcessorSubscription, EventReplayState eventReplayState) : IInitializer<EventReplayStarted>
+internal sealed class FunicularCommandsInitializer<TFailure, TOperationResult>(
+    CommandProcessorSubscription<TFailure, TOperationResult> commandProcessorSubscription,
+    EventReplayState<TFailure, TOperationResult> eventReplayState) : IInitializer<EventReplayStarted>
+    where TFailure : IFailure<TFailure>
+    where TOperationResult : IResult<Unit, TFailure, TOperationResult>
 {
     public Task Initialize()
     {

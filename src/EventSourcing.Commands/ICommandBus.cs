@@ -15,17 +15,23 @@ public interface ICommandBus
 
 public static class CommandBusExtension
 {
-    public static async Task<OperationResult<Unit>> SendCommandAndWaitUntilApplied(this ICommandBus commandBus, Command command, IObservable<Event> eventStream)
+    public static async Task<TOperationResult> SendCommandAndWaitUntilApplied<TFailure, TOperationResult>(this ICommandBus commandBus, Command command, IObservable<Event> eventStream)
+        where TFailure : IFailure<TFailure>
+        where TOperationResult : IResult<Unit, TFailure>
     {
-        var commandProcessed = await commandBus.SendAndWaitForProcessedEvent(command, eventStream).ConfigureAwait(false);
+        var commandProcessed = await commandBus.SendAndWaitForProcessedEvent<TFailure, TOperationResult>(command, eventStream).ConfigureAwait(false);
         return commandProcessed.Payload.OperationResult;
     }
 
-    public static Task<Event<CommandProcessed>> SendAndWaitForProcessedEvent(this ICommandBus commandBus, Command command, IObservable<Event> events) =>
-        commandBus.SendAndWaitForProcessedEvent(command, events
-            .OfType<Event<CommandProcessed>>());
+    public static Task<Event<CommandProcessed<TFailure, TOperationResult>>> SendAndWaitForProcessedEvent<TFailure, TOperationResult>(this ICommandBus commandBus, Command command, IObservable<Event> events)
+        where TFailure : IFailure<TFailure>
+        where TOperationResult : IResult<Unit, TFailure>
+        => commandBus.SendAndWaitForProcessedEvent(command, events
+            .OfType<Event<CommandProcessed<TFailure, TOperationResult>>>());
 
-    public static async Task<Event<CommandProcessed>> SendAndWaitForProcessedEvent(this ICommandBus commandBus, Command command, IObservable<Event<CommandProcessed>> commandProcessedEvents)
+    public static async Task<Event<CommandProcessed<TFailure, TOperationResult>>> SendAndWaitForProcessedEvent<TFailure, TOperationResult>(this ICommandBus commandBus, Command command, IObservable<Event<CommandProcessed<TFailure, TOperationResult>>> commandProcessedEvents)
+        where TFailure : IFailure<TFailure>
+        where TOperationResult : IResult<Unit, TFailure>
     {
         var processed = commandProcessedEvents
             .FirstAsync(e => e.Payload.CommandId == command.Id)

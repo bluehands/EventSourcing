@@ -12,8 +12,10 @@ public static class EventTypes
     public const string CommandProcessed = "CommandProcessed";
 }
 
-public record CommandProcessed(CommandId CommandId, OperationResult<Unit> OperationResult, string? ResultMessage)
+public record CommandProcessed<TFailure, TOperationResult>(CommandId CommandId, TOperationResult OperationResult, string? ResultMessage)
     : EventPayload(StreamIds.Command, EventTypes.CommandProcessed)
+    where TFailure : IFailure<TFailure>
+    where TOperationResult : IResult<Unit, TFailure>
 {
     public override string ToString() => $"{CommandId} processed with result {OperationResult}: {ResultMessage}";
 }
