@@ -1,24 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
 using FunicularSwitch.Generators;
 
 namespace EventSourcing.Funicular.Commands;
 
 [UnionType(CaseOrder = CaseOrder.AsDeclared)]
-public abstract partial record CommandResult<TFailure>(CommandId CommandId)
+public abstract partial record CommandResult<TFailure>(CommandId CommandId) where TFailure : notnull
 {
     public sealed record Processed_(
-        IReadOnlyCollection<IEventPayload> ResultEvents,
         CommandId CommandId,
         FunctionalResult<TFailure> FunctionalResult) : CommandResult<TFailure>(CommandId)
     {
-        public override string ToString() => $"Command '{CommandId}', FunctionalResult: '{FunctionalResult}', Produced events count: {ResultEvents.Count}";
+        public override string ToString() => $"Command '{CommandId}', FunctionalResult: '{FunctionalResult}'";
     }
 
-    public sealed record Faulted_(Exception Exception, CommandId CommandId, string Message)
+    public sealed record Faulted_(CommandId CommandId, string Message, Exception? ErrorDetails)
         : CommandResult<TFailure>(CommandId)
     {
-        public override string ToString() => $"Command {CommandId} faulted: {Message} - {Exception}";
+        public override string ToString() => $"Command {CommandId} faulted: {Message}{(ErrorDetails != null ?  $" - Details: {ErrorDetails}" : "")}";
     }
 
     public sealed record Unhandled_(CommandId CommandId, string Message) : CommandResult<TFailure>(CommandId)

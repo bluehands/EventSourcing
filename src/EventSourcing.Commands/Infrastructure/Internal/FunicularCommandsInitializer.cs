@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reactive;
 using System.Threading.Tasks;
 using EventSourcing.Infrastructure;
 using EventSourcing.Infrastructure.Internal;
@@ -24,11 +23,10 @@ public class FunicularEventSourcingContext(
     }
 }
 
-internal sealed class FunicularCommandsInitializer<TFailure, TResult>(
-    CommandProcessorSubscription<TFailure, TResult> commandProcessorSubscription,
-    EventReplayState<TFailure, TResult> eventReplayState) : IInitializer<EventReplayStarted>
+internal sealed class FunicularCommandsInitializer<TFailure>(
+    CommandProcessorSubscription<TFailure> commandProcessorSubscription,
+    EventReplayState<TFailure> eventReplayState) : IInitializer<EventReplayStarted>
     where TFailure : IFailure<TFailure>
-    where TResult : IResult<Unit, TFailure, TResult>
 {
     public Task Initialize()
     {

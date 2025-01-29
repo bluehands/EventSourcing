@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Reactive;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
 
-internal class EventReplayState<TFailure, TResult>(CommandBus commandBus, EventStream<Event> eventStream, ILogger<EventReplayState<TFailure, TResult>>? logger = null)
+internal class EventReplayState<TFailure>(CommandBus commandBus, EventStream<Event> eventStream, ILogger<EventReplayState<TFailure>>? logger = null)
     : IEventReplayState
     where TFailure : IFailure<TFailure>
-    where TResult : IResult<Unit, TFailure>
 {
     Task<Event>? _noopProcessed;
 
@@ -21,7 +19,7 @@ internal class EventReplayState<TFailure, TResult>(CommandBus commandBus, EventS
     async Task<Event> SendNoopAndWaitForProcessedEvent()
     {
         var sw = Stopwatch.StartNew();
-        var processed = await commandBus.SendAndWaitForProcessedEvent<TFailure, TResult>(new NoopCommand(), eventStream)
+        var processed = await commandBus.SendAndWaitForProcessedEvent<TFailure>(new NoopCommand(), eventStream)
             .ConfigureAwait(false);
          logger?.LogInformation("Replayed done. Replayed events up to position {ReplayPosition} in {ReplayDuration} s.", processed.Position, sw.Elapsed.TotalSeconds.ToString("N3"));
          return processed;
@@ -35,5 +33,5 @@ public record NoopCommand : Command;
 public class NoopCommandProcessor<TFailure> : SynchronousCommandProcessor<NoopCommand, TFailure>
     where TFailure : IFailure<TFailure>
 {
-    public override CommandResult<TFailure>.Processed_ ProcessSync(NoopCommand command) => command.ToEmptyProcessingResult<TFailure>($"Noop command {command}");
+    public override ProcessingResult<TFailure> ProcessSync(NoopCommand command) => ProcessingResult<TFailure>.Ok($"Noop command {command}");
 }

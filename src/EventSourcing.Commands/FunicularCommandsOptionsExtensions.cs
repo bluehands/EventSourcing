@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reactive;
 using EventSourcing.Funicular.Commands;
 using EventSourcing.Funicular.Commands.Infrastructure;
 using EventSourcing.Funicular.Commands.SerializablePayloads;
@@ -9,14 +8,13 @@ namespace EventSourcing;
 
 public static class FunicularCommandsOptionsExtensions
 {
-    public static EventSourcingOptionsBuilder UseFunicularCommands<TFailure, TFailurePayload, TResult>(
+    public static EventSourcingOptionsBuilder UseFunicularCommands<TFailure, TFailurePayload>(
         this EventSourcingOptionsBuilder optionsBuilder,
-        Action<FunicularCommandsOptionsBuilder<TFailure, TFailurePayload, TResult>>? funicularCommandsOptionsAction = null)
+        Action<FunicularCommandsOptionsBuilder<TFailure, TFailurePayload>>? funicularCommandsOptionsAction = null)
         where TFailure : IFailure<TFailure>
         where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload>
-        where TResult : IResult<Unit, TFailure, TResult>
     {
-        var builder = new FunicularCommandsOptionsBuilder<TFailure, TFailurePayload, TResult>(optionsBuilder);
+        var builder = new FunicularCommandsOptionsBuilder<TFailure, TFailurePayload>(optionsBuilder);
 
         funicularCommandsOptionsAction?.Invoke(builder);
 

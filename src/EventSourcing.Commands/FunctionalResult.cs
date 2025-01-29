@@ -3,7 +3,7 @@
 namespace EventSourcing.Funicular.Commands;
 
 [UnionType(CaseOrder = CaseOrder.AsDeclared)]
-public abstract partial record FunctionalResult<TFailure>
+public abstract partial record FunctionalResult<TFailure> where TFailure : notnull
 {
     public sealed record Ok_(string ResultMessage) : FunctionalResult<TFailure>;
 
