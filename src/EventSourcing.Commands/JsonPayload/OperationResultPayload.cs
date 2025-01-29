@@ -2,8 +2,7 @@
 
 public record OperationResultPayload<TFailurePayload>(
     OperationResultUnionCases UnionCase,
-    TFailurePayload? Failure,
-    bool Value)
+    TFailurePayload? Failure)
     where TFailurePayload : class;
 
 public enum OperationResultUnionCases
