@@ -20,7 +20,7 @@ class Program
                 //serviceCollection.AddEventSourcing(b =>
                 //    b
                 //        .UseSqliteEventStore(@"Data Source=c:\temp\EventStore.db")
-                //        .UseDefaultFunicularCommands()
+                //        .UseFunicularCommands()
                 //);
 
                 serviceCollection.AddEventSourcing(
