@@ -13,14 +13,14 @@ public record CommandProcessedPayload<TFailurePayload>(
 
 public enum FunctionalResultUnionCases
 {
-    Ok,
-    Failed
+    Ok = 0,
+    Failed = 1
 }
 
 public enum CommandResultUnionCases
 {
-    Processed,
-    Faulted,
-    Unhandled,
-    Cancelled
+    Processed = 0,
+    Faulted = 1,
+    Unhandled = 2,
+    Cancelled = 3
 }
