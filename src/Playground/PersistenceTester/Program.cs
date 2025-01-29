@@ -26,7 +26,7 @@ class Program
                     eventSourcing =>
                         eventSourcing
                             .UseSqlServerEventStore("Data Source=.\\SQLSERVEREXPRESS;Initial Catalog=TestEventStore2;Integrated Security=True;TrustServerCertificate=True;")
-                            .UseDefaultFunicularCommands()
+                            .UseFunicularCommands()
                 );
 
                 serviceCollection.AddInitializer<EventListener>();

@@ -2,20 +2,20 @@
 
 namespace EventSourcing.Funicular.Commands.JsonPayload;
 
-public class CommandProcessedMapper<TFailure, TFailurePayload, TOperationResult>
-    : EventPayloadMapper<CommandProcessed<TFailure, TOperationResult>, CommandProcessedPayload<TFailurePayload>>
+public class CommandProcessedMapper<TFailure, TFailurePayload, TResult>
+    : EventPayloadMapper<CommandProcessed<TFailure, TResult>, CommandProcessedPayload<TFailurePayload>>
     where TFailure : IFailure<TFailure>
 	where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload>
-	where TOperationResult : IResult<Unit, TFailure, TOperationResult>
+	where TResult : IResult<Unit, TFailure, TResult>
 {
-    protected override Commands.CommandProcessed<TFailure, TOperationResult> MapFromSerializablePayload(CommandProcessedPayload<TFailurePayload> serialized, StreamId streamId) =>
+    protected override Commands.CommandProcessed<TFailure, TResult> MapFromSerializablePayload(CommandProcessedPayload<TFailurePayload> serialized, StreamId streamId) =>
 		new(CommandId: new(Id: serialized.CommandId),
 			OperationResult: serialized.OperationResult.UnionCase == OperationResultUnionCases.Ok
-				? TOperationResult.Ok(value: Unit.Default)
-				: TOperationResult.Error(serialized.OperationResult.Failure!.ToFailure()),
+				? TResult.Ok(value: Unit.Default)
+				: TResult.Error(serialized.OperationResult.Failure!.ToFailure()),
 			ResultMessage: serialized.ResultMessage);
 
-	protected override CommandProcessedPayload<TFailurePayload> MapToSerializablePayload(Commands.CommandProcessed<TFailure, TOperationResult> payload) => new(
+	protected override CommandProcessedPayload<TFailurePayload> MapToSerializablePayload(Commands.CommandProcessed<TFailure, TResult> payload) => new(
 		CommandId: payload.CommandId.Id,
 		OperationResult: Map(source: payload.OperationResult),
 		ResultMessage: payload.ResultMessage

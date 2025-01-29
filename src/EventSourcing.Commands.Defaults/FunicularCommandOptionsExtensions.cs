@@ -6,8 +6,8 @@ namespace EventSourcing.Funicular.Commands.Defaults;
 
 public static class FunicularCommandOptionsExtensions
 {
-    public static EventSourcingOptionsBuilder UseDefaultFunicularCommands(this EventSourcingOptionsBuilder optionsBuilder,
-        Action<FunicularCommandsOptionsBuilder<Failure, FailurePayload, OperationResult<Unit>>>? funicularCommandOptionsAction = null)
+    public static EventSourcingOptionsBuilder UseFunicularCommands(this EventSourcingOptionsBuilder optionsBuilder,
+        Action<FunicularCommandsOptionsBuilder<Failure, FailurePayload, Result<Unit>>>? funicularCommandOptionsAction = null)
         => optionsBuilder
-            .UseFunicularCommands<Failure, FailurePayload, OperationResult<Unit>>(funicularCommandOptionsAction);
+            .UseFunicularCommands<Failure, FailurePayload, Result<Unit>>(funicularCommandOptionsAction);
 }

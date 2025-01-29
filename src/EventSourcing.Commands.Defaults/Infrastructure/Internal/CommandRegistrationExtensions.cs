@@ -13,6 +13,6 @@ public static class CommandRegistrationExtensions
         Func<ScopedEventStore> getEventStore,
         ILogger? logger,
         WakeUp? eventPollWakeUp)
-        => commands.SubscribeCommandProcessors<Failure, OperationResult<Unit>>(
+        => commands.SubscribeCommandProcessors<Failure, Result<Unit>>(
             getCommandProcessor, getEventStore, logger, eventPollWakeUp);
 }

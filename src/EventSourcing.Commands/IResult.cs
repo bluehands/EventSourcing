@@ -10,11 +10,11 @@ public interface IResult<out TValue, out TFailure>
         Func<TFailure, TResult> error);
 }
 
-public interface IResult<TValue, TFailure, out TOperationResult>
+public interface IResult<TValue, TFailure, out TResult>
     : IResult<TValue, TFailure>
     where TFailure : IFailure<TFailure>
 {
-    static abstract TOperationResult Ok(TValue value);
+    static abstract TResult Ok(TValue value);
 
-    static abstract TOperationResult Error(TFailure failure);
+    static abstract TResult Error(TFailure failure);
 }

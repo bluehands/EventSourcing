@@ -11,19 +11,19 @@ namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
 
 public static class CommandRegistrationExtensions
 {
-    public static IDisposable SubscribeCommandProcessors<TFailure, TOperationResult>(
+    public static IDisposable SubscribeCommandProcessors<TFailure, TResult>(
         this IObservable<Command> commands,
         GetCommandProcessor<TFailure> getCommandProcessor,
         Func<ScopedEventStore> getEventStore,
         ILogger? logger,
         WakeUp? eventPollWakeUp)
         where TFailure : IFailure<TFailure>
-        where TOperationResult : IResult<Unit, TFailure, TOperationResult>
+        where TResult : IResult<Unit, TFailure, TResult>
         => commands
             .Process(getCommandProcessor, logger)
             .SelectMany(async processingResult =>
             {
-                var commandProcessed = processingResult.ToCommandProcessedEvent<TFailure, TOperationResult>();
+                var commandProcessed = processingResult.ToCommandProcessedEvent<TFailure, TResult>();
                 var payloads = processingResult is CommandResult<TFailure>.Processed_ p
                     ? [.. p.ResultEvents, commandProcessed]
                     : new[] { (IEventPayload)commandProcessed };
@@ -35,21 +35,21 @@ public static class CommandRegistrationExtensions
                 }
                 catch (Exception e)
                 {
-                    await OnEventWriteError<TFailure, TOperationResult>(eventStore, payloads, e, processingResult, eventPollWakeUp, logger).ConfigureAwait(false);
+                    await OnEventWriteError<TFailure, TResult>(eventStore, payloads, e, processingResult, eventPollWakeUp, logger).ConfigureAwait(false);
                 }
 
                 return Unit.Default;
             })
             .Subscribe();
 
-    static async Task OnEventWriteError<TFailure, TOperationResult>(IEventStore eventStore,
+    static async Task OnEventWriteError<TFailure, TResult>(IEventStore eventStore,
         IEnumerable<IEventPayload> payloads,
         Exception e,
         CommandResult<TFailure> commandResult,
         WakeUp? eventPollWakeUp,
         ILogger? logger)
         where TFailure : IFailure<TFailure>
-        where TOperationResult : IResult<Unit, TFailure, TOperationResult>
+        where TResult : IResult<Unit, TFailure, TResult>
     {
         try
         {
@@ -57,7 +57,7 @@ public static class CommandRegistrationExtensions
             logger?.LogError(e, "Failed to persist events: {eventPayloads}. Trying to persist faulted event for command...", payloadInfo);
             var eventPayloads = new[]
             {
-                new CommandProcessed<TFailure, TOperationResult>(commandResult.CommandId, TOperationResult.Error(TFailure.Internal($"Failed to persist events: {payloadInfo}: {e}")), "Event write error")
+                new CommandProcessed<TFailure, TResult>(commandResult.CommandId, TResult.Error(TFailure.Internal($"Failed to persist events: {payloadInfo}: {e}")), "Event write error")
             };
             await InternalWriteEvents(eventStore, eventPayloads, eventPollWakeUp).ConfigureAwait(false);
         }
@@ -87,20 +87,20 @@ public static class CommandRegistrationExtensions
 
     static bool IsDebugEnabled(ILogger? logger) => logger?.IsEnabled(LogLevel.Debug) ?? false;
 
-    static CommandProcessed<TFailure, TOperationResult> ToCommandProcessedEvent<TFailure, TOperationResult>(this CommandResult<TFailure> r)
+    static CommandProcessed<TFailure, TResult> ToCommandProcessedEvent<TFailure, TResult>(this CommandResult<TFailure> r)
         where TFailure : IFailure<TFailure>
-        where TOperationResult : IResult<Unit, TFailure, TOperationResult>
+        where TResult : IResult<Unit, TFailure, TResult>
     {
         var t = r.Match(
             processed: p => (operationResult: p.FunctionalResult.Match(
-                    ok: _ => TOperationResult.Ok(Unit.Default),
-                    failed: error => TOperationResult.Error(error.Failure)
+                    ok: _ => TResult.Ok(Unit.Default),
+                    failed: error => TResult.Error(error.Failure)
                 )
                 , message: (string?)p.FunctionalResult.Match(ok => ok.ResultMessage, error => error.Failure.Message)
             ),
-            unhandled: u => (operationResult: TOperationResult.Error(TFailure.Internal(u.Message)), null),
-            faulted: f => (operationResult: TOperationResult.Error(TFailure.Internal(f.ToString())), null),
-            cancelled: c => (operationResult: TOperationResult.Error(TFailure.Cancelled(c.ToString())), null)
+            unhandled: u => (operationResult: TResult.Error(TFailure.Internal(u.Message)), null),
+            faulted: f => (operationResult: TResult.Error(TFailure.Internal(f.ToString())), null),
+            cancelled: c => (operationResult: TResult.Error(TFailure.Cancelled(c.ToString())), null)
         );
         return new(r.CommandId, t.operationResult, t.message);
     }

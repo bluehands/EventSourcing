@@ -12,10 +12,10 @@ using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
 
-public record FunicularCommandsOptionsExtension<TFailure, TFailurePayload, TOperationResult>(IReadOnlyCollection<Assembly>? CommandProcessorAssemblies) : IEventSourcingOptionsExtension
+public record FunicularCommandsOptionsExtension<TFailure, TFailurePayload, TResult>(IReadOnlyCollection<Assembly>? CommandProcessorAssemblies) : IEventSourcingOptionsExtension
     where TFailure : IFailure<TFailure>
     where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload>
-    where TOperationResult : IResult<Unit, TFailure, TOperationResult>
+    where TResult : IResult<Unit, TFailure, TResult>
 {
     public FunicularCommandsOptionsExtension() : this(default(IReadOnlyCollection<Assembly>))
     {
@@ -30,11 +30,11 @@ public record FunicularCommandsOptionsExtension<TFailure, TFailurePayload, TOper
         serviceCollection
             .AddSingleton<CommandBus>()
             .AddSingleton<ICommandBus>(sp => sp.GetRequiredService<CommandBus>())
-            .AddSingleton<CommandProcessorSubscription<TFailure, TOperationResult>>()
-            .AddSingleton<EventReplayState<TFailure, TOperationResult>>()
-            .AddSingleton<IEventReplayState>(sp => sp.GetRequiredService<EventReplayState<TFailure, TOperationResult>>())
+            .AddSingleton<CommandProcessorSubscription<TFailure, TResult>>()
+            .AddSingleton<EventReplayState<TFailure, TResult>>()
+            .AddSingleton<IEventReplayState>(sp => sp.GetRequiredService<EventReplayState<TFailure, TResult>>())
             .AddSingleton<EventSourcingContext, FunicularEventSourcingContext>()
-            .AddInitializer<FunicularCommandsInitializer<TFailure, TOperationResult>>();
+            .AddInitializer<FunicularCommandsInitializer<TFailure, TResult>>();
 
         serviceCollection.AddTransient<CommandProcessor<NoopCommand, TFailure>, NoopCommandProcessor<TFailure>>();
         AddCommandProcessors(serviceCollection, CommandProcessorAssemblies ?? new[] { EventSourcingOptionDefaults.DefaultImplementationAssembly });
@@ -43,7 +43,7 @@ public record FunicularCommandsOptionsExtension<TFailure, TFailurePayload, TOper
     public void AddDefaultServices(IServiceCollection serviceCollection, EventSourcingOptions eventSourcingOptions)
     {
         var lifetime = eventSourcingOptions.FindExtension<EventSourcingOptionsExtension>()?.EventPayloadMapperLifetime ?? EventSourcingOptionDefaults.DefaultEventPayloadMapperLifetime;
-        serviceCollection.Add(new(typeof(EventPayloadMapper), typeof(CommandProcessedMapper<TFailure, TFailurePayload, TOperationResult>), lifetime));
+        serviceCollection.Add(new(typeof(EventPayloadMapper), typeof(CommandProcessedMapper<TFailure, TFailurePayload, TResult>), lifetime));
     }
 
     static IServiceCollection AddCommandProcessors(IServiceCollection serviceCollection, IEnumerable<Assembly> commandProcessorAssemblies)
@@ -77,20 +77,20 @@ public record FunicularCommandsOptionsExtension<TFailure, TFailurePayload, TOper
     }
 }
 
-sealed class CommandProcessorSubscription<TFailure, TOperationResult>(
+sealed class CommandProcessorSubscription<TFailure, TResult>(
     CommandBus commandBus,
     IServiceScopeFactory serviceScopeFactory,
     WakeUp? wakeUp = null,
     ILogger<CommandBus>? logger = null)
     : IDisposable
     where TFailure : IFailure<TFailure>
-    where TOperationResult : IResult<Unit, TFailure, TOperationResult>
+    where TResult : IResult<Unit, TFailure, TResult>
 {
     IDisposable? _subscription;
 
     internal void SubscribeCommandProcessors()
     {
-        _subscription = commandBus.SubscribeCommandProcessors<TFailure, TOperationResult>(commandType =>
+        _subscription = commandBus.SubscribeCommandProcessors<TFailure, TResult>(commandType =>
         {
             var commandProcessorType = typeof(CommandProcessor<,>).MakeGenericType(commandType, typeof(TFailure));
 
