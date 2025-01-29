@@ -4,16 +4,16 @@ namespace EventSourcing.Funicular.Commands.Defaults;
 
 public static class CommandBusExtensions
 {
-    public static Task<OperationResult<Unit>> SendCommandAndWaitUntilApplied(this ICommandBus commandBus,
+    public static Task<Result<Unit>> SendCommandAndWaitUntilApplied(this ICommandBus commandBus,
         Command command, IObservable<Event> eventStream)
-        => commandBus.SendCommandAndWaitUntilApplied<Failure, OperationResult<Unit>>(command, eventStream);
+        => commandBus.SendCommandAndWaitUntilApplied<Failure, Result<Unit>>(command, eventStream);
 
-    public static Task<Event<CommandProcessed<Failure, OperationResult<Unit>>>> SendAndWaitForProcessedEvent(
+    public static Task<Event<CommandProcessed<Failure, Result<Unit>>>> SendAndWaitForProcessedEvent(
         this ICommandBus commandBus, Command command, IObservable<Event> events)
-        => commandBus.SendAndWaitForProcessedEvent<Failure, OperationResult<Unit>>(command, events);
+        => commandBus.SendAndWaitForProcessedEvent<Failure, Result<Unit>>(command, events);
 
-    public static Task<Event<CommandProcessed<Failure, OperationResult<Unit>>>> SendAndWaitForProcessedEvent(
+    public static Task<Event<CommandProcessed<Failure, Result<Unit>>>> SendAndWaitForProcessedEvent(
         this ICommandBus commandBus, Command command,
-        IObservable<Event<CommandProcessed<Failure, OperationResult<Unit>>>> commandProcessedEvents)
-        => commandBus.SendAndWaitForProcessedEvent<Failure, OperationResult<Unit>>(command, commandProcessedEvents);
+        IObservable<Event<CommandProcessed<Failure, Result<Unit>>>> commandProcessedEvents)
+        => commandBus.SendAndWaitForProcessedEvent<Failure, Result<Unit>>(command, commandProcessedEvents);
 }

@@ -2,10 +2,10 @@
 
 public static class DictionaryExtensions
 {
-    public static OperationResult<TValue> Get<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dictionary,
+    public static Result<TValue> Get<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dictionary,
         TKey key)
         => dictionary.TryGetValue(key, out var value)
-            ? OperationResult.Ok(value)
-            : OperationResult.Error<TValue>(
+            ? Result.Ok(value)
+            : Result.Error<TValue>(
                 Failure.NotFound($"{typeof(TValue).Name} with key {key} not found."));
 }

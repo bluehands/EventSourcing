@@ -9,14 +9,14 @@ namespace EventSourcing;
 
 public static class FunicularCommandsOptionsExtensions
 {
-    public static EventSourcingOptionsBuilder UseFunicularCommands<TFailure, TFailurePayload, TOperationResult>(
+    public static EventSourcingOptionsBuilder UseFunicularCommands<TFailure, TFailurePayload, TResult>(
         this EventSourcingOptionsBuilder optionsBuilder,
-        Action<FunicularCommandsOptionsBuilder<TFailure, TFailurePayload, TOperationResult>>? funicularCommandsOptionsAction = null)
+        Action<FunicularCommandsOptionsBuilder<TFailure, TFailurePayload, TResult>>? funicularCommandsOptionsAction = null)
         where TFailure : IFailure<TFailure>
         where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload>
-        where TOperationResult : IResult<Unit, TFailure, TOperationResult>
+        where TResult : IResult<Unit, TFailure, TResult>
     {
-        var builder = new FunicularCommandsOptionsBuilder<TFailure, TFailurePayload, TOperationResult>(optionsBuilder);
+        var builder = new FunicularCommandsOptionsBuilder<TFailure, TFailurePayload, TResult>(optionsBuilder);
 
         funicularCommandsOptionsAction?.Invoke(builder);
 

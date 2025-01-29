@@ -6,10 +6,10 @@ using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
 
-internal class EventReplayState<TFailure, TOperationResult>(CommandBus commandBus, EventStream<Event> eventStream, ILogger<EventReplayState<TFailure, TOperationResult>>? logger = null)
+internal class EventReplayState<TFailure, TResult>(CommandBus commandBus, EventStream<Event> eventStream, ILogger<EventReplayState<TFailure, TResult>>? logger = null)
     : IEventReplayState
     where TFailure : IFailure<TFailure>
-    where TOperationResult : IResult<Unit, TFailure>
+    where TResult : IResult<Unit, TFailure>
 {
     Task<Event>? _noopProcessed;
 
@@ -21,7 +21,7 @@ internal class EventReplayState<TFailure, TOperationResult>(CommandBus commandBu
     async Task<Event> SendNoopAndWaitForProcessedEvent()
     {
         var sw = Stopwatch.StartNew();
-        var processed = await commandBus.SendAndWaitForProcessedEvent<TFailure, TOperationResult>(new NoopCommand(), eventStream)
+        var processed = await commandBus.SendAndWaitForProcessedEvent<TFailure, TResult>(new NoopCommand(), eventStream)
             .ConfigureAwait(false);
          logger?.LogInformation("Replayed done. Replayed events up to position {ReplayPosition} in {ReplayDuration} s.", processed.Position, sw.Elapsed.TotalSeconds.ToString("N3"));
          return processed;

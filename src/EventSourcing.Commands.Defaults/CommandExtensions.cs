@@ -10,37 +10,37 @@ public static class CommandExtensions
         => command.ToOkResult<Failure>(resultEvent, resultMessage);
 }
 
-public static class DefaultOperationResultExtensions
+public static class DefaultResultExtensions
 {
-    public static CommandResult<Failure> ToProcessedResult<T>(this OperationResult<T> operationResult,
+    public static CommandResult<Failure> ToProcessedResult<T>(this Result<T> result,
         Command command, string? successMessage = null)
         where T : IEventPayload
-        => operationResult.ToProcessedResult<T, Failure>(command, successMessage);
+        => result.ToProcessedResult<T, Failure>(command, successMessage);
 
     public static CommandResult<Failure>
-        ToProcessedResult<T>(this OperationResult<T> operationResult, Command command,
+        ToProcessedResult<T>(this Result<T> result, Command command,
             Func<T, string?>? successMessage)
         where T : IEventPayload
-        => operationResult.ToProcessedResult<T, Failure>(command, successMessage);
+        => result.ToProcessedResult<T, Failure>(command, successMessage);
 
     public static CommandResult<Failure>
-        ToProcessedResultMulti<TCollection>(this OperationResult<TCollection> operationResult, Command command,
+        ToProcessedResultMulti<TCollection>(this Result<TCollection> result, Command command,
             Func<TCollection, string>? successMessage = null)
         where TCollection : IReadOnlyCollection<IEventPayload>
-        => operationResult
+        => result
             .ToProcessedResultMulti<TCollection, Failure>(command, successMessage);
 
     public static CommandResult<Failure>
         ToProcessedResultMulti<TCollection>(
-            this OperationResult<(TCollection eventPayloads, string successMessage)> operationResult,
+            this Result<(TCollection eventPayloads, string successMessage)> result,
             Command command)
         where TCollection : IReadOnlyCollection<IEventPayload>
-        => operationResult
+        => result
             .ToProcessedResultMulti<TCollection, Failure>(command);
 
     public static CommandResult<Failure>
-        ToProcessedResult<T>(this OperationResult<(T eventPayload, string successMessage)> operationResult,
+        ToProcessedResult<T>(this Result<(T eventPayload, string successMessage)> result,
             Command command)
         where T : EventPayload
-        => operationResult.ToProcessedResult<T, Failure>(command);
+        => result.ToProcessedResult<T, Failure>(command);
 }
