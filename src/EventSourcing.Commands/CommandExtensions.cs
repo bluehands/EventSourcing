@@ -31,46 +31,46 @@ public static class CommandExtensions
 
 public static class ResultExtensions
 {
-    public static CommandResult<TFailure> ToProcessedResult<T, TFailure>(this IResult<T, TFailure> operationResult, Command command, string? successMessage = null)
+    public static CommandResult<TFailure> ToProcessedResult<T, TFailure>(this IResult<T, TFailure> result, Command command, string? successMessage = null)
         where T : IEventPayload
         where TFailure : IFailure<TFailure>
-        => operationResult.ToProcessedResult(command, successMessage != null ? _ => successMessage : null);
+        => result.ToProcessedResult(command, successMessage != null ? _ => successMessage : null);
 
     public static CommandResult<TFailure>
-        ToProcessedResult<T, TFailure>(this IResult<T, TFailure> operationResult, Command command, Func<T, string?>? successMessage)
+        ToProcessedResult<T, TFailure>(this IResult<T, TFailure> result, Command command, Func<T, string?>? successMessage)
         where T : IEventPayload
         where TFailure : IFailure<TFailure>
-        => operationResult
+        => result
             .Match(
                 ok => command.ToProcessedResult(ok, FunctionalResult<TFailure>.Ok(successMessage?.Invoke(ok) ?? command.DefaultOkMessage())),
                 failure => command.ToFailureResult(failure, failure.Message)
             );
 
     public static CommandResult<TFailure>
-        ToProcessedResultMulti<TCollection, TFailure>(this IResult<TCollection, TFailure> operationResult, Command command, Func<TCollection, string>? successMessage = null)
+        ToProcessedResultMulti<TCollection, TFailure>(this IResult<TCollection, TFailure> result, Command command, Func<TCollection, string>? successMessage = null)
         where TCollection : IReadOnlyCollection<IEventPayload>
         where TFailure : IFailure<TFailure>
-        => operationResult
+        => result
             .Match(
                 ok => command.ToProcessedResult(ok, FunctionalResult<TFailure>.Ok(successMessage?.Invoke(ok) ?? command.DefaultOkMessage())),
                 failure => command.ToFailureResult(failure, failure.Message)
             );
 
     public static CommandResult<TFailure>
-        ToProcessedResultMulti<TCollection, TFailure>(this IResult<(TCollection eventPayloads, string successMessage), TFailure> operationResult, Command command)
+        ToProcessedResultMulti<TCollection, TFailure>(this IResult<(TCollection eventPayloads, string successMessage), TFailure> result, Command command)
         where TCollection : IReadOnlyCollection<IEventPayload>
         where TFailure : IFailure<TFailure>
-        => operationResult
+        => result
             .Match(
                 ok => command.ToProcessedResult(ok.eventPayloads, FunctionalResult<TFailure>.Ok(ok.successMessage)),
                 failure => command.ToFailureResult(failure, failure.Message)
             );
 
     public static CommandResult<TFailure>
-        ToProcessedResult<T, TFailure>(this IResult<(T eventPayload, string successMessage), TFailure> operationResult, Command command)
+        ToProcessedResult<T, TFailure>(this IResult<(T eventPayload, string successMessage), TFailure> result, Command command)
         where T : EventPayload
         where TFailure : IFailure<TFailure>
-        => operationResult
+        => result
             .Match(
                 ok => command.ToProcessedResult(ok.eventPayload, FunctionalResult<TFailure>.Ok(ok.successMessage)),
                 failure => command.ToFailureResult(failure, failure.Message)

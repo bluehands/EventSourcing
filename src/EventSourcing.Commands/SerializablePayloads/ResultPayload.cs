@@ -1,11 +1,11 @@
 ﻿namespace EventSourcing.Funicular.Commands.SerializablePayloads;
 
-public record OperationResultPayload<TFailurePayload>(
-    OperationResultUnionCases UnionCase,
+public record ResultPayload<TFailurePayload>(
+    ResultUnionCases UnionCase,
     TFailurePayload? Failure)
     where TFailurePayload : class;
 
-public enum OperationResultUnionCases
+public enum ResultUnionCases
 {
     Ok,
     Error

@@ -92,16 +92,16 @@ public static class CommandRegistrationExtensions
         where TResult : IResult<Unit, TFailure, TResult>
     {
         var t = r.Match(
-            processed: p => (operationResult: p.FunctionalResult.Match(
+            processed: p => (result: p.FunctionalResult.Match(
                     ok: _ => TResult.Ok(Unit.Default),
                     failed: error => TResult.Error(error.Failure)
                 )
                 , message: (string?)p.FunctionalResult.Match(ok => ok.ResultMessage, error => error.Failure.Message)
             ),
-            unhandled: u => (operationResult: TResult.Error(TFailure.Internal(u.Message)), null),
-            faulted: f => (operationResult: TResult.Error(TFailure.Internal(f.ToString())), null),
-            cancelled: c => (operationResult: TResult.Error(TFailure.Cancelled(c.ToString())), null)
+            unhandled: u => (result: TResult.Error(TFailure.Internal(u.Message)), null),
+            faulted: f => (result: TResult.Error(TFailure.Internal(f.ToString())), null),
+            cancelled: c => (result: TResult.Error(TFailure.Cancelled(c.ToString())), null)
         );
-        return new(r.CommandId, t.operationResult, t.message);
+        return new(r.CommandId, t.result, t.message);
     }
 }

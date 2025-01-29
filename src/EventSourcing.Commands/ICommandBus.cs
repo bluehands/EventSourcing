@@ -20,7 +20,7 @@ public static class CommandBusExtension
         where TResult : IResult<Unit, TFailure>
     {
         var commandProcessed = await commandBus.SendAndWaitForProcessedEvent<TFailure, TResult>(command, eventStream).ConfigureAwait(false);
-        return commandProcessed.Payload.OperationResult;
+        return commandProcessed.Payload.Result;
     }
 
     public static Task<Event<CommandProcessed<TFailure, TResult>>> SendAndWaitForProcessedEvent<TFailure, TResult>(this ICommandBus commandBus, Command command, IObservable<Event> events)
