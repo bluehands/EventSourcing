@@ -31,12 +31,12 @@ public static class CommandExtensions
 
 public static class ResultExtensions
 {
-    public static CommandResult<TFailure> ToProcessedResult<T, TFailure>(this IResult<T, TFailure> result, Command command, string? successMessage = null)
+    public static CommandResult<TFailure>.Processed_ ToProcessedResult<T, TFailure>(this IResult<T, TFailure> result, Command command, string? successMessage = null)
         where T : IEventPayload
         where TFailure : IFailure<TFailure>
         => result.ToProcessedResult(command, successMessage != null ? _ => successMessage : null);
 
-    public static CommandResult<TFailure>
+    public static CommandResult<TFailure>.Processed_
         ToProcessedResult<T, TFailure>(this IResult<T, TFailure> result, Command command, Func<T, string?>? successMessage)
         where T : IEventPayload
         where TFailure : IFailure<TFailure>
@@ -46,7 +46,7 @@ public static class ResultExtensions
                 failure => command.ToFailureResult(failure, failure.Message)
             );
 
-    public static CommandResult<TFailure>
+    public static CommandResult<TFailure>.Processed_
         ToProcessedResultMulti<TCollection, TFailure>(this IResult<TCollection, TFailure> result, Command command, Func<TCollection, string>? successMessage = null)
         where TCollection : IReadOnlyCollection<IEventPayload>
         where TFailure : IFailure<TFailure>
@@ -56,7 +56,7 @@ public static class ResultExtensions
                 failure => command.ToFailureResult(failure, failure.Message)
             );
 
-    public static CommandResult<TFailure>
+    public static CommandResult<TFailure>.Processed_
         ToProcessedResultMulti<TCollection, TFailure>(this IResult<(TCollection eventPayloads, string successMessage), TFailure> result, Command command)
         where TCollection : IReadOnlyCollection<IEventPayload>
         where TFailure : IFailure<TFailure>
@@ -66,7 +66,7 @@ public static class ResultExtensions
                 failure => command.ToFailureResult(failure, failure.Message)
             );
 
-    public static CommandResult<TFailure>
+    public static CommandResult<TFailure>.Processed_
         ToProcessedResult<T, TFailure>(this IResult<(T eventPayload, string successMessage), TFailure> result, Command command)
         where T : EventPayload
         where TFailure : IFailure<TFailure>
