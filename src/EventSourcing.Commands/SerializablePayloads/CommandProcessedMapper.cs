@@ -1,6 +1,6 @@
 ﻿using System.Reactive;
 
-namespace EventSourcing.Funicular.Commands.JsonPayload;
+namespace EventSourcing.Funicular.Commands.SerializablePayloads;
 
 public class CommandProcessedMapper<TFailure, TFailurePayload, TResult>
     : EventPayloadMapper<CommandProcessed<TFailure, TResult>, CommandProcessedPayload<TFailurePayload>>

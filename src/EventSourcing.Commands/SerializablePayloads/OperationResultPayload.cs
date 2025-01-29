@@ -1,4 +1,4 @@
-﻿namespace EventSourcing.Funicular.Commands.JsonPayload;
+﻿namespace EventSourcing.Funicular.Commands.SerializablePayloads;
 
 public record OperationResultPayload<TFailurePayload>(
     OperationResultUnionCases UnionCase,

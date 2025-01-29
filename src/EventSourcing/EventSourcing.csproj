@@ -30,7 +30,7 @@
 		<Titel>Bluehands.EventSourcing</Titel>
 		<Authors>bluehands</Authors>
 		<PackageDescription>Extensible, unobtrusive, functional and flexible multi persistence event sourcing framework for .NET. </PackageDescription>
-		<Copyright>Copyright 2024 bluehands GmbH &amp; C.ommunication KG</Copyright>
+		<Copyright>Copyright 2025 bluehands GmbH &amp; C.ommunication KG</Copyright>
 		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<!--<PackageIcon>FunicularSwitch.png</PackageIcon>-->

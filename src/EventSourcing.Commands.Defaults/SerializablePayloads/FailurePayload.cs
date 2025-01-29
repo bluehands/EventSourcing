@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
-using EventSourcing.Funicular.Commands.JsonPayload;
+using EventSourcing.Funicular.Commands.SerializablePayloads;
 
-namespace EventSourcing.Funicular.Commands.Defaults.JsonPayload;
+namespace EventSourcing.Funicular.Commands.Defaults.SerializablePayloads;
 
 public record FailurePayload(FailurePayload.UnionCases UnionCase, string? Message, IReadOnlyCollection<FailurePayload>? ChildFailures = null)
     : IFailurePayload<Failure, FailurePayload>
@@ -19,9 +19,8 @@ public record FailurePayload(FailurePayload.UnionCases UnionCase, string? Messag
 
     public Failure ToFailure() => ToFailure(this);
 
-    public static FailurePayload FromFailure(Failure failure)
-    {
-        return failure.Match(
+    public static FailurePayload FromFailure(Failure failure) =>
+        failure.Match(
             cancelled: _ => new(UnionCase: UnionCases.Cancelled, Message: failure.Message),
             conflict: _ => new(UnionCase: UnionCases.Conflict, Message: failure.Message),
             forbidden: _ => new(UnionCase: UnionCases.Forbidden, Message: failure.Message),
@@ -30,11 +29,9 @@ public record FailurePayload(FailurePayload.UnionCases UnionCase, string? Messag
             notFound: _ => new(UnionCase: UnionCases.NotFound, Message: failure.Message),
             multiple: m => new FailurePayload(UnionCase: UnionCases.Multiple, Message: null, m.Failures.Select(FromFailure).ToImmutableArray())
         );
-    }
 
-    public static Failure ToFailure(FailurePayload payload)
-    {
-        return payload.UnionCase switch
+    public static Failure ToFailure(FailurePayload payload) =>
+        payload.UnionCase switch
         {
             UnionCases.Cancelled => Failure.Cancelled(payload.Message!),
             UnionCases.Conflict => Failure.Conflict(payload.Message!),
@@ -46,5 +43,4 @@ public record FailurePayload(FailurePayload.UnionCases UnionCase, string? Messag
                 .ToImmutableArray()),
             _ => throw new ArgumentOutOfRangeException(nameof(payload), payload.UnionCase, ""),
         };
-    }
 }

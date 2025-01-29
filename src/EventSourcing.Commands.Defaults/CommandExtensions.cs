@@ -10,7 +10,7 @@ public static class CommandExtensions
         => command.ToOkResult<Failure>(resultEvent, resultMessage);
 }
 
-public static class DefaultResultExtensions
+public static class ResultExtensions
 {
     public static CommandResult<Failure> ToProcessedResult<T>(this Result<T> result,
         Command command, string? successMessage = null)

@@ -3,7 +3,7 @@ using System.Reactive;
 using EventSourcing.Infrastructure;
 using System.Reflection;
 using EventSourcing.Funicular.Commands.Infrastructure.Internal;
-using EventSourcing.Funicular.Commands.JsonPayload;
+using EventSourcing.Funicular.Commands.SerializablePayloads;
 
 namespace EventSourcing.Funicular.Commands.Infrastructure;
 

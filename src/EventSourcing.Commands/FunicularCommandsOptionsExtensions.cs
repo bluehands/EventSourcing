@@ -2,7 +2,7 @@
 using System.Reactive;
 using EventSourcing.Funicular.Commands;
 using EventSourcing.Funicular.Commands.Infrastructure;
-using EventSourcing.Funicular.Commands.JsonPayload;
+using EventSourcing.Funicular.Commands.SerializablePayloads;
 
 // ReSharper disable once CheckNamespace
 namespace EventSourcing;

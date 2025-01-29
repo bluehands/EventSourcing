@@ -30,7 +30,7 @@
 		<Titel>Bluehands.EventSourcing.Persistence.SqlServer</Titel>
 		<Authors>bluehands</Authors>
 		<PackageDescription>SqlServer persistence for EventSourcing</PackageDescription>
-		<Copyright>Copyright 2024 bluehands GmbH &amp; C.ommunication KG</Copyright>
+		<Copyright>Copyright 2025 bluehands GmbH &amp; C.ommunication KG</Copyright>
 		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<!--<PackageIcon>FunicularSwitch.png</PackageIcon>-->

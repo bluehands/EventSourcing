@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive;
 using System.Reflection;
-using EventSourcing.Funicular.Commands.JsonPayload;
+using EventSourcing.Funicular.Commands.SerializablePayloads;
 using EventSourcing.Infrastructure;
 using EventSourcing.Infrastructure.Internal;
 using Microsoft.Extensions.DependencyInjection;

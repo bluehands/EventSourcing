@@ -1,5 +1,5 @@
 ﻿using System.Reactive;
-using EventSourcing.Funicular.Commands.Defaults.JsonPayload;
+using EventSourcing.Funicular.Commands.Defaults.SerializablePayloads;
 using EventSourcing.Funicular.Commands.Infrastructure;
 
 namespace EventSourcing.Funicular.Commands.Defaults;

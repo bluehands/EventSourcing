@@ -38,19 +38,14 @@ public abstract partial record Failure(string Message) : IFailure<Failure>
             failures = m.Failures;
             return true;
         }
-        else
-        {
-            failures = null;
-            return false;
-        }
+
+        failures = null;
+        return false;
     }
 }
 
 public static class DefaultFailureExtensions
 {
     [MergeError]
-    public static Failure MergeDefaultFailure(this Failure f1, Failure f2)
-    {
-        return f1.Merge(f2);
-    }
+    public static Failure MergeDefaultFailure(this Failure f1, Failure f2) => f1.Merge(f2);
 }
