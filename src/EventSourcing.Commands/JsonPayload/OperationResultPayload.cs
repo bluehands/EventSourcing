@@ -3,7 +3,7 @@
 public record OperationResultPayload<TFailurePayload>(
     OperationResultUnionCases UnionCase,
     TFailurePayload? Failure,
-    bool Value) // TODO: TResultPayload => need to have specific handling for this?
+    bool Value)
     where TFailurePayload : class;
 
 public enum OperationResultUnionCases

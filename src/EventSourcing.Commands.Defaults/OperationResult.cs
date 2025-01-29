@@ -2,7 +2,7 @@
 
 namespace EventSourcing.Funicular.Commands.Defaults;
 
-[ResultType(errorType: typeof(Failure))] // TODO: rename
+[ResultType(errorType: typeof(Failure))]
 public abstract partial class OperationResult
 {
 }
