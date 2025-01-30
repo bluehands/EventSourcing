@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
@@ -17,7 +17,7 @@
 
 		<!--#region adapt versions here-->
 		<MajorVersion>0</MajorVersion>
-		<MinorAndPatchVersion>2.1</MinorAndPatchVersion>
+		<MinorAndPatchVersion>3.0</MinorAndPatchVersion>
 		<!--#endregion-->
 
 		<AssemblyVersion>$(MajorVersion).0.0</AssemblyVersion>
@@ -54,7 +54,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="FunicularSwitch.Generators" Version="4.1.3">
+		<PackageReference Include="FunicularSwitch.Generators" Version="4.2.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -63,10 +63,6 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\EventSourcing\EventSourcing.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Extensions\" />
 	</ItemGroup>
 
 </Project>

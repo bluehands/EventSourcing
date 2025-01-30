@@ -1,5 +1,4 @@
 ﻿using System.Reactive.Concurrency;
-using System.Reactive;
 using System.Threading;
 using System;
 using System.Reactive.Linq;
@@ -15,17 +14,13 @@ public interface ICommandBus
 
 public static class CommandBusExtension
 {
-    public static async Task<OperationResult<Unit>> SendCommandAndWaitUntilApplied(this ICommandBus commandBus, Command command, IObservable<Event> eventStream)
-    {
-        var commandProcessed = await commandBus.SendAndWaitForProcessedEvent(command, eventStream).ConfigureAwait(false);
-        return commandProcessed.Payload.OperationResult;
-    }
+    public static Task<Event<CommandProcessed<TFailure>>> SendAndWaitForProcessedEvent<TFailure>(this ICommandBus commandBus, Command command, IObservable<Event> events)
+        where TFailure : IFailure<TFailure>
+        => commandBus.SendAndWaitForProcessedEvent(command, events
+            .OfType<Event<CommandProcessed<TFailure>>>());
 
-    public static Task<Event<CommandProcessed>> SendAndWaitForProcessedEvent(this ICommandBus commandBus, Command command, IObservable<Event> events) =>
-        commandBus.SendAndWaitForProcessedEvent(command, events
-            .OfType<Event<CommandProcessed>>());
-
-    public static async Task<Event<CommandProcessed>> SendAndWaitForProcessedEvent(this ICommandBus commandBus, Command command, IObservable<Event<CommandProcessed>> commandProcessedEvents)
+    public static async Task<Event<CommandProcessed<TFailure>>> SendAndWaitForProcessedEvent<TFailure>(this ICommandBus commandBus, Command command, IObservable<Event<CommandProcessed<TFailure>>> commandProcessedEvents)
+        where TFailure : IFailure<TFailure>
     {
         var processed = commandProcessedEvents
             .FirstAsync(e => e.Payload.CommandId == command.Id)

@@ -12,7 +12,8 @@ public static class Program
 		
 		services.AddEventSourcing(es => es
             //.UseSqlServerEventStore(@"Data Source=.\SQLSERVEREXPRESS;Initial Catalog=Meetup;Integrated Security=True;TrustServerCertificate=True")
-            .UseSqliteEventStore(@"Data Source=.\EventStore.db")
+            //.UseSqliteEventStore(@"Data Source=.\EventStore.db")
+            .UseInMemoryEventStore()
             .UseFunicularCommands());
 
 		services

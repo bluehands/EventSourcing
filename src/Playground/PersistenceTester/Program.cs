@@ -1,10 +1,12 @@
 ﻿using System.Diagnostics;
 using EventSourcing;
 using EventSourcing.Funicular.Commands;
+using EventSourcing.Funicular.Commands.Defaults;
 using EventSourcing.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using static EventSourcing.Funicular.Commands.ProcessingResult<EventSourcing.Funicular.Commands.Defaults.Failure>;
 
 namespace PersistenceTester;
 
@@ -121,8 +123,8 @@ public record AddTextCommand(string Text) : Command;
 
 public class AddTextCommandProcessor : SynchronousCommandProcessor<AddTextCommand>
 {
-    public override CommandResult.Processed_ ProcessSync(AddTextCommand command) => 
-        command.ToOkResult(new TextAdded("MyJournal", "First entry", command.Text), "Added journal entry");
+    public override ProcessingResult<Failure> ProcessSync(AddTextCommand command) => 
+        Ok(new TextAdded("MyJournal", "First entry", command.Text), "Added journal entry");
 }
 
 public record TextAdded(string JournalId, string Header, string Text) : EventPayload(new("Journal", JournalId), EventTypes.TextAdded);

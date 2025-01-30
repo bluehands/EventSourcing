@@ -3,70 +3,50 @@ using System.Collections.Generic;
 
 namespace EventSourcing.Funicular.Commands;
 
-public static class CommandExtensions
+public static class ResultExtensions
 {
-    public static CommandResult.Processed_ ToFailureResult(this Command command, Failure failure, string resultMessage)
-        => command.ToEmptyProcessingResult(resultMessage, FunctionalResult.Failed(failure));
+    public static ProcessingResult<TFailure> ToProcessingResult<T, TFailure>(this IResult<T, TFailure> result, string? successMessage = null)
+        where T : IEventPayload
+        where TFailure : IFailure<TFailure>
+        => result.ToProcessingResult(successMessage != null ? _ => successMessage : null);
 
-    public static CommandResult.Processed_ ToNotFoundResult(this Command command, string resultMessage)
-        => command.ToFailureResult(Failure.NotFound(resultMessage), resultMessage);
-
-    public static CommandResult.Processed_ ToForbiddenResult(this Command command, string resultMessage)
-        => command.ToFailureResult(Failure.Forbidden(resultMessage), resultMessage);
-
-    public static CommandResult.Processed_ ToConflictResult(this Command command, string resultMessage)
-        => command.ToFailureResult(Failure.Conflict(resultMessage), resultMessage);
-
-    public static CommandResult.Processed_ ToEmptyProcessingResult(this Command command, string resultMessage, FunctionalResult? functionalResult = null)
-        => command.ToProcessedResult(Array.Empty<IEventPayload>(), functionalResult ?? FunctionalResult.Ok(resultMessage));
-
-    public static CommandResult.Processed_ ToOkResult(this Command command, IEventPayload resultEvent, string resultMessage)
-        => command.ToProcessedResult(new[] { resultEvent }, FunctionalResult.Ok(resultMessage));
-
-    public static CommandResult.Processed_ ToProcessedResult(this Command command, IEventPayload resultEvent, FunctionalResult functionalResult)
-        => command.ToProcessedResult(new[] { resultEvent }, functionalResult);
-
-    public static CommandResult.Processed_ ToProcessedResult(this Command command,
-        IReadOnlyCollection<IEventPayload> resultEvents, FunctionalResult functionalResult) =>
-        new(resultEvents, command.Id, functionalResult);
-
-    internal static string DefaultOkMessage(this Command command) => $"Successfully processed command {command}";
-}
-
-public static partial class OperationResultExtensions
-{
-    public static CommandResult.Processed_ ToProcessedResult<T>(this OperationResult<T> operationResult, Command command, string? successMessage = null) where T : IEventPayload
-        => operationResult.ToProcessedResult(command, successMessage != null ? _ => successMessage : null);
-
-    public static CommandResult.Processed_
-        ToProcessedResult<T>(this OperationResult<T> operationResult, Command command, Func<T, string?>? successMessage) where T : IEventPayload
-        => operationResult
+    public static ProcessingResult<TFailure>
+        ToProcessingResult<T, TFailure>(this IResult<T, TFailure> result, Func<T, string?>? successMessage)
+        where T : IEventPayload
+        where TFailure : IFailure<TFailure>
+        => result
             .Match(
-                ok => command.ToProcessedResult(ok, FunctionalResult.Ok(successMessage?.Invoke(ok) ?? command.DefaultOkMessage())),
-                failure => command.ToFailureResult(failure, failure.Message)
+                ok => ProcessingResult<TFailure>.Ok([ok], successMessage?.Invoke(ok)),
+                failure => ProcessingResult<TFailure>.Failed([], failure)
             );
 
-    public static CommandResult.Processed_
-        ToProcessedResultMulti<TCollection>(this OperationResult<TCollection> operationResult, Command command, Func<TCollection, string>? successMessage = null) where TCollection : IReadOnlyCollection<IEventPayload>
-        => operationResult
+    public static ProcessingResult<TFailure>
+        ToProcessedResultMulti<TCollection, TFailure>(this IResult<TCollection, TFailure> result, Func<TCollection, string>? successMessage = null)
+        where TCollection : IReadOnlyCollection<IEventPayload>
+        where TFailure : IFailure<TFailure>
+        => result
             .Match(
-                ok => command.ToProcessedResult(ok, FunctionalResult.Ok(successMessage?.Invoke(ok) ?? command.DefaultOkMessage())),
-                failure => command.ToFailureResult(failure, failure.Message)
+                ok => ProcessingResult<TFailure>.Ok(ok, successMessage?.Invoke(ok)),
+                failure => ProcessingResult<TFailure>.Failed([], failure)
             );
 
-    public static CommandResult.Processed_
-        ToProcessedResultMulti<TCollection>(this OperationResult<(TCollection eventPayloads, string successMessage)> operationResult, Command command) where TCollection : IReadOnlyCollection<IEventPayload>
-        => operationResult
+    public static ProcessingResult<TFailure>
+        ToProcessedResultMulti<TCollection, TFailure>(this IResult<(TCollection eventPayloads, string successMessage), TFailure> result)
+        where TCollection : IReadOnlyCollection<IEventPayload>
+        where TFailure : IFailure<TFailure>
+        => result
             .Match(
-                ok => command.ToProcessedResult(ok.eventPayloads, FunctionalResult.Ok(ok.successMessage)),
-                failure => command.ToFailureResult(failure, failure.Message)
+                ok => ProcessingResult<TFailure>.Ok(ok.eventPayloads, ok.successMessage),
+                failure => ProcessingResult<TFailure>.Failed([], failure)
             );
 
-    public static CommandResult.Processed_
-        ToProcessedResult<T>(this OperationResult<(T eventPayload, string successMessage)> operationResult, Command command) where T : EventPayload
-        => operationResult
+    public static ProcessingResult<TFailure>
+        ToProcessingResult<T, TFailure>(this IResult<(T eventPayload, string successMessage), TFailure> result)
+        where T : EventPayload
+        where TFailure : IFailure<TFailure>
+        => result
             .Match(
-                ok => command.ToProcessedResult(ok.eventPayload, FunctionalResult.Ok(ok.successMessage)),
-                failure => command.ToFailureResult(failure, failure.Message)
+                ok => ProcessingResult<TFailure>.Ok([ok.eventPayload], ok.successMessage),
+                failure => ProcessingResult<TFailure>.Failed([], failure)
             );
 }
