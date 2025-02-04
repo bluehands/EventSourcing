@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
+namespace EventSourcing.Commands.Infrastructure.Internal;
 
 public delegate ScopedCommandProcessor<TFailure>? GetCommandProcessor<TFailure>(Type commandType) where TFailure : notnull;
 

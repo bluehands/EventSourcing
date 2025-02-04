@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace EventSourcing.Funicular.Commands.SourceGenerator.Templates;
+namespace EventSourcing.Commands.SourceGenerator.Templates;
 
 static class Resources
 {

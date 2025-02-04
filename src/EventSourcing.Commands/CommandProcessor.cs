@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using EventSourcing.Funicular.Commands.Infrastructure.Internal;
+using EventSourcing.Commands.Infrastructure.Internal;
 using FunicularSwitch.Generators;
 
-namespace EventSourcing.Funicular.Commands;
+namespace EventSourcing.Commands;
 
 [UnionType(CaseOrder = CaseOrder.AsDeclared)]
 public abstract partial record ProcessingResult<TFailure>(IReadOnlyCollection<IEventPayload> Payloads)

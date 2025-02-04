@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using FunicularSwitch.Generators;
 
-namespace EventSourcing.Funicular.Commands.Templates;
+namespace EventSourcing.Commands.Templates;
 
 [UnionType]
 public abstract partial record FailureTypeName(string Message) : IFailure<FailureTypeName>

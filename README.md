@@ -68,11 +68,11 @@ A little meetup planner example is implemented [here](https://github.com/bluehan
 
 ## Extensibility
 
-Packages are designed to be easily extensible to support other persistence types, event serialization formats (like binary payload serialization) or new lifecycle phases (see ```AfterEventReplayPhase``` introduced by Bluehands.EventSourcing.Funicular.Commands). Exensibility patterns are inspired by the ones used in current EntityFramework versions.
+Packages are designed to be easily extensible to support other persistence types, event serialization formats (like binary payload serialization) or new lifecycle phases (see ```AfterEventReplayPhase``` introduced by Bluehands.EventSourcing.Commands). Exensibility patterns are inspired by the ones used in current EntityFramework versions.
 
 ## Command layer
 
-Your are basically free to model a command layer (or not) on top of your event sourcing infrastructure. [Bluehands.EventSourcing.Funicular.Commands](https://www.nuget.org/packages/Bluehands.EventSourcing.Funicular.Commands) package is a proposal of such a command layer offering the following features:
+Your are basically free to model a command layer (or not) on top of your event sourcing infrastructure. [Bluehands.EventSourcing.Commands](https://www.nuget.org/packages/Bluehands.EventSourcing.Commands) package is a proposal of such a command layer offering the following features:
 
  - 'Functional approach': A command processor / handler is just a function that produces events given an intention (command).
  - Use a [Result](https://github.com/bluehands/Funicular-Switch) type to ease validation and error handling in your command processors. See [RegisterParticipantCommandProcessor](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Commands.cs#L21) for an example.

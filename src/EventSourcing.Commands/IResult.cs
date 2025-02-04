@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EventSourcing.Funicular.Commands;
+namespace EventSourcing.Commands;
 
 //Optional interfaces to implement. If implemented on Result and Failure types, additional methods for command processing are generated,
 //which allow using Result in command processors with ease.

@@ -1,11 +1,11 @@
-﻿using System.Reactive.Concurrency;
-using System.Threading;
-using System;
+﻿using System;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace EventSourcing.Funicular.Commands;
+namespace EventSourcing.Commands;
 
 public interface ICommandBus
 {

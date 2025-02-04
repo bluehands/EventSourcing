@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
-using EventSourcing.Funicular.Commands.SerializablePayloads;
+using EventSourcing.Commands.SerializablePayloads;
 using EventSourcing.Infrastructure;
 using EventSourcing.Infrastructure.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
+namespace EventSourcing.Commands.Infrastructure.Internal;
 
 public record FunicularCommandsOptionsExtension<TFailure, TFailurePayload>(IReadOnlyCollection<Assembly>? CommandProcessorAssemblies) : IEventSourcingOptionsExtension
     where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload> where TFailure : notnull

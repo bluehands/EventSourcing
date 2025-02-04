@@ -2,7 +2,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using EventSourcing;
-using EventSourcing.Funicular.Commands;
+using EventSourcing.Commands;
 using EventSourcing.Infrastructure;
 
 namespace Meetup;

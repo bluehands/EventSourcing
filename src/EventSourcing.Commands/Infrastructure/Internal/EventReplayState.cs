@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
+namespace EventSourcing.Commands.Infrastructure.Internal;
 
 internal class EventReplayState<TFailure>(CommandBus commandBus, EventStream<Event> eventStream, ILogger<EventReplayState<TFailure>>? logger = null)
     : IEventReplayState where TFailure : notnull

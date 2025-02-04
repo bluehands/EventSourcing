@@ -1,6 +1,6 @@
 ﻿using System.Reactive;
 
-namespace EventSourcing.Funicular.Commands.Extensions;
+namespace EventSourcing.Commands.Extensions;
 
 public static class CommandProcessedExtensions
 {

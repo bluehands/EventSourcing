@@ -1,4 +1,2 @@
-﻿using System.Collections.Generic;
-
-namespace EventSourcing.Funicular.Commands;
+﻿namespace EventSourcing.Commands;
 

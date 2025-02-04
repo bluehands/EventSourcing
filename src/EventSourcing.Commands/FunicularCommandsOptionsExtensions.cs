@@ -1,6 +1,6 @@
 ﻿using System;
-using EventSourcing.Funicular.Commands.Infrastructure;
-using EventSourcing.Funicular.Commands.SerializablePayloads;
+using EventSourcing.Commands.Infrastructure;
+using EventSourcing.Commands.SerializablePayloads;
 
 // ReSharper disable once CheckNamespace
 namespace EventSourcing;

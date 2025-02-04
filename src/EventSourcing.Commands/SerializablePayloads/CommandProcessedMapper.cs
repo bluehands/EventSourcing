@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EventSourcing.Funicular.Commands.SerializablePayloads;
+namespace EventSourcing.Commands.SerializablePayloads;
 
 public class CommandProcessedMapper<TFailure, TFailurePayload>
     : EventPayloadMapper<CommandProcessed<TFailure>, CommandProcessedPayload<TFailurePayload>>

@@ -1,12 +1,10 @@
 ﻿using System.Diagnostics;
 using EventSourcing;
-using EventSourcing.Funicular.Commands;
-using EventSourcing.Funicular.Commands.Defaults;
+using EventSourcing.Commands;
 using EventSourcing.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using static EventSourcing.Funicular.Commands.ProcessingResult<EventSourcing.Funicular.Commands.Defaults.FailureTypeName>;
 
 namespace PersistenceTester;
 

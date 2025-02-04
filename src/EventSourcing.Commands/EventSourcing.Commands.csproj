@@ -24,13 +24,13 @@
 		<Version>$(MajorVersion).$(MinorAndPatchVersion)</Version>
 		<FileVersion>$(Version)</FileVersion>
 		<PackageVersion>$(Version)$(VersionSuffixLocal)</PackageVersion>
-		<PackageId>Bluehands.EventSourcing.Funicular.Commands</PackageId>
+		<PackageId>Bluehands.EventSourcing.Commands</PackageId>
 
 		<!-- Descriptions and information-->
-		<Titel>Bluehands.EventSourcing.Funicular.Commands</Titel>
+		<Titel>Bluehands.EventSourcing.Commands</Titel>
 		<Authors>bluehands</Authors>
 		<PackageDescription>Functional command pattern for Bluehands.EventSourcing</PackageDescription>
-		<Copyright>Copyright 2024 bluehands GmbH &amp; C.ommunication KG</Copyright>
+		<Copyright>Copyright 2025 bluehands GmbH &amp; C.ommunication KG</Copyright>
 		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<!--<PackageIcon>FunicularSwitch.png</PackageIcon>-->

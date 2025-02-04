@@ -1,4 +1,4 @@
-﻿using EventSourcing.Funicular.Commands;
+﻿using EventSourcing.Commands;
 
 namespace Meetup;
 
@@ -9,7 +9,7 @@ public record NewUserGroupTalk(string Title, int MaxAttendees) : Command
 
 public class NewUserGroupTalkCommandProcessor : SynchronousCommandProcessor<NewUserGroupTalk>
 {
-	public override ProcessingResult<Failure> ProcessSync(NewUserGroupTalk command)
+	public override EventSourcing.Commands.ProcessingResult<Failure> ProcessSync(NewUserGroupTalk command)
 	{
 		var userGroupTalkAdded = new UserGroupTalkAdded(command.TalkId, command.Title, command.MaxAttendees);
         return ProcessingResult.Ok(userGroupTalkAdded);
@@ -20,7 +20,7 @@ public record RegisterAttendee(string TalkId, string Name, string MailAddress) :
 
 public class RegisterAttendeeCommandProcessor(TalksProjection talks) : SynchronousCommandProcessor<RegisterAttendee>
 {
-	public override ProcessingResult<Failure> ProcessSync(RegisterAttendee command)
+	public override EventSourcing.Commands.ProcessingResult<Failure> ProcessSync(RegisterAttendee command)
     {
         var @event =
             from talk in talks.Current.TalksById.Get(command.TalkId)
@@ -48,9 +48,4 @@ public static class DictionaryExtension
 			return Result.Error<TValue>(Failure.NotFound($"{typeof(TValue).Name} with key {key} not found"));
 		return value;
 	}
-}
-
-[CommandExtensions<Result, Failure>]
-public static partial class CommandExtensions
-{
 }

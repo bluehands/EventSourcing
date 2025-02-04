@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EventSourcing.Funicular.Commands.SerializablePayloads;
+namespace EventSourcing.Commands.SerializablePayloads;
 
 [SerializableEventPayload(EventTypes.CommandProcessed)]
 public record CommandProcessedPayload<TFailurePayload>(

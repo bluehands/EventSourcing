@@ -1,7 +1,7 @@
 ﻿using System;
 using FunicularSwitch.Generators;
 
-namespace EventSourcing.Funicular.Commands;
+namespace EventSourcing.Commands;
 
 [UnionType(CaseOrder = CaseOrder.AsDeclared)]
 public abstract partial record CommandResult<TFailure>(CommandId CommandId) where TFailure : notnull

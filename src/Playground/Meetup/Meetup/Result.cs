@@ -1,5 +1,5 @@
-﻿using EventSourcing.Funicular.Commands;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
+using EventSourcing.Commands;
 using FunicularSwitch.Generators;
 
 namespace Meetup;

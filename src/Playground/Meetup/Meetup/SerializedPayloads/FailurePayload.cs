@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using EventSourcing.Commands.SerializablePayloads;
 
-namespace EventSourcing.Commands.Templates.SerializablePayloads;
+namespace Meetup.SerializedPayloads;
 
 public record FailurePayload(FailurePayload.UnionCases UnionCase, string? Message, IReadOnlyCollection<FailurePayload>? ChildFailures = null)
-    : IFailurePayload<FailureTypeName, FailurePayload>
+    : IFailurePayload<Failure, FailurePayload>
 {
     public enum UnionCases
     {
@@ -20,9 +17,9 @@ public record FailurePayload(FailurePayload.UnionCases UnionCase, string? Messag
         Multiple
     }
 
-    public FailureTypeName ToFailure() => ToFailure(this);
+    public Failure ToFailure() => ToFailure(this);
 
-    public static FailurePayload FromFailure(FailureTypeName failure) =>
+    public static FailurePayload FromFailure(Failure failure) =>
         failure.Match(
             cancelled: _ => new(UnionCase: UnionCases.Cancelled, Message: failure.Message),
             conflict: _ => new(UnionCase: UnionCases.Conflict, Message: failure.Message),
@@ -33,16 +30,16 @@ public record FailurePayload(FailurePayload.UnionCases UnionCase, string? Messag
             multiple: m => new FailurePayload(UnionCase: UnionCases.Multiple, Message: null, m.Failures.Select(FromFailure).ToImmutableArray())
         );
 
-    public static FailureTypeName ToFailure(FailurePayload payload) =>
+    public static Failure ToFailure(FailurePayload payload) =>
         payload.UnionCase switch
         {
-            UnionCases.Cancelled => FailureTypeName.Cancelled(payload.Message!),
-            UnionCases.Conflict => FailureTypeName.Conflict(payload.Message!),
-            UnionCases.Forbidden => FailureTypeName.Forbidden(payload.Message!),
-            UnionCases.Internal => FailureTypeName.Internal(payload.Message!),
-            UnionCases.InvalidInput => FailureTypeName.InvalidInput(payload.Message!),
-            UnionCases.NotFound => FailureTypeName.NotFound(payload.Message!),
-            UnionCases.Multiple => FailureTypeName.Multiple(payload.ChildFailures!.Select(ToFailure)
+            UnionCases.Cancelled => Failure.Cancelled(payload.Message!),
+            UnionCases.Conflict => Failure.Conflict(payload.Message!),
+            UnionCases.Forbidden => Failure.Forbidden(payload.Message!),
+            UnionCases.Internal => Failure.Internal(payload.Message!),
+            UnionCases.InvalidInput => Failure.InvalidInput(payload.Message!),
+            UnionCases.NotFound => Failure.NotFound(payload.Message!),
+            UnionCases.Multiple => Failure.Multiple(payload.ChildFailures!.Select(ToFailure)
                 .ToImmutableArray()),
             _ => throw new ArgumentOutOfRangeException(nameof(payload), payload.UnionCase, ""),
         };

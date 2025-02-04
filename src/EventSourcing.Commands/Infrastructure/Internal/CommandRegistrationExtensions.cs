@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using EventSourcing.Infrastructure.Internal;
 using Microsoft.Extensions.Logging;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
+namespace EventSourcing.Commands.Infrastructure.Internal;
 
 public static class CommandRegistrationExtensions
 {

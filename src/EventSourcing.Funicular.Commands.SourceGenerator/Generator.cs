@@ -1,14 +1,15 @@
-﻿using Microsoft.CodeAnalysis;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using EventSourcing.Commands.SourceGenerator.Templates;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using PolyType.Roslyn;
 using PolyType.SourceGenerator.Helpers;
 
-namespace EventSourcing.Funicular.Commands.SourceGenerator;
+namespace EventSourcing.Commands.SourceGenerator;
 
 [Generator]
 public class Generator : IIncrementalGenerator
@@ -74,8 +75,8 @@ public class Generator : IIncrementalGenerator
 
         foreach (var resultModel in model.ResultModels)
         {
-            var failureExtensionsSource = Templates.TemplatesContents.FailureTypeExtensions
-                .Replace("namespace EventSourcing.Funicular.Commands.Templates", $"namespace {resultModel.TargetNamespace}")
+            var failureExtensionsSource = TemplatesContents.FailureTypeExtensions
+                .Replace("namespace EventSourcing.Commands.Templates", $"namespace {resultModel.TargetNamespace}")
                 .Replace("public static partial class CommandBusExtensions", $"{string.Join(" ", resultModel.ExtensionTypeModifiers)} class {resultModel.ExtensionTypeName}")
                 .Replace("FailureTypeName", resultModel.FailureFullTypeName);
 
@@ -83,8 +84,8 @@ public class Generator : IIncrementalGenerator
 
             if (resultModel.ResultFullTypeName != null)
             {
-                var resultExtensionsSource = Templates.TemplatesContents.ResultTypeExtensions
-                    .Replace("namespace EventSourcing.Funicular.Commands.Templates", $"namespace {resultModel.TargetNamespace}")
+                var resultExtensionsSource = TemplatesContents.ResultTypeExtensions
+                    .Replace("namespace EventSourcing.Commands.Templates", $"namespace {resultModel.TargetNamespace}")
                     .Replace("public static partial class CommandBusExtensions", $"{string.Join(" ", resultModel.ExtensionTypeModifiers)} class {resultModel.ExtensionTypeName}")
                     .Replace("ResultTypeName", resultModel.ResultFullTypeName)
                     .Replace("FailureTypeName", resultModel.FailureFullTypeName);
@@ -95,7 +96,7 @@ public class Generator : IIncrementalGenerator
                         $$"""
                           namespace {{resultModel.ResultTypeNamespace}}
                           {
-                             public partial class {{resultModel.ResultTypeName}}<T> : EventSourcing.Funicular.Commands.IResult<T, {{resultModel.FailureFullTypeName}}, {{resultModel.ResultFullTypeName}}<T>>{};
+                             public partial class {{resultModel.ResultTypeName}}<T> : EventSourcing.Commands.IResult<T, {{resultModel.FailureFullTypeName}}, {{resultModel.ResultFullTypeName}}<T>>{};
                           }
                           """;
                     resultExtensionsSource += partialResult;
@@ -127,7 +128,7 @@ sealed record ResultModel(
 
 public class KnownSymbols(Compilation compilation)
 {
-    public const string CommandExtensionsAttributeName = "EventSourcing.Funicular.Commands.CommandExtensionsAttribute";
+    public const string CommandExtensionsAttributeName = "EventSourcing.Commands.CommandExtensionsAttribute";
 
     /// <summary>
     /// The compilation from which information is being queried.
@@ -137,7 +138,7 @@ public class KnownSymbols(Compilation compilation)
     public INamedTypeSymbol? CommandExtensionsAttribute => GetOrResolveType($"{CommandExtensionsAttributeName}`2", ref _commandExtensionsAttribute);
     Option<INamedTypeSymbol?> _commandExtensionsAttribute;
 
-    public INamedTypeSymbol? ResultInterface => GetOrResolveType("EventSourcing.Funicular.Commands.IResult`3", ref _resultInterface);
+    public INamedTypeSymbol? ResultInterface => GetOrResolveType("EventSourcing.Commands.IResult`3", ref _resultInterface);
     Option<INamedTypeSymbol?> _resultInterface;
 
 

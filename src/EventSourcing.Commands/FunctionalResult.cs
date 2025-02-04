@@ -1,6 +1,6 @@
 ﻿using FunicularSwitch.Generators;
 
-namespace EventSourcing.Funicular.Commands;
+namespace EventSourcing.Commands;
 
 [UnionType(CaseOrder = CaseOrder.AsDeclared)]
 public abstract partial record FunctionalResult<TFailure> where TFailure : notnull

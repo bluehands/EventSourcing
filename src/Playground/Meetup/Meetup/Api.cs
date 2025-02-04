@@ -1,6 +1,6 @@
-﻿using EventSourcing.Funicular.Commands;
-using EventSourcing;
+﻿using EventSourcing;
 using System.Reactive.Linq;
+using EventSourcing.Commands;
 using FunicularSwitch;
 
 namespace Meetup;

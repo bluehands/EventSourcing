@@ -1,4 +1,4 @@
-﻿namespace EventSourcing.Funicular.Commands.SerializablePayloads;
+﻿namespace EventSourcing.Commands.SerializablePayloads;
 
 public interface IFailurePayload<out TFailure>
 {

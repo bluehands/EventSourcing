@@ -1,6 +1,4 @@
-﻿using System.Reactive;
-
-namespace EventSourcing.Funicular.Commands;
+﻿namespace EventSourcing.Commands;
 
 public static class StreamIds
 {

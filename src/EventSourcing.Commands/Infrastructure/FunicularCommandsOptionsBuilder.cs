@@ -1,10 +1,10 @@
 ﻿using System.Collections.Immutable;
-using EventSourcing.Infrastructure;
 using System.Reflection;
-using EventSourcing.Funicular.Commands.Infrastructure.Internal;
-using EventSourcing.Funicular.Commands.SerializablePayloads;
+using EventSourcing.Commands.Infrastructure.Internal;
+using EventSourcing.Commands.SerializablePayloads;
+using EventSourcing.Infrastructure;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure;
+namespace EventSourcing.Commands.Infrastructure;
 
 public class FunicularCommandsOptionsBuilder<TFailure, TFailurePayload>(EventSourcingOptionsBuilder optionsBuilder)
     : EventSourcingOptionsExtensionBuilder<FunicularCommandsOptionsBuilder<TFailure, TFailurePayload>, FunicularCommandsOptionsExtension<TFailure, TFailurePayload>>(optionsBuilder)

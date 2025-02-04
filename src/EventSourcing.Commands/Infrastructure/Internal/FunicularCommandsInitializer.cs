@@ -6,7 +6,7 @@ using EventSourcing.Infrastructure.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
+namespace EventSourcing.Commands.Infrastructure.Internal;
 
 public class FunicularEventSourcingContext(
     IEventReplayState eventReplayState,

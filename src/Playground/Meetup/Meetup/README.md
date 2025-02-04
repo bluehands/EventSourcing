@@ -1,6 +1,6 @@
 ## Meetup example
 
-This is a minimal example demonstrating how event sourcing packages with the optional Funicular.Commands layer can be used. We set up an app for planning user group talks. Talks can be added by a speaker with some meta information an a maximum number of attendees. Attendees can register for talks and are added to the attendees list or a waitlist, if number of maximum number of attendees is exeeded.
+This is a minimal example demonstrating how event sourcing packages with the optional EventSourcing.Commands layer can be used. We set up an app for planning user group talks. Talks can be added by a speaker with some meta information an a maximum number of attendees. Attendees can register for talks and are added to the attendees list or a waitlist, if number of maximum number of attendees is exeeded.
 
 Our asp net core web application offers a graphql api with query, mutation and subscription endpoints. Multiple instances of the app can be run and every instance is notified via the event stream and updates its state accordingly.
 
