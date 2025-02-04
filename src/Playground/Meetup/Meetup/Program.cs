@@ -1,4 +1,5 @@
 using EventSourcing;
+using EventSourcing.Funicular.Commands.SerializablePayloads;
 using EventSourcing.Infrastructure;
 
 namespace Meetup;
@@ -12,9 +13,9 @@ public static class Program
 		
 		services.AddEventSourcing(es => es
             //.UseSqlServerEventStore(@"Data Source=.\SQLSERVEREXPRESS;Initial Catalog=Meetup;Integrated Security=True;TrustServerCertificate=True")
-            //.UseSqliteEventStore(@"Data Source=.\EventStore.db")
-            .UseInMemoryEventStore()
-            .UseFunicularCommands());
+            .UseSqliteEventStore(@"Data Source=.\EventStore.db")
+            //.UseInMemoryEventStore()
+            .UseFunicularCommands<Failure, SerializableFailure>());
 
 		services
             .AddInitializer<TalksProjection>(serviceLifetime: ServiceLifetime.Singleton, asSelf: true);
@@ -42,4 +43,11 @@ public static class Program
 
         return services;
     }
+}
+
+public class SerializableFailure : IFailurePayload<Failure, SerializableFailure>
+{
+    public Failure ToFailure() => throw new NotImplementedException();
+
+    public static SerializableFailure FromFailure(Failure failure) => throw new NotImplementedException();
 }

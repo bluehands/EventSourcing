@@ -6,8 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
 
 internal class EventReplayState<TFailure>(CommandBus commandBus, EventStream<Event> eventStream, ILogger<EventReplayState<TFailure>>? logger = null)
-    : IEventReplayState
-    where TFailure : IFailure<TFailure>
+    : IEventReplayState where TFailure : notnull
 {
     Task<Event>? _noopProcessed;
 
@@ -30,8 +29,7 @@ internal class EventReplayState<TFailure>(CommandBus commandBus, EventStream<Eve
 
 public record NoopCommand : Command;
 
-public class NoopCommandProcessor<TFailure> : SynchronousCommandProcessor<NoopCommand, TFailure>
-    where TFailure : IFailure<TFailure>
+public class NoopCommandProcessor<TFailure> : SynchronousCommandProcessor<NoopCommand, TFailure> where TFailure : notnull
 {
     public override ProcessingResult<TFailure> ProcessSync(NoopCommand command) => ProcessingResult<TFailure>.Ok($"Noop command {command}");
 }

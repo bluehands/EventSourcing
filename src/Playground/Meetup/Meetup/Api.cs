@@ -17,7 +17,7 @@ public class Mutation(ICommandBus commandStream, TalksProjection talks)
     public async Task<string> RegisterParticipant(string talkId, string name, string mailAddress)
     {
         var result = await commandStream.SendCommandAndWaitUntilApplied(new RegisterAttendee(talkId, name, mailAddress), talks.ProcessedCommands);
-        return result.Match(_ => $"{name} registered", error: e => throw new GraphQLException(e.Message));
+        return result.Match(_ => $"{name} registered", error: e => throw new GraphQLException(e.ToString()));
     }
 }
 

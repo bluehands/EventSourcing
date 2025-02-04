@@ -2,12 +2,10 @@
 
 namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
 
-public delegate ScopedCommandProcessor<TFailure>? GetCommandProcessor<TFailure>(Type commandType)
-    where TFailure : IFailure<TFailure>;
+public delegate ScopedCommandProcessor<TFailure>? GetCommandProcessor<TFailure>(Type commandType) where TFailure : notnull;
 
 public sealed class ScopedCommandProcessor<TFailure>(CommandProcessor<TFailure> processor, IDisposable scope)
-    : IDisposable
-    where TFailure : IFailure<TFailure>
+    : IDisposable where TFailure : notnull
 {
     public CommandProcessor<TFailure> Processor { get; } = processor;
 

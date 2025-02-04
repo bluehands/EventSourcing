@@ -4,8 +4,7 @@ namespace EventSourcing.Funicular.Commands.SerializablePayloads;
 
 public class CommandProcessedMapper<TFailure, TFailurePayload>
     : EventPayloadMapper<CommandProcessed<TFailure>, CommandProcessedPayload<TFailurePayload>>
-    where TFailure : IFailure<TFailure>
-    where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload>
+    where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload> where TFailure : notnull
 {
     protected override CommandProcessed<TFailure> MapFromSerializablePayload(CommandProcessedPayload<TFailurePayload> serialized, StreamId streamId)
     {

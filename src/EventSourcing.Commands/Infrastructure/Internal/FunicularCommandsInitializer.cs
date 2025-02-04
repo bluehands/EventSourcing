@@ -25,8 +25,7 @@ public class FunicularEventSourcingContext(
 
 internal sealed class FunicularCommandsInitializer<TFailure>(
     CommandProcessorSubscription<TFailure> commandProcessorSubscription,
-    EventReplayState<TFailure> eventReplayState) : IInitializer<EventReplayStarted>
-    where TFailure : IFailure<TFailure>
+    EventReplayState<TFailure> eventReplayState) : IInitializer<EventReplayStarted> where TFailure : notnull
 {
     public Task Initialize()
     {

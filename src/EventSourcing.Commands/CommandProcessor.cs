@@ -29,8 +29,7 @@ public abstract partial record ProcessingResult<TFailure>(IReadOnlyCollection<IE
     }
 }
 
-public abstract class CommandProcessor<TFailure>
-    where TFailure : IFailure<TFailure>
+public abstract class CommandProcessor<TFailure> where TFailure : notnull
 {
     public static async Task<(CommandResult<TFailure> result, IReadOnlyCollection<IEventPayload> payloads)> Process(Command command, GetCommandProcessor<TFailure> getCommandProcessor)
     {
@@ -71,8 +70,7 @@ public abstract class CommandProcessor<TFailure>
 
 public abstract class CommandProcessor<T, TFailure>
     : CommandProcessor<TFailure>
-    where T : Command
-    where TFailure : IFailure<TFailure>
+    where T : Command where TFailure : notnull
 {
     protected override async Task<ProcessingResult<TFailure>> InternalProcess(Command command) => await Process((T)command).ConfigureAwait(false);
 
@@ -81,8 +79,7 @@ public abstract class CommandProcessor<T, TFailure>
 
 public abstract class SynchronousCommandProcessor<T, TFailure>
     : CommandProcessor<T, TFailure>
-    where T : Command
-    where TFailure : IFailure<TFailure>
+    where T : Command where TFailure : notnull
 {
     public override Task<ProcessingResult<TFailure>> Process(T command) => Task.FromResult(ProcessSync(command));
 

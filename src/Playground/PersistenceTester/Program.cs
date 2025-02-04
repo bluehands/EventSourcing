@@ -6,13 +6,13 @@ using EventSourcing.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using static EventSourcing.Funicular.Commands.ProcessingResult<EventSourcing.Funicular.Commands.Defaults.Failure>;
+using static EventSourcing.Funicular.Commands.ProcessingResult<EventSourcing.Funicular.Commands.Defaults.FailureTypeName>;
 
 namespace PersistenceTester;
 
 class Program
 {
-    static async Task Main(string[] args)
+    static async Task Main()
     {
         using var host = Host.CreateDefaultBuilder()
             .ConfigureServices(serviceCollection =>
@@ -123,7 +123,7 @@ public record AddTextCommand(string Text) : Command;
 
 public class AddTextCommandProcessor : SynchronousCommandProcessor<AddTextCommand>
 {
-    public override ProcessingResult<Failure> ProcessSync(AddTextCommand command) => 
+    public override ProcessingResult<FailureTypeName> ProcessSync(AddTextCommand command) => 
         Ok(new TextAdded("MyJournal", "First entry", command.Text), "Added journal entry");
 }
 

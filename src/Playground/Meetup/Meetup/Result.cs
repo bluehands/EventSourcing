@@ -1,9 +1,16 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using EventSourcing.Funicular.Commands;
+using System.Diagnostics.CodeAnalysis;
 using FunicularSwitch.Generators;
 
-namespace EventSourcing.Funicular.Commands.Defaults;
+namespace Meetup;
 
-[UnionType]
+[ResultType(typeof(Failure))]
+public partial class Result<T>
+{
+
+}
+
+[FunicularSwitch.Generators.UnionType]
 public abstract partial record Failure(string Message) : IFailure<Failure>
 {
     public record Forbidden_(string Message) : Failure(Message);
@@ -47,5 +54,14 @@ public abstract partial record Failure(string Message) : IFailure<Failure>
 public static class DefaultFailureExtensions
 {
     [MergeError]
-    public static Failure MergeDefaultFailure(this Failure f1, Failure f2) => f1.Merge(f2);
+    public static Failure MergeDefaultFailure(this Failure f1, Failure f2)
+    {
+        IReadOnlyCollection<Failure> children;
+        if (f1.IsMultiple(out var m))
+            children = f2.IsMultiple(out var m2) ? [..m, ..m2] : [..m, f2];
+        else
+            children = f2.IsMultiple(out var m2) ? [f1, ..m2] : [f1, f2];
+
+        return Failure.Multiple(children);
+    }
 }

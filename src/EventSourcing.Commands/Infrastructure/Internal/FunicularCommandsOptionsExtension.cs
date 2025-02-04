@@ -12,8 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
 
 public record FunicularCommandsOptionsExtension<TFailure, TFailurePayload>(IReadOnlyCollection<Assembly>? CommandProcessorAssemblies) : IEventSourcingOptionsExtension
-    where TFailure : IFailure<TFailure>
-    where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload>
+    where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload> where TFailure : notnull
 {
     public FunicularCommandsOptionsExtension() : this(default(IReadOnlyCollection<Assembly>))
     {
@@ -81,8 +80,7 @@ sealed class CommandProcessorSubscription<TFailure>(
     IServiceScopeFactory serviceScopeFactory,
     WakeUp? wakeUp = null,
     ILogger<CommandBus>? logger = null)
-    : IDisposable
-    where TFailure : IFailure<TFailure>
+    : IDisposable where TFailure : notnull
 {
     IDisposable? _subscription;
 

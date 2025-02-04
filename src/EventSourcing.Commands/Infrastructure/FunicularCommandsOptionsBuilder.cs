@@ -8,8 +8,7 @@ namespace EventSourcing.Funicular.Commands.Infrastructure;
 
 public class FunicularCommandsOptionsBuilder<TFailure, TFailurePayload>(EventSourcingOptionsBuilder optionsBuilder)
     : EventSourcingOptionsExtensionBuilder<FunicularCommandsOptionsBuilder<TFailure, TFailurePayload>, FunicularCommandsOptionsExtension<TFailure, TFailurePayload>>(optionsBuilder)
-    where TFailure : IFailure<TFailure>
-    where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload>
+    where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload> where TFailure : notnull
 {
     public FunicularCommandsOptionsBuilder<TFailure, TFailurePayload> CommandProcessorAssemblies(Assembly assembly, params Assembly[] assemblies) =>
         WithOption(e => e with

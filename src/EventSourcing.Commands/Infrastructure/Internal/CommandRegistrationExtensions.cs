@@ -16,9 +16,7 @@ public static class CommandRegistrationExtensions
         GetCommandProcessor<TFailure> getCommandProcessor,
         Func<ScopedEventStore> getEventStore,
         ILogger? logger,
-        WakeUp? eventPollWakeUp)
-        where TFailure : IFailure<TFailure>
-        => commands
+        WakeUp? eventPollWakeUp) where TFailure : notnull => commands
             .Process(getCommandProcessor, logger)
             .SelectMany(async processingResult =>
             {
@@ -44,8 +42,7 @@ public static class CommandRegistrationExtensions
         Exception e,
         CommandId commandId,
         WakeUp? eventPollWakeUp,
-        ILogger? logger)
-        where TFailure : IFailure<TFailure>
+        ILogger? logger) where TFailure : notnull
     {
         try
         {
@@ -70,8 +67,7 @@ public static class CommandRegistrationExtensions
     }
 
     static IObservable<(CommandResult<TFailure> result, IReadOnlyCollection<IEventPayload> payloads)> Process<TFailure>(this IObservable<Command> commands,
-        GetCommandProcessor<TFailure> getCommandProcessor, ILogger? logger)
-        where TFailure : IFailure<TFailure>
+        GetCommandProcessor<TFailure> getCommandProcessor, ILogger? logger) where TFailure : notnull
         => commands
             .SelectMany(async c =>
             {
