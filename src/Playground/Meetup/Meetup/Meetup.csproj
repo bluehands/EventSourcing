@@ -21,6 +21,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Bluehands.EventSourcing.Commands" Version="0.3.0-SourceGenerator-20250205.3" />
+		<PackageReference Include="Bluehands.EventSourcing.Persistence.Sqlite" Version="0.3.0-main-20250130.2" />
 		<PackageReference Include="FunicularSwitch" Version="6.1.1" />
 		<PackageReference Include="FunicularSwitch.Generators" Version="4.2.0">
 			<PrivateAssets>all</PrivateAssets>
@@ -29,11 +31,4 @@
 		<PackageReference Include="HotChocolate.AspNetCore" Version="13.9.14" />
 		<PackageReference Include="System.Linq.Async" Version="6.0.1" />
 	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\..\..\EventSourcing.Commands\EventSourcing.Commands.csproj" />
-		<ProjectReference Include="..\..\..\EventSourcing.Commands.SourceGenerator\EventSourcing.Commands.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-		<ProjectReference Include="..\..\..\EventSourcing.Persistence.EntityFramework.Sqlite\EventSourcing.Persistence.EntityFramework.Sqlite.csproj" />
-	</ItemGroup>
-
 </Project>
