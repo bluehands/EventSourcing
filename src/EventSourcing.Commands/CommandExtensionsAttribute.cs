@@ -18,6 +18,6 @@ public class CommandExtensionsAttribute<TResult, TError> : Attribute
 /// Use this attribute on a static partial class. 
 /// Useful extensions and command processor base classes for your error type are added by the source generator shipped with EventSourcing.Commands.
 /// </summary>
-/// <typeparam name="TError">Type use to represent errors in CommandProcessors</typeparam>
+/// <typeparam name="TError">Type used to represent errors in CommandProcessors</typeparam>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public class CommandExtensionsAttribute<TError> : Attribute;
