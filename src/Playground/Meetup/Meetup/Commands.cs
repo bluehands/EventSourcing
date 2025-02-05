@@ -9,7 +9,7 @@ public record NewUserGroupTalk(string Title, int MaxAttendees) : Command
 
 public class NewUserGroupTalkCommandProcessor : SynchronousCommandProcessor<NewUserGroupTalk>
 {
-	public override EventSourcing.Commands.ProcessingResult<Failure> ProcessSync(NewUserGroupTalk command)
+	public override EventSourcing.Commands.ProcessingResult<Error> ProcessSync(NewUserGroupTalk command)
 	{
 		var userGroupTalkAdded = new UserGroupTalkAdded(command.TalkId, command.Title, command.MaxAttendees);
         return ProcessingResult.Ok(userGroupTalkAdded);
@@ -20,7 +20,7 @@ public record RegisterAttendee(string TalkId, string Name, string MailAddress) :
 
 public class RegisterAttendeeCommandProcessor(TalksProjection talks) : SynchronousCommandProcessor<RegisterAttendee>
 {
-	public override EventSourcing.Commands.ProcessingResult<Failure> ProcessSync(RegisterAttendee command)
+	public override EventSourcing.Commands.ProcessingResult<Error> ProcessSync(RegisterAttendee command)
     {
         var @event =
             from talk in talks.Current.TalksById.Get(command.TalkId)
@@ -32,10 +32,10 @@ public class RegisterAttendeeCommandProcessor(TalksProjection talks) : Synchrono
 
 		return @event.ToProcessingResult();
 
-		IEnumerable<Failure> RegistrationOk(Talk talk)
+		IEnumerable<Error> RegistrationOk(Talk talk)
 		{
 			if (talk.Attendees.Any(a => a.Name == command.Name))
-				yield return Failure.Conflict($"{command.Name} already registered.");
+				yield return Error.Conflict($"{command.Name} already registered.");
 		}
 	}
 }
@@ -45,7 +45,7 @@ public static class DictionaryExtension
 	public static Result<TValue> Get<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dict, TKey key)
 	{
 		if (!dict.TryGetValue(key, out var value))
-			return Result.Error<TValue>(Failure.NotFound($"{typeof(TValue).Name} with key {key} not found"));
+			return Result.Error<TValue>(Error.NotFound($"{typeof(TValue).Name} with key {key} not found"));
 		return value;
 	}
 }

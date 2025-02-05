@@ -72,9 +72,9 @@ public abstract class Projection<T> : IDisposable, IInitializer<BeforeEventRepla
     public IObservable<(T state, Event @event)> Changes => _connectableObservable;
     public T Current { get; private set; }
 
-    public IObservable<Event<CommandProcessed<Failure>>> ProcessedCommands => Changes
+    public IObservable<Event<CommandProcessed<Error>>> ProcessedCommands => Changes
         .Select(c => c.@event)
-        .OfType<Event<CommandProcessed<Failure>>>();
+        .OfType<Event<CommandProcessed<Error>>>();
 
     protected Projection(IObservable<Event> eventStream, T initialState, Func<T, Event, T> apply)
     {

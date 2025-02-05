@@ -17,6 +17,6 @@ static class Resources
 
 static class TemplatesContents
 {
-    public static string FailureTypeExtensions => Resources.ReadResource("FailureTypeExtensions.cs");
+    public static string ErrorTypeExtensions => Resources.ReadResource("ErrorTypeExtensions.cs");
     public static string ResultTypeExtensions => Resources.ReadResource("ResultTypeExtensions.cs");
 }

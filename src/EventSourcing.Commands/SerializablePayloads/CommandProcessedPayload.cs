@@ -3,13 +3,13 @@
 namespace EventSourcing.Commands.SerializablePayloads;
 
 [SerializableEventPayload(EventTypes.CommandProcessed)]
-public record CommandProcessedPayload<TFailurePayload>(
+public record CommandProcessedPayload<TErrorPayload>(
     Guid CommandId,
     CommandResultUnionCases CommandResult,
     FunctionalResultUnionCases? FunctionalResult,
-    TFailurePayload? Failure,
+    TErrorPayload? Error,
     string? ResultMessage)
-    where TFailurePayload : class;
+    where TErrorPayload : class;
 
 public enum FunctionalResultUnionCases
 {

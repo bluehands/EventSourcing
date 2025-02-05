@@ -14,10 +14,10 @@ public interface ICommandBus
 
 public static class CommandBusExtension
 {
-    public static Task<Event<CommandProcessed<TFailure>>> SendAndWaitForProcessedEvent<TFailure>(this ICommandBus commandBus, Command command, IObservable<Event> events) where TFailure : notnull => commandBus.SendAndWaitForProcessedEvent(command, events
-            .OfType<Event<CommandProcessed<TFailure>>>());
+    public static Task<Event<CommandProcessed<TError>>> SendAndWaitForProcessedEvent<TError>(this ICommandBus commandBus, Command command, IObservable<Event> events) where TError : notnull => commandBus.SendAndWaitForProcessedEvent(command, events
+            .OfType<Event<CommandProcessed<TError>>>());
 
-    public static async Task<Event<CommandProcessed<TFailure>>> SendAndWaitForProcessedEvent<TFailure>(this ICommandBus commandBus, Command command, IObservable<Event<CommandProcessed<TFailure>>> commandProcessedEvents) where TFailure : notnull
+    public static async Task<Event<CommandProcessed<TError>>> SendAndWaitForProcessedEvent<TError>(this ICommandBus commandBus, Command command, IObservable<Event<CommandProcessed<TError>>> commandProcessedEvents) where TError : notnull
     {
         var processed = commandProcessedEvents
             .FirstAsync(e => e.Payload.CommandId == command.Id)

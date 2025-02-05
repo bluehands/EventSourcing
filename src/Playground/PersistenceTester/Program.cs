@@ -18,14 +18,14 @@ static partial class CommandExtensions
 {
     public static EventSourcingOptionsBuilder UseFunicularCommands(
         this EventSourcingOptionsBuilder optionsBuilder,
-        Action<FunicularCommandsOptionsBuilder<string, FailurePayload>>? funicularCommandsOptionsAction = null) =>
-        optionsBuilder.UseFunicularCommands<string, FailurePayload>(funicularCommandsOptionsAction);
+        Action<FunicularCommandsOptionsBuilder<string, ErrorPayload>>? funicularCommandsOptionsAction = null) =>
+        optionsBuilder.UseFunicularCommands<string, ErrorPayload>(funicularCommandsOptionsAction);
 
-    internal sealed record FailurePayload(string Error) : IFailurePayload<string, FailurePayload>
+    internal sealed record ErrorPayload(string Error) : IErrorPayload<string, ErrorPayload>
     {
-        public string ToFailure() => Error;
+        public string ToError() => Error;
 
-        public static FailurePayload FromFailure(string failure) => new (failure);
+        public static ErrorPayload FromError(string error) => new (error);
     }
 }
 

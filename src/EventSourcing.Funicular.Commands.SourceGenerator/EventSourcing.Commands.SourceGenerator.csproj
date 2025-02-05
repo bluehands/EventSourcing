@@ -20,7 +20,7 @@
 	  <None Include="$(PkgPolyType_Roslyn)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
 	<ItemGroup>
-	  <EmbeddedResource Include="..\EventSourcing.Commands.Templates\FailureTypeExtensions.cs" Link="Templates\FailureTypeExtensions.cs" />
+	  <EmbeddedResource Include="..\EventSourcing.Commands.Templates\ErrorTypeExtensions.cs" Link="Templates\ErrorTypeExtensions.cs" />
 	  <EmbeddedResource Include="..\EventSourcing.Commands.Templates\ResultTypeExtensions.cs" Link="Templates\ResultTypeExtensions.cs" />
 	</ItemGroup>
 

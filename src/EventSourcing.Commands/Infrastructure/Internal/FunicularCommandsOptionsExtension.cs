@@ -11,8 +11,8 @@ using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Commands.Infrastructure.Internal;
 
-public record FunicularCommandsOptionsExtension<TFailure, TFailurePayload>(IReadOnlyCollection<Assembly>? CommandProcessorAssemblies) : IEventSourcingOptionsExtension
-    where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload> where TFailure : notnull
+public record FunicularCommandsOptionsExtension<TError, TFailurePayload>(IReadOnlyCollection<Assembly>? CommandProcessorAssemblies) : IEventSourcingOptionsExtension
+    where TFailurePayload : class, IErrorPayload<TError, TFailurePayload> where TError : notnull
 {
     public FunicularCommandsOptionsExtension() : this(default(IReadOnlyCollection<Assembly>))
     {
@@ -27,13 +27,13 @@ public record FunicularCommandsOptionsExtension<TFailure, TFailurePayload>(IRead
         serviceCollection
             .AddSingleton<CommandBus>()
             .AddSingleton<ICommandBus>(sp => sp.GetRequiredService<CommandBus>())
-            .AddSingleton<CommandProcessorSubscription<TFailure>>()
-            .AddSingleton<EventReplayState<TFailure>>()
-            .AddSingleton<IEventReplayState>(sp => sp.GetRequiredService<EventReplayState<TFailure>>())
+            .AddSingleton<CommandProcessorSubscription<TError>>()
+            .AddSingleton<EventReplayState<TError>>()
+            .AddSingleton<IEventReplayState>(sp => sp.GetRequiredService<EventReplayState<TError>>())
             .AddSingleton<EventSourcingContext, FunicularEventSourcingContext>()
-            .AddInitializer<FunicularCommandsInitializer<TFailure>>();
+            .AddInitializer<CommandsInitializer<TError>>();
 
-        serviceCollection.AddTransient<CommandProcessor<NoopCommand, TFailure>, NoopCommandProcessor<TFailure>>();
+        serviceCollection.AddTransient<CommandProcessor<NoopCommand, TError>, NoopCommandProcessor<TError>>();
         AddCommandProcessors(serviceCollection, CommandProcessorAssemblies ?? [EventSourcingOptionDefaults.DefaultImplementationAssembly
         ]);
     }
@@ -41,12 +41,12 @@ public record FunicularCommandsOptionsExtension<TFailure, TFailurePayload>(IRead
     public void AddDefaultServices(IServiceCollection serviceCollection, EventSourcingOptions eventSourcingOptions)
     {
         var lifetime = eventSourcingOptions.FindExtension<EventSourcingOptionsExtension>()?.EventPayloadMapperLifetime ?? EventSourcingOptionDefaults.DefaultEventPayloadMapperLifetime;
-        serviceCollection.Add(new(typeof(EventPayloadMapper), typeof(CommandProcessedMapper<TFailure, TFailurePayload>), lifetime));
+        serviceCollection.Add(new(typeof(EventPayloadMapper), typeof(CommandProcessedMapper<TError, TFailurePayload>), lifetime));
     }
 
     static IServiceCollection AddCommandProcessors(IServiceCollection serviceCollection, IEnumerable<Assembly> commandProcessorAssemblies)
     {
-        var tuples = typeof(CommandProcessor<TFailure>)
+        var tuples = typeof(CommandProcessor<TError>)
             .GetConcreteDerivedTypes(commandProcessorAssemblies)
             .Select(processorType =>
             {
@@ -75,23 +75,23 @@ public record FunicularCommandsOptionsExtension<TFailure, TFailurePayload>(IRead
     }
 }
 
-sealed class CommandProcessorSubscription<TFailure>(
+sealed class CommandProcessorSubscription<TError>(
     CommandBus commandBus,
     IServiceScopeFactory serviceScopeFactory,
     WakeUp? wakeUp = null,
     ILogger<CommandBus>? logger = null)
-    : IDisposable where TFailure : notnull
+    : IDisposable where TError : notnull
 {
     IDisposable? _subscription;
 
     internal void SubscribeCommandProcessors()
     {
-        _subscription = commandBus.SubscribeCommandProcessors<TFailure>(commandType =>
+        _subscription = commandBus.SubscribeCommandProcessors<TError>(commandType =>
         {
-            var commandProcessorType = typeof(CommandProcessor<,>).MakeGenericType(commandType, typeof(TFailure));
+            var commandProcessorType = typeof(CommandProcessor<,>).MakeGenericType(commandType, typeof(TError));
 
             var scope = serviceScopeFactory.CreateScope();
-            var processor = (CommandProcessor<TFailure>?)scope.ServiceProvider.GetService(commandProcessorType);
+            var processor = (CommandProcessor<TError>?)scope.ServiceProvider.GetService(commandProcessorType);
             if (processor == null)
             {
                 scope.Dispose();

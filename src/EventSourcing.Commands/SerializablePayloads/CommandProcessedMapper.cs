@@ -2,43 +2,43 @@
 
 namespace EventSourcing.Commands.SerializablePayloads;
 
-public class CommandProcessedMapper<TFailure, TFailurePayload>
-    : EventPayloadMapper<CommandProcessed<TFailure>, CommandProcessedPayload<TFailurePayload>>
-    where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload> where TFailure : notnull
+public class CommandProcessedMapper<TError, TErrorPayload>
+    : EventPayloadMapper<CommandProcessed<TError>, CommandProcessedPayload<TErrorPayload>>
+    where TErrorPayload : class, IErrorPayload<TError, TErrorPayload> where TError : notnull
 {
-    protected override CommandProcessed<TFailure> MapFromSerializablePayload(CommandProcessedPayload<TFailurePayload> serialized, StreamId streamId)
+    protected override CommandProcessed<TError> MapFromSerializablePayload(CommandProcessedPayload<TErrorPayload> serialized, StreamId streamId)
     {
         var commandId = new CommandId(serialized.CommandId);
         return new(serialized.CommandResult switch
         {
-            CommandResultUnionCases.Processed => CommandResult<TFailure>.Processed(commandId,
+            CommandResultUnionCases.Processed => CommandResult<TError>.Processed(commandId,
                 serialized.FunctionalResult switch
                 {
-                    FunctionalResultUnionCases.Ok => FunctionalResult<TFailure>.Ok(serialized.ResultMessage),
-                    FunctionalResultUnionCases.Failed => FunctionalResult<TFailure>.Failed(
-                        serialized.Failure!.ToFailure()),
+                    FunctionalResultUnionCases.Ok => FunctionalResult<TError>.Ok(serialized.ResultMessage),
+                    FunctionalResultUnionCases.Failed => FunctionalResult<TError>.Failed(
+                        serialized.Error!.ToError()),
                     _ => throw new ArgumentOutOfRangeException($"Unexpected {nameof(FunctionalResultUnionCases)}: {serialized.FunctionalResult}")
                 }),
-            CommandResultUnionCases.Faulted => CommandResult<TFailure>.Faulted(commandId, serialized.ResultMessage, null),
-            CommandResultUnionCases.Unhandled => CommandResult<TFailure>.Unhandled(commandId, serialized.ResultMessage),
-            CommandResultUnionCases.Cancelled => CommandResult<TFailure>.Cancelled(commandId),
+            CommandResultUnionCases.Faulted => CommandResult<TError>.Faulted(commandId, serialized.ResultMessage, null),
+            CommandResultUnionCases.Unhandled => CommandResult<TError>.Unhandled(commandId, serialized.ResultMessage),
+            CommandResultUnionCases.Cancelled => CommandResult<TError>.Cancelled(commandId),
             _ => throw new ArgumentOutOfRangeException($"Unexpected {nameof(CommandResultUnionCases)}: {serialized.CommandResult}")
         });
     }
 
-    protected override CommandProcessedPayload<TFailurePayload> MapToSerializablePayload(CommandProcessed<TFailure> payload)
+    protected override CommandProcessedPayload<TErrorPayload> MapToSerializablePayload(CommandProcessed<TError> payload)
     {
         var commandId = payload.CommandId.Id;
         return payload.CommandResult
             .Match(processed: p =>
                 {
-                    var (functionalResult, failure, message) =
+                    var (functionalResult, error, message) =
                         p.FunctionalResult.Match(
-                        ok => (functionalResult: FunctionalResultUnionCases.Ok, failure: default(TFailurePayload), message: (string?)ok.ResultMessage),
-                        failed => (FunctionalResultUnionCases.Failed, TFailurePayload.FromFailure(failed.Failure), null)
+                        ok => (functionalResult: FunctionalResultUnionCases.Ok, error: default(TErrorPayload), message: (string?)ok.ResultMessage),
+                        failed => (FunctionalResultUnionCases.Failed, TErrorPayload.FromError(failed.Error), null)
                     );
                     
-                    return new CommandProcessedPayload<TFailurePayload>(commandId, CommandResultUnionCases.Processed, functionalResult, failure, message);
+                    return new CommandProcessedPayload<TErrorPayload>(commandId, CommandResultUnionCases.Processed, functionalResult, error, message);
                 },
                 faulted: f => new(commandId, CommandResultUnionCases.Faulted, null, null, f.Message),
                 unhandled: u => new(commandId, CommandResultUnionCases.Unhandled, null, null, u.Message),

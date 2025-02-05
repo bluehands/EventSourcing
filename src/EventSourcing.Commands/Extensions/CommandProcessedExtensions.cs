@@ -4,17 +4,17 @@ namespace EventSourcing.Commands.Extensions;
 
 public static class CommandProcessedExtensions
 {
-    public static TResult ToResult<TResult, TFailure>(this CommandProcessed<TFailure> commandProcessed) 
-        where TResult : IResult<Unit, TFailure, TResult>
-        where TFailure : IFailure<TFailure> =>
+    public static TResult ToResult<TResult, TError>(this CommandProcessed<TError> commandProcessed) 
+        where TResult : IResult<Unit, TError, TResult>
+        where TError : IError<TError> =>
         commandProcessed.CommandResult
             .Match(
                 processed: p => p.FunctionalResult.Match(
                     ok: _ => TResult.Ok(Unit.Default),
-                    failed: error => TResult.Error(error.Failure)
+                    failed: error => TResult.Error(error.Error)
                 ),
-                unhandled: u => TResult.Error(TFailure.Internal(u.Message)),
-                faulted: f => TResult.Error(TFailure.Internal(f.ToString())),
-                cancelled: c => TResult.Error(TFailure.Cancelled(c.ToString()))
+                unhandled: u => TResult.Error(TError.Internal(u.Message)),
+                faulted: f => TResult.Error(TError.Internal(f.ToString())),
+                cancelled: c => TResult.Error(TError.Cancelled(c.ToString()))
             );
 }

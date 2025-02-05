@@ -20,7 +20,7 @@ public class Generator : IIncrementalGenerator
             .Select((compilation, _) => new KnownSymbols(compilation));
 
         var model = context.SyntaxProvider.ForTypesWithAttributeDeclarations(
-            attributeFullyQualifiedNames: [$"{KnownSymbols.CommandExtensionsAttributeName}<TFailure, TResult>", $"{KnownSymbols.CommandExtensionsAttributeName}<TFailure>"],
+            attributeFullyQualifiedNames: [$"{KnownSymbols.CommandExtensionsAttributeName}<TError, TResult>", $"{KnownSymbols.CommandExtensionsAttributeName}<TError>"],
             (syntax, _) => syntax is TypeDeclarationSyntax)
             .Collect()
             .Combine(knownSymbols)
@@ -43,14 +43,14 @@ public class Generator : IIncrementalGenerator
                 string? resultTypeName = null;
                 string? resultTypeNamespace = null;
                 bool addPartialResultImplementingIResult = false;
-                ITypeSymbol failureTypeSymbol;
+                ITypeSymbol errorTypeSymbol;
 
                 if (attributeData.AttributeClass is
-                        { TypeArguments: [{ } resultType, { } failureType] } &&
+                        { TypeArguments: [{ } resultType, { } errorType] } &&
                     SymbolEqualityComparer.Default.Equals(attributeData.AttributeClass!.ConstructedFrom,
-                        knownSymbols.CommandExtensionsAttributeOfTFailureTResult))
+                        knownSymbols.CommandExtensionsAttributeOfTErrorTResult))
                 {
-                    failureTypeSymbol = failureType;
+                    errorTypeSymbol = errorType;
                     resultTypeName = resultType.Name;
                     resultTypeNamespace = resultType.ContainingNamespace.ToDisplayString(RoslynHelpers.QualifiedNameOnlyFormat);
                     addPartialResultImplementingIResult = resultType.DeclaringSyntaxReferences.Length > 0 &&
@@ -59,11 +59,11 @@ public class Generator : IIncrementalGenerator
                    
                 }
                 else if (attributeData.AttributeClass is
-                             { TypeArguments: [{ } failureType1] } &&
+                             { TypeArguments: [{ } errorType1] } &&
                          SymbolEqualityComparer.Default.Equals(attributeData.AttributeClass!.ConstructedFrom,
-                             knownSymbols.CommandExtensionsAttributeOfTFailure))
+                             knownSymbols.CommandExtensionsAttributeOfTError))
                 {
-                    failureTypeSymbol = failureType1;
+                    errorTypeSymbol = errorType1;
                 }
                 else continue;
 
@@ -75,7 +75,7 @@ public class Generator : IIncrementalGenerator
                     ExtensionTypeName: extensionType.Name,
                     ResultTypeName: resultTypeName,
                     ResultTypeNamespace: resultTypeNamespace,
-                    FailureFullTypeName: failureTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                    ErrorFullTypeName: errorTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                     AddPartialResultImplementingIResult: 
                     addPartialResultImplementingIResult
                 ));
@@ -95,12 +95,12 @@ public class Generator : IIncrementalGenerator
 
         foreach (var resultModel in model.ResultModels)
         {
-            var failureExtensionsSource = TemplatesContents.FailureTypeExtensions
+            var errorExtensionsSource = TemplatesContents.ErrorTypeExtensions
                 .Replace("namespace EventSourcing.Commands.Templates", $"namespace {resultModel.TargetNamespace}")
                 .Replace("public static partial class CommandBusExtensions", $"{string.Join(" ", resultModel.ExtensionTypeModifiers)} class {resultModel.ExtensionTypeName}")
-                .Replace("FailureTypeName", resultModel.FailureFullTypeName);
+                .Replace("ErrorTypeName", resultModel.ErrorFullTypeName);
 
-            spc.AddSource($"{resultModel.TargetNamespace}.{resultModel.ExtensionTypeName}.FailureExtensions.g.cs", failureExtensionsSource);
+            spc.AddSource($"{resultModel.TargetNamespace}.{resultModel.ExtensionTypeName}.ErrorExtensions.g.cs", errorExtensionsSource);
 
             if (resultModel.ResultFullTypeName != null)
             {
@@ -108,7 +108,7 @@ public class Generator : IIncrementalGenerator
                     .Replace("namespace EventSourcing.Commands.Templates", $"namespace {resultModel.TargetNamespace}")
                     .Replace("public static partial class CommandBusExtensions", $"{string.Join(" ", resultModel.ExtensionTypeModifiers)} class {resultModel.ExtensionTypeName}")
                     .Replace("ResultTypeName", resultModel.ResultFullTypeName)
-                    .Replace("FailureTypeName", resultModel.FailureFullTypeName);
+                    .Replace("ErrorTypeName", resultModel.ErrorFullTypeName);
 
                 if (resultModel.AddPartialResultImplementingIResult)
                 {
@@ -116,7 +116,7 @@ public class Generator : IIncrementalGenerator
                         $$"""
                           namespace {{resultModel.ResultTypeNamespace}}
                           {
-                             public partial class {{resultModel.ResultTypeName}}<T> : EventSourcing.Commands.IResult<T, {{resultModel.FailureFullTypeName}}, {{resultModel.ResultFullTypeName}}<T>>{};
+                             public partial class {{resultModel.ResultTypeName}}<T> : EventSourcing.Commands.IResult<T, {{resultModel.ErrorFullTypeName}}, {{resultModel.ResultFullTypeName}}<T>>{};
                           }
                           """;
                     resultExtensionsSource += partialResult;
@@ -137,7 +137,7 @@ sealed record ResultModel(
     string TargetNamespace,
     ImmutableEquatableArray<string> ExtensionTypeModifiers,
     string ExtensionTypeName,
-    string FailureFullTypeName,
+    string ErrorFullTypeName,
     string? ResultTypeName,
     string? ResultTypeNamespace,
     bool AddPartialResultImplementingIResult
@@ -155,11 +155,11 @@ public class KnownSymbols(Compilation compilation)
     /// </summary>
     public Compilation Compilation { get; } = compilation;
 
-    public INamedTypeSymbol? CommandExtensionsAttributeOfTFailureTResult => GetOrResolveType($"{CommandExtensionsAttributeName}`2", ref _commandExtensionsAttributeOfTFailureTResult);
-    Option<INamedTypeSymbol?> _commandExtensionsAttributeOfTFailureTResult;
+    public INamedTypeSymbol? CommandExtensionsAttributeOfTErrorTResult => GetOrResolveType($"{CommandExtensionsAttributeName}`2", ref _commandExtensionsAttributeOfTErrorTResult);
+    Option<INamedTypeSymbol?> _commandExtensionsAttributeOfTErrorTResult;
 
-    public INamedTypeSymbol? CommandExtensionsAttributeOfTFailure => GetOrResolveType($"{CommandExtensionsAttributeName}`1", ref _commandExtensionsAttributeOfTFailure);
-    Option<INamedTypeSymbol?> _commandExtensionsAttributeOfTFailure;
+    public INamedTypeSymbol? CommandExtensionsAttributeOfTError => GetOrResolveType($"{CommandExtensionsAttributeName}`1", ref _commandExtensionsAttributeOfTError);
+    Option<INamedTypeSymbol?> _commandExtensionsAttributeOfTError;
 
     public INamedTypeSymbol? ResultInterface => GetOrResolveType("EventSourcing.Commands.IResult`3", ref _resultInterface);
     Option<INamedTypeSymbol?> _resultInterface;

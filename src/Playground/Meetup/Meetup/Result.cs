@@ -4,31 +4,31 @@ using FunicularSwitch.Generators;
 
 namespace Meetup;
 
-[ResultType(typeof(Failure))]
+[ResultType(typeof(Error))]
 public partial class Result<T>
 {
 }
 
 [FunicularSwitch.Generators.UnionType]
-public abstract partial record Failure(string Message) : IFailure<Failure>
+public abstract partial record Error(string Message) : IError<Error>
 {
-    public record Forbidden_(string Message) : Failure(Message);
+    public record Forbidden_(string Message) : Error(Message);
 
-    public record NotFound_(string Message) : Failure(Message);
+    public record NotFound_(string Message) : Error(Message);
 
-    public record Conflict_(string Message) : Failure(Message);
+    public record Conflict_(string Message) : Error(Message);
 
-    public record Internal_(string Message) : Failure(Message);
+    public record Internal_(string Message) : Error(Message);
 
-    public record InvalidInput_(string Message) : Failure(Message);
+    public record InvalidInput_(string Message) : Error(Message);
 
-    public record Multiple_(IReadOnlyCollection<Failure> Failures)
-        : Failure(string.Join(Environment.NewLine, Failures.Select(f => f.Message)))
+    public record Multiple_(IReadOnlyCollection<Error> Errors)
+        : Error(string.Join(Environment.NewLine, Errors.Select(f => f.Message)))
     {
-        public IReadOnlyCollection<Failure> Failures { get; } = Failures;
+        public IReadOnlyCollection<Error> Errors { get; } = Errors;
     }
 
-    public record Cancelled_ : Failure
+    public record Cancelled_ : Error
     {
         public Cancelled_(string? message = null) : base(message ?? "Operation cancelled")
         {
@@ -37,30 +37,30 @@ public abstract partial record Failure(string Message) : IFailure<Failure>
 
     public override string ToString() => $"{GetType().Name.TrimEnd('_')}: {Message}";
 
-    public bool IsMultiple([NotNullWhen(true)] out IReadOnlyCollection<Failure>? failures)
+    public bool IsMultiple([NotNullWhen(true)] out IReadOnlyCollection<Error>? errors)
     {
         if (this is Multiple_ m)
         {
-            failures = m.Failures;
+            errors = m.Errors;
             return true;
         }
 
-        failures = null;
+        errors = null;
         return false;
     }
 }
 
-public static class FailureExtensions
+public static class ErrorExtensions
 {
     [MergeError]
-    public static Failure Merge(this Failure f1, Failure f2)
+    public static Error Merge(this Error f1, Error f2)
     {
-        IReadOnlyCollection<Failure> children;
+        IReadOnlyCollection<Error> children;
         if (f1.IsMultiple(out var m))
             children = f2.IsMultiple(out var m2) ? [..m, ..m2] : [..m, f2];
         else
             children = f2.IsMultiple(out var m2) ? [f1, ..m2] : [f1, f2];
 
-        return Failure.Multiple(children);
+        return Error.Multiple(children);
     }
 }

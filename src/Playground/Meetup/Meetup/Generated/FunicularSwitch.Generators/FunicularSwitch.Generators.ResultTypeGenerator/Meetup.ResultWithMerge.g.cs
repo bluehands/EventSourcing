@@ -94,7 +94,7 @@ namespace Meetup
         public static Result<global::System.Collections.Generic.IReadOnlyCollection<T>> Aggregate<T>(this global::System.Collections.Generic.IEnumerable<Result<T>> results)
         {
             var isError = false;
-            Failure aggregated = default!;
+            Error aggregated = default!;
             var oks = new global::System.Collections.Generic.List<T>();
             foreach (var result in results)
             {
@@ -322,9 +322,9 @@ namespace Meetup
             return Aggregate(r1.Result, r2.Result, r3.Result, r4.Result, r5.Result, r6.Result, r7.Result, r8.Result, r9.Result, combine);
         }
 
-        public static Result<T> FirstOk<T>(this global::System.Collections.Generic.IEnumerable<Result<T>> results, global::System.Func<Failure> onEmpty)
+        public static Result<T> FirstOk<T>(this global::System.Collections.Generic.IEnumerable<Result<T>> results, global::System.Func<Error> onEmpty)
         {
-            var errors = new global::System.Collections.Generic.List<Failure>();
+            var errors = new global::System.Collections.Generic.List<Error>();
             foreach (var result in results)
             {
                 if (result is Result<T>.Error_ e)
@@ -373,19 +373,19 @@ namespace Meetup
             }
         }
 
-        public static Result<global::System.Collections.Generic.IReadOnlyCollection<T>> AllOk<T>(this global::System.Collections.Generic.IEnumerable<T> candidates, global::System.Func<T, global::System.Collections.Generic.IEnumerable<Failure>> validate) =>
+        public static Result<global::System.Collections.Generic.IReadOnlyCollection<T>> AllOk<T>(this global::System.Collections.Generic.IEnumerable<T> candidates, global::System.Func<T, global::System.Collections.Generic.IEnumerable<Error>> validate) =>
             candidates
                 .Select(c => c.Validate(validate))
                 .Aggregate();
 
         public static Result<global::System.Collections.Generic.IReadOnlyCollection<T>> AllOk<T>(this global::System.Collections.Generic.IEnumerable<Result<T>> candidates,
-            global::System.Func<T, global::System.Collections.Generic.IEnumerable<Failure>> validate) =>
+            global::System.Func<T, global::System.Collections.Generic.IEnumerable<Error>> validate) =>
             candidates
                 .Bind(items => items.AllOk(validate));
 
-        public static Result<T> Validate<T>(this Result<T> item, global::System.Func<T, global::System.Collections.Generic.IEnumerable<Failure>> validate) => item.Bind(i => i.Validate(validate));
+        public static Result<T> Validate<T>(this Result<T> item, global::System.Func<T, global::System.Collections.Generic.IEnumerable<Error>> validate) => item.Bind(i => i.Validate(validate));
 
-        public static Result<T> Validate<T>(this T item, global::System.Func<T, global::System.Collections.Generic.IEnumerable<Failure>> validate)
+        public static Result<T> Validate<T>(this T item, global::System.Func<T, global::System.Collections.Generic.IEnumerable<Error>> validate)
         {
 	        try
 	        {
@@ -401,17 +401,17 @@ namespace Meetup
 	        }
         }
 
-        public static Result<T> FirstOk<T>(this global::System.Collections.Generic.IEnumerable<T> candidates, global::System.Func<T, global::System.Collections.Generic.IEnumerable<Failure>> validate, global::System.Func<Failure> onEmpty) =>
+        public static Result<T> FirstOk<T>(this global::System.Collections.Generic.IEnumerable<T> candidates, global::System.Func<T, global::System.Collections.Generic.IEnumerable<Error>> validate, global::System.Func<Error> onEmpty) =>
             candidates
                 .Select(r => r.Validate(validate))
                 .FirstOk(onEmpty);
 
         #region helpers
 
-        static Failure MergeErrors(global::System.Collections.Generic.IEnumerable<Failure> errors)
+        static Error MergeErrors(global::System.Collections.Generic.IEnumerable<Error> errors)
         {
             var first = true;
-            Failure aggregated = default!;
+            Error aggregated = default!;
             foreach (var myError in errors)
             {
                 if (first)
@@ -428,7 +428,7 @@ namespace Meetup
             return aggregated;
         }
 
-        static Failure MergeErrors(Failure aggregated, Failure error) => aggregated.MergeDefaultFailure(error);
+        static Error MergeErrors(Error aggregated, Error error) => aggregated.Merge(error);
 
         #endregion
     }

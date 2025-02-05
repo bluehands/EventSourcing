@@ -62,12 +62,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\EventSourcing.Funicular.Commands.SourceGenerator\EventSourcing.Funicular.Commands.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	  <ProjectReference Include="..\EventSourcing.Funicular.Commands.SourceGenerator\EventSourcing.Commands.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	  <ProjectReference Include="..\EventSourcing\EventSourcing.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="..\EventSourcing.Funicular.Commands.SourceGenerator\bin\$(Configuration)\netstandard2.0\EventSourcing.Funicular.Commands.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+		<None Include="..\EventSourcing.Funicular.Commands.SourceGenerator\bin\$(Configuration)\netstandard2.0\EventSourcing.Commands.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
 
 </Project>
