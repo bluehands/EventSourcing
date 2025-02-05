@@ -19,9 +19,8 @@ public class Generator : IIncrementalGenerator
         var knownSymbols = context.CompilationProvider
             .Select((compilation, _) => new KnownSymbols(compilation));
 
-
         var model = context.SyntaxProvider.ForTypesWithAttributeDeclarations(
-            attributeFullyQualifiedNames: [$"{KnownSymbols.CommandExtensionsAttributeName}<TFailure, TResult>"],
+            attributeFullyQualifiedNames: [$"{KnownSymbols.CommandExtensionsAttributeName}<TFailure, TResult>", $"{KnownSymbols.CommandExtensionsAttributeName}<TFailure>"],
             (syntax, _) => syntax is TypeDeclarationSyntax)
             .Collect()
             .Combine(knownSymbols)
@@ -41,24 +40,45 @@ public class Generator : IIncrementalGenerator
 
             foreach (var attributeData in extensionType.GetAttributes())
             {
+                string? resultTypeName = null;
+                string? resultTypeNamespace = null;
+                bool addPartialResultImplementingIResult = false;
+                ITypeSymbol failureTypeSymbol;
+
                 if (attributeData.AttributeClass is
                         { TypeArguments: [{ } resultType, { } failureType] } &&
                     SymbolEqualityComparer.Default.Equals(attributeData.AttributeClass!.ConstructedFrom,
-                        knownSymbols.CommandExtensionsAttribute))
+                        knownSymbols.CommandExtensionsAttributeOfTFailureTResult))
                 {
-                    resultModels.Add(new(targetNamespace,
-                        ExtensionTypeModifiers: attributedType.Declarations.First().Syntax.Modifiers.Select(m => m.Text)
-                            .ToImmutableEquatableArray(),
-                        ExtensionTypeName: extensionType.Name,
-                        ResultTypeName: resultType.Name,
-                        ResultTypeNamespace: resultType.ContainingNamespace.ToDisplayString(RoslynHelpers.QualifiedNameOnlyFormat),
-                        FailureFullTypeName: failureType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                        AddPartialResultImplementingIResult: 
-                            resultType.DeclaringSyntaxReferences.Length > 0 &&
-                            resultType.DeclaringSyntaxReferences[0].GetSyntax(token) is TypeDeclarationSyntax d && d.Modifiers.Any(m => m.Text == "partial") &&
-                            SymbolEqualityComparer.Default.Equals(resultType.ContainingAssembly, extensionType.ContainingAssembly)
-                    ));
+                    failureTypeSymbol = failureType;
+                    resultTypeName = resultType.Name;
+                    resultTypeNamespace = resultType.ContainingNamespace.ToDisplayString(RoslynHelpers.QualifiedNameOnlyFormat);
+                    addPartialResultImplementingIResult = resultType.DeclaringSyntaxReferences.Length > 0 &&
+                                                          resultType.DeclaringSyntaxReferences[0].GetSyntax(token) is TypeDeclarationSyntax d && d.Modifiers.Any(m => m.Text == "partial") &&
+                                                          SymbolEqualityComparer.Default.Equals(resultType.ContainingAssembly, extensionType.ContainingAssembly);
+                   
                 }
+                else if (attributeData.AttributeClass is
+                             { TypeArguments: [{ } failureType1] } &&
+                         SymbolEqualityComparer.Default.Equals(attributeData.AttributeClass!.ConstructedFrom,
+                             knownSymbols.CommandExtensionsAttributeOfTFailure))
+                {
+                    failureTypeSymbol = failureType1;
+                }
+                else continue;
+
+                resultModels.Add(new(targetNamespace,
+                    ExtensionTypeModifiers: attributedType.Declarations
+                        .First().Syntax.Modifiers
+                        .Select(m => m.Text)
+                        .ToImmutableEquatableArray(),
+                    ExtensionTypeName: extensionType.Name,
+                    ResultTypeName: resultTypeName,
+                    ResultTypeNamespace: resultTypeNamespace,
+                    FailureFullTypeName: failureTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                    AddPartialResultImplementingIResult: 
+                    addPartialResultImplementingIResult
+                ));
             }
         }
 
@@ -90,7 +110,7 @@ public class Generator : IIncrementalGenerator
                     .Replace("ResultTypeName", resultModel.ResultFullTypeName)
                     .Replace("FailureTypeName", resultModel.FailureFullTypeName);
 
-                if (!resultModel.AddPartialResultImplementingIResult)
+                if (resultModel.AddPartialResultImplementingIResult)
                 {
                     var partialResult = 
                         $$"""
@@ -135,8 +155,11 @@ public class KnownSymbols(Compilation compilation)
     /// </summary>
     public Compilation Compilation { get; } = compilation;
 
-    public INamedTypeSymbol? CommandExtensionsAttribute => GetOrResolveType($"{CommandExtensionsAttributeName}`2", ref _commandExtensionsAttribute);
-    Option<INamedTypeSymbol?> _commandExtensionsAttribute;
+    public INamedTypeSymbol? CommandExtensionsAttributeOfTFailureTResult => GetOrResolveType($"{CommandExtensionsAttributeName}`2", ref _commandExtensionsAttributeOfTFailureTResult);
+    Option<INamedTypeSymbol?> _commandExtensionsAttributeOfTFailureTResult;
+
+    public INamedTypeSymbol? CommandExtensionsAttributeOfTFailure => GetOrResolveType($"{CommandExtensionsAttributeName}`1", ref _commandExtensionsAttributeOfTFailure);
+    Option<INamedTypeSymbol?> _commandExtensionsAttributeOfTFailure;
 
     public INamedTypeSymbol? ResultInterface => GetOrResolveType("EventSourcing.Commands.IResult`3", ref _resultInterface);
     Option<INamedTypeSymbol?> _resultInterface;

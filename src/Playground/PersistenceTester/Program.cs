@@ -1,12 +1,33 @@
 ﻿using System.Diagnostics;
 using EventSourcing;
 using EventSourcing.Commands;
+using EventSourcing.Commands.Infrastructure;
+using EventSourcing.Commands.SerializablePayloads;
 using EventSourcing.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace PersistenceTester;
+
+/// <summary>
+/// This is all you need to use the standard FunicularSwitch result type with the EventSourcing.Commands package. On how to use a custom Result and error type, see Meetup project.
+/// </summary>
+[CommandExtensions<string>]
+static partial class CommandExtensions
+{
+    public static EventSourcingOptionsBuilder UseFunicularCommands(
+        this EventSourcingOptionsBuilder optionsBuilder,
+        Action<FunicularCommandsOptionsBuilder<string, FailurePayload>>? funicularCommandsOptionsAction = null) =>
+        optionsBuilder.UseFunicularCommands<string, FailurePayload>(funicularCommandsOptionsAction);
+
+    internal sealed record FailurePayload(string Error) : IFailurePayload<string, FailurePayload>
+    {
+        public string ToFailure() => Error;
+
+        public static FailurePayload FromFailure(string failure) => new (failure);
+    }
+}
 
 class Program
 {
@@ -47,7 +68,7 @@ class Program
         await services.StartEventSourcing();
 
         var commandStream = services.GetRequiredService<ICommandBus>();
-        await commandStream.SendCommandAndWaitUntilApplied(new AddTextCommand("Hallo"),  eventStream);
+        await commandStream.SendAndWaitForProcessedEvent(new AddTextCommand("Hallo"),  eventStream);
         
         var eventStore = services.GetRequiredService<IEventStore>();
 
@@ -121,8 +142,8 @@ public record AddTextCommand(string Text) : Command;
 
 public class AddTextCommandProcessor : SynchronousCommandProcessor<AddTextCommand>
 {
-    public override ProcessingResult<FailureTypeName> ProcessSync(AddTextCommand command) => 
-        Ok(new TextAdded("MyJournal", "First entry", command.Text), "Added journal entry");
+    public override ProcessingResult<string> ProcessSync(AddTextCommand command) => 
+        ProcessingResult.Ok(new TextAdded("MyJournal", "First entry", command.Text), "Added journal entry");
 }
 
 public record TextAdded(string JournalId, string Header, string Text) : EventPayload(new("Journal", JournalId), EventTypes.TextAdded);

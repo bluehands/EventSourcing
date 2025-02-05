@@ -7,7 +7,6 @@ namespace Meetup;
 [ResultType(typeof(Failure))]
 public partial class Result<T>
 {
-
 }
 
 [FunicularSwitch.Generators.UnionType]
@@ -51,10 +50,10 @@ public abstract partial record Failure(string Message) : IFailure<Failure>
     }
 }
 
-public static class DefaultFailureExtensions
+public static class FailureExtensions
 {
     [MergeError]
-    public static Failure MergeDefaultFailure(this Failure f1, Failure f2)
+    public static Failure Merge(this Failure f1, Failure f2)
     {
         IReadOnlyCollection<Failure> children;
         if (f1.IsMultiple(out var m))

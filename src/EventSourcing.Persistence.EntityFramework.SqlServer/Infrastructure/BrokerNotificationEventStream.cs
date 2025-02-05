@@ -64,7 +64,7 @@ static class BrokerNotificationEventStream
             var eventMapper = scope.ServiceProvider.GetRequiredService<IEventMapper<Event>>();
             var logger = scope.ServiceProvider.GetService<ILogger<SqlDependencyChangeListener>>();
 
-            //TODO: load existing in buffers, because right now alle events are read at once when stream starts
+            //TODO: load existing in buffers, because right now all events are read at once when stream starts
             var innerStream = SqlDependencyChangeListener
                 .GetChangeStream(new SqlServerExecutor(sp), (lastPosition, connection) =>
                     {
