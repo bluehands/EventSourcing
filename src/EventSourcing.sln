@@ -34,7 +34,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{3D801EE3-2
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing.Commands.Templates", "EventSourcing.Commands.Templates\EventSourcing.Commands.Templates.csproj", "{A07D7627-A770-4DC2-9F5F-990E45A222D0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing.Commands.SourceGenerator", "EventSourcing.Funicular.Commands.SourceGenerator\EventSourcing.Commands.SourceGenerator.csproj", "{9952F7A6-EF65-4AFA-98F9-33B88D3E6F8D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing.Commands.SourceGenerator", "EventSourcing.Commands.SourceGenerator\EventSourcing.Commands.SourceGenerator.csproj", "{9952F7A6-EF65-4AFA-98F9-33B88D3E6F8D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

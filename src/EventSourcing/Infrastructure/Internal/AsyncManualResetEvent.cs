@@ -1,4 +1,4 @@
-﻿//Taken from https://github.com/StephenCleary/AsyncEx/blob/v5.0.0/src/Nito.AsyncEx.Coordination/AsyncManualResetEvent.cs
+﻿//Original source https://github.com/StephenCleary/AsyncEx/blob/v5.0.0/src/Nito.AsyncEx.Coordination/AsyncManualResetEvent.cs
 using System.Threading;
 using System.Diagnostics;
 using System.Threading.Tasks;

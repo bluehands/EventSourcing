@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Original source https://github.com/eiriktsarpalis/PolyType/blob/main/src/PolyType.SourceGenerator/Helpers/RoslynHelpers.IncrementalValues.cs
+using System;
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -8,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 
+// ReSharper disable once CheckNamespace
 namespace PolyType.SourceGenerator.Helpers;
 
 public readonly struct TypeWithAttributeDeclarationContext

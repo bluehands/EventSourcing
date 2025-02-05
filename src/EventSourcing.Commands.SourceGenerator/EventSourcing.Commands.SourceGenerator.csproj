@@ -16,23 +16,9 @@
 	    <PrivateAssets>all</PrivateAssets>
 	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	  </PackageReference>
-	  <PackageReference Include="PolyType.Roslyn" Version="0.26.5" PrivateAssets="all" GeneratePathProperty="true" />
-	  <None Include="$(PkgPolyType_Roslyn)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
 	<ItemGroup>
 	  <EmbeddedResource Include="..\EventSourcing.Commands.Templates\ErrorTypeExtensions.cs" Link="Templates\ErrorTypeExtensions.cs" />
 	  <EmbeddedResource Include="..\EventSourcing.Commands.Templates\ResultTypeExtensions.cs" Link="Templates\ResultTypeExtensions.cs" />
 	</ItemGroup>
-
-	<PropertyGroup>
-		<GetTargetPathDependsOn>
-			$(GetTargetPathDependsOn);GetDependencyTargetPaths
-		</GetTargetPathDependsOn>
-	</PropertyGroup>
-
-	<Target Name="GetDependencyTargetPaths">
-		<ItemGroup>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGPolyType_Roslyn)\lib\netstandard2.0\PolyType.Roslyn.dll" IncludeRuntimeDependency="false" />
-		</ItemGroup>
-	</Target>
 </Project>
