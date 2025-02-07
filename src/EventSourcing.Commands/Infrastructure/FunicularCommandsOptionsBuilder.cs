@@ -1,17 +1,16 @@
 ﻿using System.Collections.Immutable;
-using EventSourcing.Infrastructure;
 using System.Reflection;
-using EventSourcing.Funicular.Commands.Infrastructure.Internal;
-using EventSourcing.Funicular.Commands.SerializablePayloads;
+using EventSourcing.Commands.Infrastructure.Internal;
+using EventSourcing.Commands.SerializablePayloads;
+using EventSourcing.Infrastructure;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure;
+namespace EventSourcing.Commands.Infrastructure;
 
-public class FunicularCommandsOptionsBuilder<TFailure, TFailurePayload>(EventSourcingOptionsBuilder optionsBuilder)
-    : EventSourcingOptionsExtensionBuilder<FunicularCommandsOptionsBuilder<TFailure, TFailurePayload>, FunicularCommandsOptionsExtension<TFailure, TFailurePayload>>(optionsBuilder)
-    where TFailure : IFailure<TFailure>
-    where TFailurePayload : class, IFailurePayload<TFailure, TFailurePayload>
+public class FunicularCommandsOptionsBuilder<TError, TErrorPayload>(EventSourcingOptionsBuilder optionsBuilder)
+    : EventSourcingOptionsExtensionBuilder<FunicularCommandsOptionsBuilder<TError, TErrorPayload>, FunicularCommandsOptionsExtension<TError, TErrorPayload>>(optionsBuilder)
+    where TErrorPayload : class, IErrorPayload<TError, TErrorPayload> where TError : notnull
 {
-    public FunicularCommandsOptionsBuilder<TFailure, TFailurePayload> CommandProcessorAssemblies(Assembly assembly, params Assembly[] assemblies) =>
+    public FunicularCommandsOptionsBuilder<TError, TErrorPayload> CommandProcessorAssemblies(Assembly assembly, params Assembly[] assemblies) =>
         WithOption(e => e with
         {
             CommandProcessorAssemblies = ImmutableList.Create<Assembly>().Add(assembly).AddRange(assemblies)

@@ -1,15 +1,13 @@
 ﻿using System;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
+namespace EventSourcing.Commands.Infrastructure.Internal;
 
-public delegate ScopedCommandProcessor<TFailure>? GetCommandProcessor<TFailure>(Type commandType)
-    where TFailure : IFailure<TFailure>;
+public delegate ScopedCommandProcessor<TError>? GetCommandProcessor<TError>(Type commandType) where TError : notnull;
 
-public sealed class ScopedCommandProcessor<TFailure>(CommandProcessor<TFailure> processor, IDisposable scope)
-    : IDisposable
-    where TFailure : IFailure<TFailure>
+public sealed class ScopedCommandProcessor<TError>(CommandProcessor<TError> processor, IDisposable scope)
+    : IDisposable where TError : notnull
 {
-    public CommandProcessor<TFailure> Processor { get; } = processor;
+    public CommandProcessor<TError> Processor { get; } = processor;
 
     public void Dispose() => scope.Dispose();
 }

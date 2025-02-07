@@ -7,59 +7,40 @@ using EventSourcing.Infrastructure.Internal;
 
 namespace EventSourcing;
 
-public class EventStore<TDbEvent, TSerializedPayload> : IEventStore, IEventMapper<TDbEvent>
+public class EventStore<TDbEvent, TSerializedPayload>(
+    IEventReader<TDbEvent> eventReader,
+    IEventWriter<TDbEvent> eventWriter,
+    IDbEventDescriptor<TDbEvent, TSerializedPayload> eventDescriptor,
+    IEventSerializer<TSerializedPayload> payloadSerializer,
+    EventPayloadMappers payloadMappers,
+    EventFactory eventFactory,
+    ICorruptedEventHandler? corruptedEventHandler = null)
+    : IEventStore, IEventMapper<TDbEvent>
 {
-    readonly IEventReader<TDbEvent> _eventReader;
-    readonly IEventSerializer<TSerializedPayload> _payloadSerializer;
-    readonly EventPayloadMappers _payloadMappers;
-    readonly EventFactory _eventFactory;
-    readonly ICorruptedEventHandler? _corruptedEventHandler;
-    readonly IEventWriter<TDbEvent> _eventWriter;
-    readonly IDbEventDescriptor<TDbEvent, TSerializedPayload> _eventDescriptor;
-
-    public EventStore(
-        IEventReader<TDbEvent> eventReader,
-        IEventWriter<TDbEvent> eventWriter,
-        IDbEventDescriptor<TDbEvent, TSerializedPayload> eventDescriptor,
-        IEventSerializer<TSerializedPayload> payloadSerializer,
-        EventPayloadMappers payloadMappers,
-        EventFactory eventFactory,
-        ICorruptedEventHandler? corruptedEventHandler = null
-        )
-    {
-        _eventReader = eventReader;
-        _payloadSerializer = payloadSerializer;
-        _payloadMappers = payloadMappers;
-        _eventFactory = eventFactory;
-        _corruptedEventHandler = corruptedEventHandler;
-        _eventWriter = eventWriter;
-        _eventDescriptor = eventDescriptor;
-    }
-
     public IAsyncEnumerable<Event> ReadEvents(long? fromPositionInclusive)
     {
-        var dbEvents = _eventReader.ReadEvents(fromPositionInclusive);
+        var dbEvents = eventReader.ReadEvents(fromPositionInclusive);
         return MapFromDbEvents(dbEvents);
     }
 
     public IAsyncEnumerable<Event> ReadEvents(StreamId streamId, long? fromPositionInclusive)
     {
-        var dbEvents = _eventReader.ReadEvents(streamId, fromPositionInclusive);
+        var dbEvents = eventReader.ReadEvents(streamId, fromPositionInclusive);
         return MapFromDbEvents(dbEvents);
     }
 
     public Task WriteEvents(IReadOnlyCollection<IEventPayload> payloads)
     {
         var events = MapToDbEvents(payloads);
-        return _eventWriter.WriteEvents(events);
+        return eventWriter.WriteEvents(events);
     }
 
     public IEnumerable<TDbEvent> MapToDbEvents(IEnumerable<IEventPayload> payloads) =>
         payloads.Select(payload =>
         {
-            var serializablePayload = _payloadMappers.MapToSerializablePayload(payload);
-            var serializedPayload = _payloadSerializer.Serialize(serializablePayload);
-            return _eventDescriptor.CreateDbEvent(payload.StreamId, payload.EventType, serializedPayload);
+            var serializablePayload = payloadMappers.MapToSerializablePayload(payload);
+            var serializedPayload = payloadSerializer.Serialize(serializablePayload);
+            return eventDescriptor.CreateDbEvent(payload.StreamId, payload.EventType, serializedPayload);
         });
 
     public async IAsyncEnumerable<Event> MapFromDbEvents(IAsyncEnumerable<TDbEvent> dbEvents)
@@ -68,28 +49,28 @@ public class EventStore<TDbEvent, TSerializedPayload> : IEventStore, IEventMappe
         {
             IEventPayload eventPayload;
 
-            var eventType = _eventDescriptor.GetEventType(dbEvent);
-            var streamId = _eventDescriptor.GetStreamId(dbEvent);
-            var serializedPayload = _eventDescriptor.GetPayload(dbEvent)!;
-            var eventPosition = _eventDescriptor.GetPosition(dbEvent);
-            var timestamp = _eventDescriptor.GetTimestamp(dbEvent);
+            var eventType = eventDescriptor.GetEventType(dbEvent);
+            var streamId = eventDescriptor.GetStreamId(dbEvent);
+            var serializedPayload = eventDescriptor.GetPayload(dbEvent)!;
+            var eventPosition = eventDescriptor.GetPosition(dbEvent);
+            var timestamp = eventDescriptor.GetTimestamp(dbEvent);
 
             try
             {
-                eventPayload = _payloadMappers.MapFromSerializedPayload(streamId, eventType, serializedPayload, _payloadSerializer != null
-                    ? (t, s) => _payloadSerializer.Deserialize(t, (TSerializedPayload)s)
+                eventPayload = payloadMappers.MapFromSerializedPayload(streamId, eventType, serializedPayload, payloadSerializer != null
+                    ? (t, s) => payloadSerializer.Deserialize(t, (TSerializedPayload)s)
                     : null);
             }
             catch (Exception e)
             {
                 // permanent deserialize / mapping error. 
-                var errorPayload = _corruptedEventHandler?.OnDeserializeOrMappingError(e, eventPosition, eventType, timestamp, serializedPayload);
+                var errorPayload = corruptedEventHandler?.OnDeserializeOrMappingError(e, eventPosition, eventType, timestamp, serializedPayload);
                 if (errorPayload == null)
                     continue;
                 eventPayload = errorPayload;
             }
 
-            yield return _eventFactory.EventFromPayload(eventPayload, eventPosition, timestamp);
+            yield return eventFactory.EventFromPayload(eventPayload, eventPosition, timestamp);
         }
     }
 }

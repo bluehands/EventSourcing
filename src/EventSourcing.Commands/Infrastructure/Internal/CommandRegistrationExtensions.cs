@@ -7,22 +7,20 @@ using System.Threading.Tasks;
 using EventSourcing.Infrastructure.Internal;
 using Microsoft.Extensions.Logging;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
+namespace EventSourcing.Commands.Infrastructure.Internal;
 
 public static class CommandRegistrationExtensions
 {
-    public static IDisposable SubscribeCommandProcessors<TFailure>(
+    public static IDisposable SubscribeCommandProcessors<TError>(
         this IObservable<Command> commands,
-        GetCommandProcessor<TFailure> getCommandProcessor,
+        GetCommandProcessor<TError> getCommandProcessor,
         Func<ScopedEventStore> getEventStore,
         ILogger? logger,
-        WakeUp? eventPollWakeUp)
-        where TFailure : IFailure<TFailure>
-        => commands
+        WakeUp? eventPollWakeUp) where TError : notnull => commands
             .Process(getCommandProcessor, logger)
             .SelectMany(async processingResult =>
             {
-                var commandProcessed = new CommandProcessed<TFailure>(processingResult.result);
+                var commandProcessed = new CommandProcessed<TError>(processingResult.result);
                 IReadOnlyCollection<IEventPayload> payloads = [.. processingResult.payloads, commandProcessed];
 
                 using var eventStore = getEventStore();
@@ -32,20 +30,19 @@ public static class CommandRegistrationExtensions
                 }
                 catch (Exception e)
                 {
-                    await OnEventWriteError<TFailure>(eventStore, payloads, e, commandProcessed.CommandId, eventPollWakeUp, logger).ConfigureAwait(false);
+                    await OnEventWriteError<TError>(eventStore, payloads, e, commandProcessed.CommandId, eventPollWakeUp, logger).ConfigureAwait(false);
                 }
 
                 return Unit.Default;
             })
             .Subscribe();
 
-    static async Task OnEventWriteError<TFailure>(IEventStore eventStore,
+    static async Task OnEventWriteError<TError>(IEventStore eventStore,
         IEnumerable<IEventPayload> payloads,
         Exception e,
         CommandId commandId,
         WakeUp? eventPollWakeUp,
-        ILogger? logger)
-        where TFailure : IFailure<TFailure>
+        ILogger? logger) where TError : notnull
     {
         try
         {
@@ -53,7 +50,7 @@ public static class CommandRegistrationExtensions
             logger?.LogError(e, "Failed to persist events: {eventPayloads}. Trying to persist faulted event for command...", payloadInfo);
             var eventPayloads = new[]
             {
-                new CommandProcessed<TFailure>(CommandResult<TFailure>.Faulted(commandId, $"Failed to persist events: {payloadInfo}: {e}", e)),
+                new CommandProcessed<TError>(CommandResult<TError>.Faulted(commandId, $"Failed to persist events: {payloadInfo}: {e}", e)),
             };
             await InternalWriteEvents(eventStore, eventPayloads, eventPollWakeUp).ConfigureAwait(false);
         }
@@ -69,14 +66,13 @@ public static class CommandRegistrationExtensions
         eventPollWakeUp?.ThereIsWorkToDo();
     }
 
-    static IObservable<(CommandResult<TFailure> result, IReadOnlyCollection<IEventPayload> payloads)> Process<TFailure>(this IObservable<Command> commands,
-        GetCommandProcessor<TFailure> getCommandProcessor, ILogger? logger)
-        where TFailure : IFailure<TFailure>
+    static IObservable<(CommandResult<TError> result, IReadOnlyCollection<IEventPayload> payloads)> Process<TError>(this IObservable<Command> commands,
+        GetCommandProcessor<TError> getCommandProcessor, ILogger? logger) where TError : notnull
         => commands
             .SelectMany(async c =>
             {
                 if (IsDebugEnabled(logger)) logger?.LogDebug("Executing {Command}...", c);
-                var result = await CommandProcessor<TFailure>.Process(c, getCommandProcessor).ConfigureAwait(false);
+                var result = await CommandProcessor<TError>.Process(c, getCommandProcessor).ConfigureAwait(false);
                 if (IsDebugEnabled(logger)) logger?.LogDebug("Execution finished with {CommandResult}.", result);
                 return result;
             });

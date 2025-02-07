@@ -68,14 +68,15 @@ A little meetup planner example is implemented [here](https://github.com/bluehan
 
 ## Extensibility
 
-Packages are designed to be easily extensible to support other persistence types, event serialization formats (like binary payload serialization) or new lifecycle phases (see ```AfterEventReplayPhase``` introduced by Bluehands.EventSourcing.Funicular.Commands). Exensibility patterns are inspired by the ones used in current EntityFramework versions.
+Packages are designed to be easily extensible to support other persistence types, event serialization formats (like binary payload serialization) or new lifecycle phases (see ```AfterEventReplayPhase``` introduced by Bluehands.EventSourcing.Commands). Exensibility patterns are inspired by the ones used in current EntityFramework versions.
 
 ## Command layer
 
-Your are basically free to model a command layer (or not) on top of your event sourcing infrastructure. [Bluehands.EventSourcing.Funicular.Commands](https://www.nuget.org/packages/Bluehands.EventSourcing.Funicular.Commands) package is a proposal of such a command layer offering the following features:
+Your are basically free to model a command layer (or not) on top of your event sourcing infrastructure. [Bluehands.EventSourcing.Commands](https://www.nuget.org/packages/Bluehands.EventSourcing.Commands) package is a proposal of such a command layer offering the following features:
 
  - 'Functional approach': A command processor / handler is just a function that produces events given an intention (command).
- - Use a [Result](https://github.com/bluehands/Funicular-Switch) type to ease validation and error handling in your command processors. See [RegisterParticipantCommandProcessor](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Commands.cs#L21) for an example.
+ - Your command handlers can return a an error in case of functional errors. This error information is serialized to the event store and gives you a generic way to inform your caller about failed commands, without having to model everything into your application state. You can choose your error type freely. A source generator shipped with the package adds supporting types for your specific error type (TODO: sample links). 
+ - Use a [Result](https://github.com/bluehands/Funicular-Switch) type that correspongs to you error type to ease validation and error handling in your command processors. See [RegisterParticipantCommandProcessor](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Commands.cs#L21) for an example.
  - Possibility for the issuer of a command to wait until the effect of his command (the events) where processed by a particular projection. This is especially useful for scenarios were a non CQS[^1] api should be kept stable while evolving the underlying infrastructure towards event sourcing. Have a look a the [Meetup app api](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Api.cs#L13) for an example of the ```SendCommandAndWaitUntilApplied``` method.
 
 [^1]: An API that does not respect the '[Command Query Separation](https://de.wikipedia.org/wiki/Command-Query-Separation)' principle. So commands actually return data, i.e. UpdateSomething returns the updated entity.
@@ -85,7 +86,7 @@ Your are basically free to model a command layer (or not) on top of your event s
 
 As for the command layer you are basically free to build your projections the way you want. Just use the event stream to subscribe to events and apply them to your state objects.
 
-*Bluehands.EventSourcing.Funicular.Projections* package will come soon. Look at the [Talks type](https://github.com/bluehands/EventSourcing/blob/main/src/Playground/Meetup/Meetup/Projection.cs) to see an example of an in memory projection that uses an immutable state representation. State changes can be observed in a [reactive way](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Api.cs#L34).
+*Bluehands.EventSourcing.Projections* package will come soon. Look at the [Talks type](https://github.com/bluehands/EventSourcing/blob/main/src/Playground/Meetup/Meetup/Projection.cs) to see an example of an in memory projection that uses an immutable state representation. State changes can be observed in a [reactive way](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Api.cs#L34).
 
 ## Error handling
 

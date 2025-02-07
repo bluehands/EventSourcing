@@ -1,4 +1,4 @@
-﻿using EventSourcing.Funicular.Commands;
+﻿using EventSourcing.Commands;
 
 namespace Meetup;
 
@@ -9,10 +9,10 @@ public record NewUserGroupTalk(string Title, int MaxAttendees) : Command
 
 public class NewUserGroupTalkCommandProcessor : SynchronousCommandProcessor<NewUserGroupTalk>
 {
-	public override CommandResult.Processed_ ProcessSync(NewUserGroupTalk command)
+	public override EventSourcing.Commands.ProcessingResult<Error> ProcessSync(NewUserGroupTalk command)
 	{
 		var userGroupTalkAdded = new UserGroupTalkAdded(command.TalkId, command.Title, command.MaxAttendees);
-		return command.ToProcessedResult(userGroupTalkAdded, FunctionalResult.Ok($"Talk '{command.Title}' added"));
+        return ProcessingResult.Ok(userGroupTalkAdded);
 	}
 }
 
@@ -20,29 +20,32 @@ public record RegisterAttendee(string TalkId, string Name, string MailAddress) :
 
 public class RegisterAttendeeCommandProcessor(TalksProjection talks) : SynchronousCommandProcessor<RegisterAttendee>
 {
-	public override CommandResult.Processed_ ProcessSync(RegisterAttendee command)
-	{
-		var @event =
-			from talk in talks.Current.TalksById.Get(command.TalkId)
-			from validRegistration in talk.Validate(RegistrationOk)
-			select new AttendeeRegistered(command.TalkId, command.Name, command.MailAddress, DateTimeOffset.Now);
+	public override EventSourcing.Commands.ProcessingResult<Error> ProcessSync(RegisterAttendee command)
+    {
+        var @event =
+            from talk in talks.Current.TalksById.Get(command.TalkId)
+            from validRegistration in talk.Validate(RegistrationOk)
+            select (
+                new AttendeeRegistered(command.TalkId, command.Name, command.MailAddress, DateTimeOffset.Now),
+                $"Attendee '{command.Name}' registered for talk '{talk.Title}'"
+            );
 
-		return @event.ToProcessedResult(command);
+		return @event.ToProcessingResult();
 
-		IEnumerable<Failure> RegistrationOk(Talk talk)
+		IEnumerable<Error> RegistrationOk(Talk talk)
 		{
 			if (talk.Attendees.Any(a => a.Name == command.Name))
-				yield return Failure.Conflict($"{command.Name} already registered.");
+				yield return Error.Conflict($"{command.Name} already registered.");
 		}
 	}
 }
 
 public static class DictionaryExtension
 {
-	public static OperationResult<TValue> Get<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dict, TKey key)
+	public static Result<TValue> Get<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dict, TKey key)
 	{
 		if (!dict.TryGetValue(key, out var value))
-			return OperationResult.NotFound<TValue>($"{typeof(TValue).Name} with key {key} not found");
+			return Result.Error<TValue>(Error.NotFound($"{typeof(TValue).Name} with key {key} not found"));
 		return value;
 	}
 }

@@ -17,7 +17,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PersistenceTester", "Playgr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventSourcing.Test", "EventSourcing.Test\EventSourcing.Test.csproj", "{E3836C1C-4411-4395-A19D-A26BC1EB12B7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventSourcing.Funicular.Commands", "EventSourcing.Commands\EventSourcing.Funicular.Commands.csproj", "{05A329B3-AFFD-4FE9-A65D-AFBB7271DC18}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventSourcing.Commands", "EventSourcing.Commands\EventSourcing.Commands.csproj", "{05A329B3-AFFD-4FE9-A65D-AFBB7271DC18}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{83A22E42-1D58-4080-B455-3F2A59ED75FB}"
 EndProject
@@ -32,7 +32,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{3D801EE3-2
 		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing.Funicular.Commands.Defaults", "EventSourcing.Commands.Defaults\EventSourcing.Funicular.Commands.Defaults.csproj", "{A07D7627-A770-4DC2-9F5F-990E45A222D0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing.Commands.Templates", "EventSourcing.Commands.Templates\EventSourcing.Commands.Templates.csproj", "{A07D7627-A770-4DC2-9F5F-990E45A222D0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing.Commands.SourceGenerator", "EventSourcing.Commands.SourceGenerator\EventSourcing.Commands.SourceGenerator.csproj", "{9952F7A6-EF65-4AFA-98F9-33B88D3E6F8D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -76,6 +78,10 @@ Global
 		{A07D7627-A770-4DC2-9F5F-990E45A222D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A07D7627-A770-4DC2-9F5F-990E45A222D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A07D7627-A770-4DC2-9F5F-990E45A222D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9952F7A6-EF65-4AFA-98F9-33B88D3E6F8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9952F7A6-EF65-4AFA-98F9-33B88D3E6F8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9952F7A6-EF65-4AFA-98F9-33B88D3E6F8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9952F7A6-EF65-4AFA-98F9-33B88D3E6F8D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

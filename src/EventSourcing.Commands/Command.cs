@@ -1,4 +1,4 @@
-﻿namespace EventSourcing.Funicular.Commands;
+﻿namespace EventSourcing.Commands;
 
 public abstract record Command
 {

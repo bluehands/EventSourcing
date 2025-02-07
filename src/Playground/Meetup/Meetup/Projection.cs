@@ -2,7 +2,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using EventSourcing;
-using EventSourcing.Funicular.Commands;
+using EventSourcing.Commands;
 using EventSourcing.Infrastructure;
 
 namespace Meetup;
@@ -72,9 +72,9 @@ public abstract class Projection<T> : IDisposable, IInitializer<BeforeEventRepla
     public IObservable<(T state, Event @event)> Changes => _connectableObservable;
     public T Current { get; private set; }
 
-    public IObservable<Event<CommandProcessed>> ProcessedCommands => Changes
+    public IObservable<Event<CommandProcessed<Error>>> ProcessedCommands => Changes
         .Select(c => c.@event)
-        .OfType<Event<CommandProcessed>>();
+        .OfType<Event<CommandProcessed<Error>>>();
 
     protected Projection(IObservable<Event> eventStream, T initialState, Func<T, Event, T> apply)
     {

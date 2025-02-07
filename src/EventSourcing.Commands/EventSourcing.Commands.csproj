@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net8.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+	
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+		<PackageId>Bluehands.EventSourcing.Commands</PackageId>
+		<Titel>Bluehands.EventSourcing.Commands</Titel>
+		<PackageDescription>Functional command pattern for Bluehands.EventSourcing</PackageDescription>
+		<PackageTags>Commands,Processor,EventSourcing,CQRS</PackageTags>
+	</PropertyGroup>
+	
+	<ItemGroup>
+	  <Compile Include="..\Shared\Instrastructure\Internal\TypeExtensions.cs" Link="Infrastructure\Internal\TypeExtensions.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="FunicularSwitch.Generators" Version="4.2.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="System.Reactive" Version="6.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\EventSourcing.Commands.SourceGenerator\EventSourcing.Commands.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	  <ProjectReference Include="..\EventSourcing\EventSourcing.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\EventSourcing.Commands.SourceGenerator\bin\$(Configuration)\netstandard2.0\EventSourcing.Commands.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+	</ItemGroup>
+
+</Project>

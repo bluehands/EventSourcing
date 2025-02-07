@@ -6,7 +6,7 @@ using EventSourcing.Infrastructure.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
+namespace EventSourcing.Commands.Infrastructure.Internal;
 
 public class FunicularEventSourcingContext(
     IEventReplayState eventReplayState,
@@ -23,10 +23,9 @@ public class FunicularEventSourcingContext(
     }
 }
 
-internal sealed class FunicularCommandsInitializer<TFailure>(
-    CommandProcessorSubscription<TFailure> commandProcessorSubscription,
-    EventReplayState<TFailure> eventReplayState) : IInitializer<EventReplayStarted>
-    where TFailure : IFailure<TFailure>
+internal sealed class CommandsInitializer<TError>(
+    CommandProcessorSubscription<TError> commandProcessorSubscription,
+    EventReplayState<TError> eventReplayState) : IInitializer<EventReplayStarted> where TError : notnull
 {
     public Task Initialize()
     {

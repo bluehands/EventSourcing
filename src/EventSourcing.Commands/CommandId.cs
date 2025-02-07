@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EventSourcing.Funicular.Commands;
+namespace EventSourcing.Commands;
 
 public record CommandId(Guid Id)
 {

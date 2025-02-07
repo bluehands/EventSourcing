@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure.Internal;
+namespace EventSourcing.Commands.Infrastructure.Internal;
 
 public interface IEventReplayState
 {

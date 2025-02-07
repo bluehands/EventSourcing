@@ -1,23 +1,35 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<SignAssembly>false</SignAssembly>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Bluehands.EventSourcing" Version="0.2.1-main-20241125.2" />
-    <PackageReference Include="Bluehands.EventSourcing.Funicular.Commands" Version="0.2.1-main-20241125.2" />
-    <PackageReference Include="Bluehands.EventSourcing.Persistence.Sqlite" Version="0.2.1-main-20241125.2" />
-    <PackageReference Include="Bluehands.EventSourcing.Persistence.SqlServer" Version="0.2.1-main-20241125.2" />
-    <PackageReference Include="FunicularSwitch" Version="6.1.1" />
-    <PackageReference Include="FunicularSwitch.Generators" Version="4.2.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="HotChocolate.AspNetCore" Version="13.9.14" />
-    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
-  </ItemGroup>
+	<PropertyGroup>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>
+	</PropertyGroup>
 
+	<ItemGroup>
+		<!--
+			Don't include the output from a previous source generator execution into future runs; the */** trick here ensures that there's
+			at least one subdirectory, which is our key that it's coming from a source generator as opposed to something that is coming from
+			some other tool. 
+		-->
+		<Compile Remove="$(CompilerGeneratedFilesOutputPath)/*/**/*.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Bluehands.EventSourcing.Commands" Version="0.3.0-SourceGenerator-20250205.3" />
+		<PackageReference Include="Bluehands.EventSourcing.Persistence.Sqlite" Version="0.3.0-main-20250130.2" />
+		<PackageReference Include="FunicularSwitch" Version="6.1.1" />
+		<PackageReference Include="FunicularSwitch.Generators" Version="4.2.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="HotChocolate.AspNetCore" Version="13.9.14" />
+		<PackageReference Include="System.Linq.Async" Version="6.0.1" />
+	</ItemGroup>
 </Project>

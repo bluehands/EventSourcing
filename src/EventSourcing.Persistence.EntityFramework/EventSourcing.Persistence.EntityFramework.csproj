@@ -8,45 +8,10 @@
 
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
-
-		<VersionSuffixLocal />
-		<!--When variable is set we are building a prerelease package-->
-		<VersionSuffixLocal Condition="'$(IsPreRelease)'!='' AND '$(IsPreRelease)'">
-			$(VersionSuffix)
-		</VersionSuffixLocal>
-
-		<!--#region adapt versions here-->
-		<MajorVersion>0</MajorVersion>
-		<MinorAndPatchVersion>3.0</MinorAndPatchVersion>
-		<!--#endregion-->
-
-		<AssemblyVersion>$(MajorVersion).0.0</AssemblyVersion>
-		<Version>$(MajorVersion).$(MinorAndPatchVersion)</Version>
-		<FileVersion>$(Version)</FileVersion>
-		<PackageVersion>$(Version)$(VersionSuffixLocal)</PackageVersion>
 		<PackageId>Bluehands.EventSourcing.Persistence.EntityFramework</PackageId>
-
-		<!-- Descriptions and information-->
 		<Titel>Bluehands.EventSourcing.Persistence.EntityFramework</Titel>
-		<Authors>bluehands</Authors>
 		<PackageDescription>Common functionality for entity framework based persistence implementations for EventSourcing</PackageDescription>
-		<Copyright>Copyright 2025 bluehands GmbH &amp; C.ommunication KG</Copyright>
-		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<!--<PackageIcon>FunicularSwitch.png</PackageIcon>-->
 		<PackageTags>EventSourcing,CQRS,EventStore,EntityFramework</PackageTags>
-		<RepositoryUrl>https://github.com/bluehands/EventSourcing</RepositoryUrl>
-		<RepositoryType>Git</RepositoryType>
-		<RepositoryBranch>main</RepositoryBranch>
-
-		<!-- Package specific settings -->
-		<PackageOutputPath>$(OutputPath)</PackageOutputPath>
-		<IncludeSymbols>true</IncludeSymbols>
-		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-		<ContentTargetFolders>content</ContentTargetFolders>
-		<SignAssembly>True</SignAssembly>
-		<AssemblyOriginatorKeyFile>..\..\EventSourcing.snk</AssemblyOriginatorKeyFile>
-		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 	</PropertyGroup>
 
 	<ItemGroup>

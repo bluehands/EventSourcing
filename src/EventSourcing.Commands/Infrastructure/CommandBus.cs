@@ -2,10 +2,10 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
-using AsyncLock = EventSourcing.Funicular.Commands.Infrastructure.Internal.AsyncLock;
-using EventSourcing.Funicular.Commands.Infrastructure.Internal;
+using EventSourcing.Commands.Infrastructure.Internal;
+using AsyncLock = EventSourcing.Commands.Infrastructure.Internal.AsyncLock;
 
-namespace EventSourcing.Funicular.Commands.Infrastructure;
+namespace EventSourcing.Commands.Infrastructure;
 
 public sealed class CommandBus : IObservable<Command>, IDisposable, ICommandBus
 {
