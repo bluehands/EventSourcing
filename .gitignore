@@ -399,3 +399,4 @@ FodyWeavers.xsd
 /src/Playground/Meetup/Meetup/EventStore.db
 /src/Playground/Meetup/Meetup/EventStore.db-shm
 /src/Playground/Meetup/Meetup/EventStore.db-wal
+/src/EventSourcing.Persistence.EntityFramework.Sqlite/MigrationsDb.db
