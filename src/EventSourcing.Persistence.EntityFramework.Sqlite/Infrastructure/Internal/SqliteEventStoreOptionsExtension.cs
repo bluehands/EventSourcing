@@ -6,9 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace EventSourcing.Persistence.EntityFramework.Sqlite.Infrastructure.Internal;
 
-public record SqliteEventStoreOptionsExtension(string? ConnectionString) : IEventSourcingOptionsExtension
+public record SqliteEventStoreOptionsExtension(Func<IServiceProvider, string?> ConnectionString) : IEventSourcingOptionsExtension
 {
-    public SqliteEventStoreOptionsExtension() : this(default(string))
+    public SqliteEventStoreOptionsExtension() : this(_ => null)
     {
     }
 
@@ -21,8 +21,8 @@ public record SqliteEventStoreOptionsExtension(string? ConnectionString) : IEven
 
     public void ApplyServices(IServiceCollection serviceCollection)
     {
-        serviceCollection.AddDbContext<EventStoreContext>(options =>
-            options.UseSqlite(ConnectionString, o => o.MigrationsAssembly(typeof(Marker).Assembly.GetName().Name!))
+        serviceCollection.AddDbContext<EventStoreContext>((sp, options) =>
+            options.UseSqlite(ConnectionString(sp), o => o.MigrationsAssembly(typeof(Marker).Assembly.GetName().Name!))
         );
 
         serviceCollection.AddEntityFrameworkServices();
