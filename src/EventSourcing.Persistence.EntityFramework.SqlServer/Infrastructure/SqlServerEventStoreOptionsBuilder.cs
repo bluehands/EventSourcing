@@ -9,6 +9,11 @@ public class SqlServerEventStoreOptionsBuilder(EventSourcingOptionsBuilder optio
     public SqlServerEventStoreOptionsBuilder ConnectionString(string connectionString) =>
         WithOption(options => options with
         {
+            ConnectionString = _ => connectionString
+        });
+    public SqlServerEventStoreOptionsBuilder ConnectionString(Func<IServiceProvider, string> connectionString) =>
+        WithOption(options => options with
+        {
             ConnectionString = connectionString
         });
 
