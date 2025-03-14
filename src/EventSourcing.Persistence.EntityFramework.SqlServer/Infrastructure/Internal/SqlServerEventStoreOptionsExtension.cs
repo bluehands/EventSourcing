@@ -6,9 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace EventSourcing.Persistence.EntityFramework.SqlServer.Infrastructure.Internal;
 
-public record SqlServerEventStoreOptionsExtension(string? ConnectionString) : IEventSourcingOptionsExtension
+public record SqlServerEventStoreOptionsExtension(Func<IServiceProvider, string?> ConnectionString) : IEventSourcingOptionsExtension
 {
-    public SqlServerEventStoreOptionsExtension() : this(default(string))
+    public SqlServerEventStoreOptionsExtension() : this(_ => null)
     {
     }
 
@@ -23,9 +23,9 @@ public record SqlServerEventStoreOptionsExtension(string? ConnectionString) : IE
 
     public void ApplyServices(IServiceCollection serviceCollection)
     {
-        serviceCollection.AddDbContext<EventStoreContext>(options =>
+        serviceCollection.AddDbContext<EventStoreContext>((sp, options) =>
             options
-                .UseSqlServer(ConnectionString, 
+                .UseSqlServer(ConnectionString(sp), 
                     o => o.MigrationsAssembly(typeof(Marker).Assembly.GetName().Name!))
                 .AddInterceptors([new ExclusiveWriteInterceptor()])
         );

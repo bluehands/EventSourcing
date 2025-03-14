@@ -9,21 +9,24 @@
 
   <!--#region adapt versions here-->
   <MajorVersion>0</MajorVersion>
-  <MinorAndPatchVersion>4.0</MinorAndPatchVersion>
+  <MinorAndPatchVersion>4.1</MinorAndPatchVersion>
   <!--#endregion-->
 
   <AssemblyVersion>$(MajorVersion).0.0</AssemblyVersion>
-  <Version>$(MajorVersion).$(MinorAndPatchVersion)</Version>
+  <Version>$(MajorVersion).$(MinorAndPatchVersion)$(VersionSuffixLocal)</Version>
   <FileVersion>$(Version)</FileVersion>
-  <PackageVersion>$(Version)$(VersionSuffixLocal)</PackageVersion>
-  <Authors>bluehands</Authors>
-  <Copyright>Copyright 2025 bluehands GmbH &amp; C.ommunication KG</Copyright>
+  <PackageVersion>$(Version)</PackageVersion>
+  
+  <Authors>Implemented with 💙 by bluehands</Authors>
+  <Company>bluehands GmbH &amp; Co.mmunication KG</Company>
+  <Copyright>bluehands GmbH &amp; Co.mmunication KG</Copyright>
+  
   <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-  <PackageLicenseExpression>MIT</PackageLicenseExpression>
-  <!--<PackageIcon>FunicularSwitch.png</PackageIcon>-->
-  <RepositoryUrl>https://github.com/bluehands/EventSourcing</RepositoryUrl>
+  <PackageLicenseExpression>MIT</PackageLicenseExpression>  
+  <RepositoryUrl>https://github.com/bluehands/EventSourcing.git</RepositoryUrl>
   <RepositoryType>Git</RepositoryType>
   <RepositoryBranch>main</RepositoryBranch>
+  <PackageProjectUrl>https://github.com/bluehands/EventSourcing</PackageProjectUrl>    
 
   <!-- Package specific settings -->
   <PackageOutputPath>$(OutputPath)</PackageOutputPath>
