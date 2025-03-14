@@ -13,7 +13,8 @@ namespace EventSourcing.Persistence.EntityFramework.Sqlite.Migrations
             migrationBuilder.Sql(
                 """
                 PRAGMA journal_mode=wal;
-                """);
+                """, 
+                suppressTransaction: true);
         }
 
         /// <inheritdoc />
