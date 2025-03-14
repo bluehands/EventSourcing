@@ -10,6 +10,11 @@ public class SqliteEventStoreOptionsBuilder(EventSourcingOptionsBuilder optionsB
     public SqliteEventStoreOptionsBuilder ConnectionString(string connectionString) =>
         WithOption(options => options with
         {
+            ConnectionString = _ => connectionString
+        });    
+    public SqliteEventStoreOptionsBuilder ConnectionString(Func<IServiceProvider, string> connectionString) =>
+        WithOption(options => options with
+        {
             ConnectionString = connectionString
         });
 }

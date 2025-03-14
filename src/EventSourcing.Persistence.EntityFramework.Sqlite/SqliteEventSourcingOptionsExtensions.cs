@@ -6,7 +6,13 @@ namespace EventSourcing;
 
 public static class SqliteEventSourcingOptionsExtensions
 {
-    public static EventSourcingOptionsBuilder UseSqliteEventStore(this EventSourcingOptionsBuilder optionsBuilder, string connectionString, Action<SqliteEventStoreOptionsBuilder>? sqliteOptionsAction = null)
+    public static EventSourcingOptionsBuilder UseSqliteEventStore(
+        this EventSourcingOptionsBuilder optionsBuilder, string connectionString,
+        Action<SqliteEventStoreOptionsBuilder>? sqliteOptionsAction = null)
+    {
+        return UseSqliteEventStore(optionsBuilder, _ => connectionString, sqliteOptionsAction);
+    }
+    public static EventSourcingOptionsBuilder UseSqliteEventStore(this EventSourcingOptionsBuilder optionsBuilder, Func<IServiceProvider, string> connectionString, Action<SqliteEventStoreOptionsBuilder>? sqliteOptionsAction = null)
     {
         var sqlBuilder = new SqliteEventStoreOptionsBuilder(optionsBuilder)
             .ConnectionString(connectionString);
