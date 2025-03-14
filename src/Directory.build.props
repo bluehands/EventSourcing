@@ -9,7 +9,7 @@
 
   <!--#region adapt versions here-->
   <MajorVersion>0</MajorVersion>
-  <MinorAndPatchVersion>4.1</MinorAndPatchVersion>
+  <MinorAndPatchVersion>4.2</MinorAndPatchVersion>
   <!--#endregion-->
 
   <AssemblyVersion>$(MajorVersion).0.0</AssemblyVersion>
