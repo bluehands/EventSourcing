@@ -19,12 +19,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventSourcing.Test", "Event
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventSourcing.Commands", "EventSourcing.Commands\EventSourcing.Commands.csproj", "{05A329B3-AFFD-4FE9-A65D-AFBB7271DC18}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{83A22E42-1D58-4080-B455-3F2A59ED75FB}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{BDF491D5-451E-4B68-9817-23FE0940C254}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Internal", "Internal", "{6D0A308C-7E88-4FBC-B96D-BFA63E5AB152}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Meetup", "Playground\Meetup\Meetup\Meetup.csproj", "{A558C943-63B2-47F0-B277-F2BC3348B3FC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{3D801EE3-2BEC-47B2-A89C-361C08BF3E15}"
@@ -35,6 +29,13 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing.Commands.Templates", "EventSourcing.Commands.Templates\EventSourcing.Commands.Templates.csproj", "{A07D7627-A770-4DC2-9F5F-990E45A222D0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing.Commands.SourceGenerator", "EventSourcing.Commands.SourceGenerator\EventSourcing.Commands.SourceGenerator.csproj", "{9952F7A6-EF65-4AFA-98F9-33B88D3E6F8D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		..\.gitignore = ..\.gitignore
+		..\azure-pipelines.yml = ..\azure-pipelines.yml
+		Directory.build.props = Directory.build.props
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -88,8 +89,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{8F0B502C-AD02-4038-B204-9EEA56F1B672} = {1F559C7F-C0CD-49FD-B571-9DCDAAE84CD1}
-		{BDF491D5-451E-4B68-9817-23FE0940C254} = {83A22E42-1D58-4080-B455-3F2A59ED75FB}
-		{6D0A308C-7E88-4FBC-B96D-BFA63E5AB152} = {BDF491D5-451E-4B68-9817-23FE0940C254}
 		{A558C943-63B2-47F0-B277-F2BC3348B3FC} = {1F559C7F-C0CD-49FD-B571-9DCDAAE84CD1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
