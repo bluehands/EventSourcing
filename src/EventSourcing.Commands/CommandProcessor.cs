@@ -36,7 +36,7 @@ public abstract class CommandProcessor<TError> where TError : notnull
         var command = scopedCommand.Command;
         try
         {
-            var commandProcessor = getCommandProcessor(scopedCommand.GetType(), scopedCommand.ServiceScope);
+            var commandProcessor = getCommandProcessor(command.GetType(), scopedCommand.ServiceScope);
             if (commandProcessor != null)
                 // ReSharper disable once AccessToDisposedClosure
             {
@@ -51,7 +51,7 @@ public abstract class CommandProcessor<TError> where TError : notnull
                 return (commandResult, processingResult.Payloads, scopedCommand);
             }
 
-            return Error(CommandResult<TError>.Unhandled(command.Id, $"No command processor registered for command {scopedCommand.GetType().Name}"));
+            return Error(CommandResult<TError>.Unhandled(command.Id, $"No command processor registered for command {command.GetType().Name}"));
         }
         catch (OperationCanceledException)
         {
@@ -59,7 +59,7 @@ public abstract class CommandProcessor<TError> where TError : notnull
         }
         catch (Exception e)
         {
-            return Error(CommandResult<TError>.Faulted(command.Id, $"Process command {scopedCommand} failed: {e}", e));
+            return Error(CommandResult<TError>.Faulted(command.Id, $"Process command {command} failed: {e}", e));
         }
 
         (CommandResult<TError> result, IReadOnlyCollection<IEventPayload> payloads, ScopedCommand) Error(
