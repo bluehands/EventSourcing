@@ -5,6 +5,7 @@ using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using EventSourcing.Infrastructure.Internal;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Commands.Infrastructure.Internal;
@@ -12,9 +13,8 @@ namespace EventSourcing.Commands.Infrastructure.Internal;
 public static class CommandRegistrationExtensions
 {
     public static IDisposable SubscribeCommandProcessors<TError>(
-        this IObservable<Command> commands,
+        this IObservable<ScopedCommand> commands,
         GetCommandProcessor<TError> getCommandProcessor,
-        Func<ScopedEventStore> getEventStore,
         ILogger? logger,
         WakeUp? eventPollWakeUp) where TError : notnull => commands
             .Process(getCommandProcessor, logger)
@@ -23,14 +23,19 @@ public static class CommandRegistrationExtensions
                 var commandProcessed = new CommandProcessed<TError>(processingResult.result);
                 IReadOnlyCollection<IEventPayload> payloads = [.. processingResult.payloads, commandProcessed];
 
-                using var eventStore = getEventStore();
+                var eventStore = processingResult.command.ServiceScope.ServiceProvider.GetRequiredService<IEventStore>();
                 try
                 {
                     await InternalWriteEvents(eventStore, payloads, eventPollWakeUp).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
-                    await OnEventWriteError<TError>(eventStore, payloads, e, commandProcessed.CommandId, eventPollWakeUp, logger).ConfigureAwait(false);
+                    await OnEventWriteError<TError>(eventStore, payloads, e, commandProcessed.CommandId,
+                        eventPollWakeUp, logger).ConfigureAwait(false);
+                }
+                finally
+                {
+                    processingResult.command.Dispose();
                 }
 
                 return Unit.Default;
@@ -66,7 +71,7 @@ public static class CommandRegistrationExtensions
         eventPollWakeUp?.ThereIsWorkToDo();
     }
 
-    static IObservable<(CommandResult<TError> result, IReadOnlyCollection<IEventPayload> payloads)> Process<TError>(this IObservable<Command> commands,
+    static IObservable<(CommandResult<TError> result, IReadOnlyCollection<IEventPayload> payloads, ScopedCommand command)> Process<TError>(this IObservable<ScopedCommand> commands,
         GetCommandProcessor<TError> getCommandProcessor, ILogger? logger) where TError : notnull
         => commands
             .SelectMany(async c =>

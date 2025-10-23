@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Commands.Infrastructure.Internal;
 
-internal class EventReplayState<TError>(CommandBus commandBus, EventStream<Event> eventStream, ILogger<EventReplayState<TError>>? logger = null)
+internal class EventReplayState<TError>(ICommandBus commandBus, EventStream<Event> eventStream, ILogger<EventReplayState<TError>>? logger = null)
     : IEventReplayState where TError : notnull
 {
     Task<Event>? _noopProcessed;
