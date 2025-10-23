@@ -10,7 +10,7 @@ public abstract record Command
     public override string ToString() => $"{GetType().Name} ({Id.Id})";
 }
 
-public readonly record struct ScopedCommand(Command Command, IServiceScope ServiceScope) : IDisposable
+public readonly record struct ScopedCommand(Command Command, IServiceScope ServiceScope, bool DisposeAfterProcess) : IDisposable
 {
     public void Dispose()
     {

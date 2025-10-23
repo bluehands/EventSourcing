@@ -35,7 +35,8 @@ public static class CommandRegistrationExtensions
                 }
                 finally
                 {
-                    processingResult.command.Dispose();
+                    if (processingResult.command.DisposeAfterProcess)
+                        processingResult.command.Dispose();
                 }
 
                 return Unit.Default;
