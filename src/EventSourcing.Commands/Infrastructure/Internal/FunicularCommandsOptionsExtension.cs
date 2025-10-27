@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
+
 using EventSourcing.Commands.SerializablePayloads;
 using EventSourcing.Infrastructure;
 using EventSourcing.Infrastructure.Internal;
@@ -26,7 +27,7 @@ public record FunicularCommandsOptionsExtension<TError, TFailurePayload>(IReadOn
     {
         serviceCollection
             .AddSingleton<CommandBus>()
-            .AddSingleton<ICommandBus>(sp => sp.GetRequiredService<CommandBus>())
+            .AddTransient<ICommandBus, Infrastructure.CommandBus>()
             .AddSingleton<CommandProcessorSubscription<TError>>()
             .AddSingleton<EventReplayState<TError>>()
             .AddSingleton<IEventReplayState>(sp => sp.GetRequiredService<EventReplayState<TError>>())
@@ -77,7 +78,6 @@ public record FunicularCommandsOptionsExtension<TError, TFailurePayload>(IReadOn
 
 sealed class CommandProcessorSubscription<TError>(
     CommandBus commandBus,
-    IServiceScopeFactory serviceScopeFactory,
     WakeUp? wakeUp = null,
     ILogger<CommandBus>? logger = null)
     : IDisposable where TError : notnull
@@ -86,24 +86,12 @@ sealed class CommandProcessorSubscription<TError>(
 
     internal void SubscribeCommandProcessors()
     {
-        _subscription = commandBus.SubscribeCommandProcessors<TError>(commandType =>
+        _subscription = commandBus.SubscribeCommandProcessors<TError>((commandType, serviceScope) =>
         {
             var commandProcessorType = typeof(CommandProcessor<,>).MakeGenericType(commandType, typeof(TError));
 
-            var scope = serviceScopeFactory.CreateScope();
-            var processor = (CommandProcessor<TError>?)scope.ServiceProvider.GetService(commandProcessorType);
-            if (processor == null)
-            {
-                scope.Dispose();
-                return null;
-            }
-
-            return new(processor, scope);
-        }, () =>
-        {
-            var scope = serviceScopeFactory.CreateScope();
-            return new(scope.ServiceProvider.GetRequiredService<IEventStore>(), scope);
-
+            var processor = (CommandProcessor<TError>?)serviceScope.ServiceProvider.GetService(commandProcessorType);
+            return processor;
         }, logger, wakeUp);
     }
 

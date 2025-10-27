@@ -31,15 +31,16 @@ public abstract partial record ProcessingResult<TError>(IReadOnlyCollection<IEve
 
 public abstract class CommandProcessor<TError> where TError : notnull
 {
-    public static async Task<(CommandResult<TError> result, IReadOnlyCollection<IEventPayload> payloads)> Process(Command command, GetCommandProcessor<TError> getCommandProcessor)
+    public static async Task<(CommandResult<TError> result, IReadOnlyCollection<IEventPayload> payloads, ScopedCommand)> Process(ScopedCommand scopedCommand, GetCommandProcessor<TError> getCommandProcessor)
     {
+        var command = scopedCommand.Command;
         try
         {
-            using var scopedCommandProcessor = getCommandProcessor(command.GetType());
-            if (scopedCommandProcessor != null)
+            var commandProcessor = getCommandProcessor(command.GetType(), scopedCommand.ServiceScope);
+            if (commandProcessor != null)
                 // ReSharper disable once AccessToDisposedClosure
             {
-                var processingResult = await Task.Run(() => scopedCommandProcessor.Processor.InternalProcess(command))
+                var processingResult = await Task.Run(() => commandProcessor.InternalProcess(command))
                     .ConfigureAwait(false);
 
                 var commandResult = CommandResult<TError>.Processed(command.Id,
@@ -47,7 +48,7 @@ public abstract class CommandProcessor<TError> where TError : notnull
                         .Match(ok: ok => FunctionalResult<TError>.Ok(ok.Message ?? ""),
                             failed: failed => FunctionalResult<TError>.Failed(failed.Error))
                 );
-                return (commandResult, processingResult.Payloads);
+                return (commandResult, processingResult.Payloads, scopedCommand);
             }
 
             return Error(CommandResult<TError>.Unhandled(command.Id, $"No command processor registered for command {command.GetType().Name}"));
@@ -61,8 +62,8 @@ public abstract class CommandProcessor<TError> where TError : notnull
             return Error(CommandResult<TError>.Faulted(command.Id, $"Process command {command} failed: {e}", e));
         }
 
-        static (CommandResult<TError> result, IReadOnlyCollection<IEventPayload> payloads) Error(
-            CommandResult<TError> result) => (result, []);
+        (CommandResult<TError> result, IReadOnlyCollection<IEventPayload> payloads, ScopedCommand) Error(
+            CommandResult<TError> result) => (result, [], scopedCommand);
     }
 
     protected abstract Task<ProcessingResult<TError>> InternalProcess(Command command);
