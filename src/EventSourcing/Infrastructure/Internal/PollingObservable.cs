@@ -12,6 +12,7 @@ public static class PollingObservable
     public static IObservable<Event> Poll(
         Func<Task<long>> getPositionToStartFrom,
         Func<long, IAsyncEnumerable<Event>> poll,
+        TimeSpan delayOnError,
         WakeUp wakeUp,
         ILogger? logger) =>
         Observable.Create<Event>(observer => Scheduler.Default.ScheduleAsync(async (_, ct) =>
@@ -23,7 +24,7 @@ public static class PollingObservable
             while (!ct.IsCancellationRequested)
             {
                 var streamIsHot = false;
-                TimeSpan delayTime = TimeSpan.Zero;
+                var faulted = false;
                 try
                 {
                     wakeUp.WorkIsScheduled();
@@ -45,16 +46,19 @@ public static class PollingObservable
                 catch (Exception ex)
                 {
                     //exception reading events from db. Retry after certain time. TODO: use policy here
-                    delayTime = TimeSpan.FromSeconds(5);
-                    logger?.LogError(ex, $"Poll failed. No events will be published. Poll will be retried at position {arg}. Delay retry for {delayTime}.");
+                    faulted = true;
+                    logger?.LogError(ex, $"Poll failed. No events will be published. Poll will be retried at position {arg}. Delay retry for {delayOnError}.");
                 }
                 try
                 {
-                    if (delayTime > TimeSpan.Zero)
+                    if (faulted)
                     {
-                        await Task.Delay(delayTime, ct).ConfigureAwait(false);
+                        await Task.Delay(delayOnError, ct).ConfigureAwait(false);
                     }
-                    await wakeUp.WaitForSignalOrUntilTimeout(streamIsHot, ct).ConfigureAwait(false);
+                    else
+                    {
+                        await wakeUp.WaitForSignalOrUntilTimeout(streamIsHot, ct).ConfigureAwait(false);
+                    }
                 }
                 catch (OperationCanceledException)
                 {
