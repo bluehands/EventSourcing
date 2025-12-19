@@ -23,6 +23,7 @@ public static class PollingObservable
             while (!ct.IsCancellationRequested)
             {
                 var streamIsHot = false;
+                TimeSpan delayTime = TimeSpan.Zero;
                 try
                 {
                     wakeUp.WorkIsScheduled();
@@ -44,11 +45,15 @@ public static class PollingObservable
                 catch (Exception ex)
                 {
                     //exception reading events from db. Retry after certain time. TODO: use policy here
-                    var waitTime = TimeSpan.FromSeconds(5);
-                    logger?.LogError(ex, $"Poll failed. No events will be published. Poll will be retried at position {arg}. Delay retry for {waitTime}.");
+                    delayTime = TimeSpan.FromSeconds(5);
+                    logger?.LogError(ex, $"Poll failed. No events will be published. Poll will be retried at position {arg}. Delay retry for {delayTime}.");
                 }
                 try
                 {
+                    if (delayTime > TimeSpan.Zero)
+                    {
+                        await Task.Delay(delayTime, ct).ConfigureAwait(false);
+                    }
                     await wakeUp.WaitForSignalOrUntilTimeout(streamIsHot, ct).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
