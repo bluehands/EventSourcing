@@ -13,16 +13,18 @@ public static class PollingEventStreamDefaults
 {
     public static readonly TimeSpan MinWaitTime = TimeSpan.Zero;
     public static readonly TimeSpan MaxWaitTime = TimeSpan.FromMilliseconds(100);
+    public static readonly TimeSpan DelayOnError = TimeSpan.FromSeconds(1);
 }
 
 public static class PollingEventStreamExtensions
 {
     public static TBuilder UsePollingEventStream<TBuilder>(this TBuilder builder, TimeSpan minWaitTime,
-        TimeSpan maxWaitTime, Func<Task<long>>? getPositionToStartFrom = null)
+        TimeSpan maxWaitTime, Func<Task<long>>? getPositionToStartFrom = null, TimeSpan? delayOnError = null)
         where TBuilder : IAllowPollingEventStreamBuilder, IEventSourcingExtensionsBuilderInfrastructure =>
         builder.WithOption<TBuilder, PollingEventStreamOptionsExtension>(_ => new(
             MinWaitTime: minWaitTime,
             MaxWaitTime: maxWaitTime,
+            DelayOnError: delayOnError,
             GetPositionToStartFrom: getPositionToStartFrom)
         );
 
@@ -31,6 +33,7 @@ public static class PollingEventStreamExtensions
         builder.WithOption<TBuilder, PollingEventStreamOptionsExtension>(_ => new(
             MinWaitTime: null,
             MaxWaitTime: null,
+            DelayOnError: null,
             GetPositionToStartFrom: getPositionToStartFrom)
         );
 
@@ -39,9 +42,18 @@ public static class PollingEventStreamExtensions
         builder.WithOption<TBuilder, PollingEventStreamOptionsExtension>(e => e);
 }
 
-public record PollingEventStreamOptionsExtension(TimeSpan? MinWaitTime, TimeSpan? MaxWaitTime, Func<Task<long>>? GetPositionToStartFrom) : IEventStreamOptionsExtension
+public record PollingEventStreamOptionsExtension(
+    TimeSpan? MinWaitTime,
+    TimeSpan? MaxWaitTime,
+    TimeSpan? DelayOnError,
+    Func<Task<long>>? GetPositionToStartFrom) : IEventStreamOptionsExtension
 {
-    public PollingEventStreamOptionsExtension() : this(null, null, null)
+    public PollingEventStreamOptionsExtension()
+        : this(
+            MinWaitTime: null,
+            MaxWaitTime: null,
+            DelayOnError: null,
+            GetPositionToStartFrom: null)
     {
     }
 
@@ -52,7 +64,7 @@ public record PollingEventStreamOptionsExtension(TimeSpan? MinWaitTime, TimeSpan
     public void ApplyServices(IServiceCollection serviceCollection)
     {
         serviceCollection.AddSingleton(sp => new WakeUp(MinWaitTime ?? PollingEventStreamDefaults.MinWaitTime, MaxWaitTime ?? PollingEventStreamDefaults.MaxWaitTime, sp.GetService<ILogger<WakeUp>>()));
-        serviceCollection.AddSingleton(sp => BuildPollingEventStream(sp, GetPositionToStartFrom ?? (() => Task.FromResult(0L))));
+        serviceCollection.AddSingleton(sp => BuildPollingEventStream(sp, GetPositionToStartFrom ?? (() => Task.FromResult(0L)), DelayOnError ?? PollingEventStreamDefaults.DelayOnError));
         serviceCollection.AddSingleton<IObservable<Event>>(sp => sp.GetRequiredService<EventStream<Event>>());
     }
 
@@ -60,7 +72,7 @@ public record PollingEventStreamOptionsExtension(TimeSpan? MinWaitTime, TimeSpan
     {
     }
 
-    static EventStream<Event> BuildPollingEventStream(IServiceProvider provider, Func<Task<long>> getPositionToStartFrom)
+    static EventStream<Event> BuildPollingEventStream(IServiceProvider provider, Func<Task<long>> getPositionToStartFrom, TimeSpan delayOnError)
     {
         var streamScope = provider.CreateScope();
 
@@ -70,6 +82,7 @@ public record PollingEventStreamOptionsExtension(TimeSpan? MinWaitTime, TimeSpan
         var events = PollingObservable.Poll(
             getPositionToStartFrom,
             l =>  eventReader.ReadEvents(l),
+            delayOnError,
             wakeUp,
             provider.GetService<ILogger<EventStream<Event>>>()
         );
