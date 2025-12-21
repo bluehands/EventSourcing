@@ -144,7 +144,7 @@ public class MockEventStore(int failTimes) : IEventReader<EFEvent>, IEventWriter
     public async IAsyncEnumerable<EFEvent> ReadEvents(StreamId streamId, long? fromPositionInclusive)
     {
         this.tries += 1;
-        if (this.tries < this.failTimes)
+        if (this.tries <= this.failTimes)
         {
             throw new Exception("BOOM");
         }
@@ -161,7 +161,7 @@ public class MockEventStore(int failTimes) : IEventReader<EFEvent>, IEventWriter
     public async IAsyncEnumerable<EFEvent> ReadEvents(long? fromPositionInclusive)
     {
         this.tries += 1;
-        if (this.tries < this.failTimes)
+        if (this.tries <= this.failTimes)
         {
             throw new Exception("BOOM");
         }
