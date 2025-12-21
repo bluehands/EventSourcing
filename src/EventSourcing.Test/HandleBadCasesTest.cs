@@ -1,7 +1,12 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using EventSourcing.Infrastructure;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using EFEvent = EventSourcing.Persistence.EntityFramework.Event;
 
 namespace EventSourcing.Test;
 
@@ -13,11 +18,10 @@ public class HandleBadCasesTest
     {
         var test = await TestHelper.SetupEventSourcing<TestService>();
 
-        var receivedEvents = await test.SendAndWait(new IEventPayload[]
-        {
+        var receivedEvents = await test.SendAndWait([
             new UnreadableEntryAdded("1", "Next entry"),
             new EntryAdded("1", "Hallo diary")
-        }, 1);
+        ], 1);
 
         receivedEvents[0].Payload.Should().BeOfType<EntryAdded>();
     }
@@ -30,13 +34,46 @@ public class HandleBadCasesTest
         );
 
         var receivedEvents = await test
-            .SendAndWait(new IEventPayload[]
-            {
+            .SendAndWait([
                 new EntryAdded("1", "Hallo diary"),
                 new UnreadableEntryAdded("1", "Next entry")
-            });
+            ]);
 
         receivedEvents[1].Payload.Should().BeOfType<MapToErrorPayloadHandler.CorruptedEvent>();
+    }
+
+    [TestMethod]
+    public async Task ErrorReadingEvents()
+    {
+        const int failTimes = 3;
+        var mockEventStore = new MockEventStore(failTimes);
+        var delayOnError = TimeSpan.FromMilliseconds(150);
+        var test = await TestHelper.SetupEventSourcing<TestService>(
+            modifyServices: services => services
+                .RemoveAll<IEventReader<EFEvent>>()
+                .AddSingleton<IEventReader<EFEvent>>(mockEventStore)
+                .RemoveAll<IEventWriter<EFEvent>>()
+                .AddSingleton<IEventWriter<EFEvent>>(mockEventStore),
+            inMemoryOptions: inMemoryOptions =>
+            {
+                inMemoryOptions.UsePollingEventStream(
+                    minWaitTime: TimeSpan.Zero,
+                    maxWaitTime: TimeSpan.FromMilliseconds(50),
+                    delayOnError: delayOnError);
+            });
+
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
+
+        var receivedEvents = await test
+            .SendAndWait([
+                new EntryAdded("1", "Hallo diary"),
+            ]);
+
+        stopwatch.Stop();
+        receivedEvents.Should().HaveCount(1);
+        stopwatch.Elapsed
+            .Should().BeGreaterThanOrEqualTo((failTimes - 1) * delayOnError);
     }
 
     class StreamIds
@@ -76,7 +113,9 @@ class TestService
         _eventStore = eventStore;
     }
 
-    public async Task<IList<Event>> SendAndWait(IReadOnlyCollection<IEventPayload> payloads, int? numberOfExpectedEvents = null)
+    public async Task<IList<Event>> SendAndWait(
+        IReadOnlyCollection<IEventPayload> payloads,
+        int? numberOfExpectedEvents = null)
     {
         await _eventStore.WriteEvents(payloads);
 
@@ -94,4 +133,55 @@ public class MapToErrorPayloadHandler : ICorruptedEventHandler
         new CorruptedEvent(eventType, serializedPayload);
 
     public record CorruptedEvent(string EventType, object SerializedPayload) : EventPayload(new("Corrupted", "Events"), EventType);
+}
+
+public class MockEventStore(int failTimes) : IEventReader<EFEvent>, IEventWriter<EFEvent>
+{
+    private readonly ConcurrentQueue<EFEvent> events = new();
+    private readonly int failTimes = failTimes;
+    private int tries = 0;
+    
+    public async IAsyncEnumerable<EFEvent> ReadEvents(StreamId streamId, long? fromPositionInclusive)
+    {
+        this.tries += 1;
+        if (this.tries < this.failTimes)
+        {
+            throw new Exception("BOOM");
+        }
+
+        while (this.events.TryDequeue(out var @event))
+        {
+            if (fromPositionInclusive.HasValue && @event.Position >= fromPositionInclusive.Value && @event.StreamId == streamId.Id)
+            {
+                yield return @event;
+            }
+        }
+    }
+
+    public async IAsyncEnumerable<EFEvent> ReadEvents(long? fromPositionInclusive)
+    {
+        this.tries += 1;
+        if (this.tries < this.failTimes)
+        {
+            throw new Exception("BOOM");
+        }
+
+        while (this.events.TryDequeue(out var @event))
+        {
+            if (fromPositionInclusive.HasValue && @event.Position >= fromPositionInclusive.Value)
+            {
+                yield return @event;
+            }
+        }
+    }
+
+    public Task WriteEvents(IEnumerable<EFEvent> payloads)
+    {
+        foreach (var payload in payloads)
+        {
+            this.events.Enqueue(payload);
+        }
+
+        return Task.CompletedTask;
+    }
 }
