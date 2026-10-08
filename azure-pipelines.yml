@@ -10,7 +10,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  solution: '**/*.sln'
+  solution: '**/*.slnx'
   buildConfiguration: 'Release'
   IsPrerelease: $[or(ne(variables['Build.SourceBranchName'], 'main'), ${{parameters.buildPrerelease}})]
   VersionSuffix: -$(Build.SourceBranchName)-$(Build.BuildNumber)
