@@ -29,6 +29,7 @@ steps:
     msbuildArgs: '/p:ContinuousIntegrationBuild=true'
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
+    vsVersion: 'latest'
 
 - task: VSTest@2
   inputs:
