@@ -14,13 +14,13 @@ public class CommandProcessedMapper<TError, TErrorPayload>
             CommandResultUnionCases.Processed => CommandResult<TError>.Processed(commandId,
                 serialized.FunctionalResult switch
                 {
-                    FunctionalResultUnionCases.Ok => FunctionalResult<TError>.Ok(serialized.ResultMessage),
+                    FunctionalResultUnionCases.Ok => FunctionalResult<TError>.Ok(serialized.ResultMessage!),
                     FunctionalResultUnionCases.Failed => FunctionalResult<TError>.Failed(
                         serialized.Error!.ToError()),
                     _ => throw new ArgumentOutOfRangeException($"Unexpected {nameof(FunctionalResultUnionCases)}: {serialized.FunctionalResult}")
                 }),
-            CommandResultUnionCases.Faulted => CommandResult<TError>.Faulted(commandId, serialized.ResultMessage, null),
-            CommandResultUnionCases.Unhandled => CommandResult<TError>.Unhandled(commandId, serialized.ResultMessage),
+            CommandResultUnionCases.Faulted => CommandResult<TError>.Faulted(commandId, serialized.ResultMessage!, null),
+            CommandResultUnionCases.Unhandled => CommandResult<TError>.Unhandled(commandId, serialized.ResultMessage!),
             CommandResultUnionCases.Cancelled => CommandResult<TError>.Cancelled(commandId),
             _ => throw new ArgumentOutOfRangeException($"Unexpected {nameof(CommandResultUnionCases)}: {serialized.CommandResult}")
         });
@@ -42,6 +42,6 @@ public class CommandProcessedMapper<TError, TErrorPayload>
                 },
                 faulted: f => new(commandId, CommandResultUnionCases.Faulted, null, null, f.Message),
                 unhandled: u => new(commandId, CommandResultUnionCases.Unhandled, null, null, u.Message),
-                cancelled: c => new(commandId, CommandResultUnionCases.Cancelled, null, null, null)
+                cancelled: _ => new(commandId, CommandResultUnionCases.Cancelled, null, null, null)
             );
     } }

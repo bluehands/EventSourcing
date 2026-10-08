@@ -8,8 +8,8 @@
   </VersionSuffixLocal>
 
   <!--#region adapt versions here-->
-  <MajorVersion>0</MajorVersion>
-  <MinorAndPatchVersion>4.4</MinorAndPatchVersion>
+  <MajorVersion>1</MajorVersion>
+  <MinorAndPatchVersion>0.0</MinorAndPatchVersion>
   <!--#endregion-->
 
   <AssemblyVersion>$(MajorVersion).0.0</AssemblyVersion>
