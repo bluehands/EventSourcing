@@ -28,6 +28,7 @@ public sealed class EventFactory
         var payloadTypes = payloadMappers.Select(p => p.GetType()
             .GetArgumentOfFirstGenericBaseType(t => t.GetGenericTypeDefinition() == typeof(EventPayloadMapper<,>)));
         return payloadTypes
+            .Distinct()
             .ToFrozenDictionary(p => p, BuildCreateEvent);
     }
 
