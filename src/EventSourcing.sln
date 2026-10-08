@@ -41,12 +41,18 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventSourcing.Benchmarks", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventSourcing.Benchmarks.Test", "EventSourcing.Benchmarks.Test\EventSourcing.Benchmarks.Test.csproj", "{B2A78351-47A8-46F2-8E7B-831F6457F202}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventSourcing.Commands.SourceGenerator.Test", "EventSourcing.Commands.SourceGenerator.Test\EventSourcing.Commands.SourceGenerator.Test.csproj", "{0220EECB-33EB-4AF2-8913-C9F6C691916D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0220EECB-33EB-4AF2-8913-C9F6C691916D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0220EECB-33EB-4AF2-8913-C9F6C691916D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0220EECB-33EB-4AF2-8913-C9F6C691916D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0220EECB-33EB-4AF2-8913-C9F6C691916D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B2A78351-47A8-46F2-8E7B-831F6457F201}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B2A78351-47A8-46F2-8E7B-831F6457F201}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B2A78351-47A8-46F2-8E7B-831F6457F201}.Release|Any CPU.ActiveCfg = Release|Any CPU
