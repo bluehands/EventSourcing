@@ -1,6 +1,7 @@
 using System.Reactive;
 using EventSourcing;
 using EventSourcing.Commands;
+using EventSourcing.Commands.Infrastructure;
 using EventSourcing.Infrastructure;
 using Meetup.SerializedPayloads;
 
@@ -39,6 +40,8 @@ public static class Program
 			.UseEndpoints(endpoints => endpoints.MapGraphQL());
 
 		await app.Services.StartEventSourcing();
+
+		await app.Services.GetRequiredService<IEventReplayState>().WaitForReplayDone();
 
 		await app.RunAsync();
 	}

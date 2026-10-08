@@ -13,6 +13,16 @@ namespace EventSourcing.Commands.Templates
             this global::EventSourcing.Commands.ICommandBus commandBus, global::EventSourcing.Commands.Command command,
             global::System.IObservable<global::EventSourcing.Event<global::EventSourcing.Commands.CommandProcessed<ErrorTypeName>>> commandProcessedEvents)
             => global::EventSourcing.Commands.CommandBusExtension.SendAndWaitForProcessedEvent(commandBus, command, commandProcessedEvents);
+
+        public static global::System.Threading.Tasks.Task<global::EventSourcing.Event<global::EventSourcing.Commands.CommandProcessed<ErrorTypeName>>> SendAndWaitForProcessedEvent(
+            this global::EventSourcing.Commands.ICommandBus commandBus, global::EventSourcing.Commands.Command command,
+            global::System.IObservable<global::EventSourcing.Event> events, global::System.TimeSpan timeout)
+            => global::EventSourcing.Commands.CommandBusExtension.SendAndWaitForProcessedEvent<ErrorTypeName>(commandBus, command, events, timeout);
+
+        public static global::System.Threading.Tasks.Task<global::EventSourcing.Event<global::EventSourcing.Commands.CommandProcessed<ErrorTypeName>>> SendAndWaitForProcessedEvent(
+            this global::EventSourcing.Commands.ICommandBus commandBus, global::EventSourcing.Commands.Command command,
+            global::System.IObservable<global::EventSourcing.Event<global::EventSourcing.Commands.CommandProcessed<ErrorTypeName>>> commandProcessedEvents, global::System.TimeSpan timeout)
+            => global::EventSourcing.Commands.CommandBusExtension.SendAndWaitForProcessedEvent(commandBus, command, commandProcessedEvents, timeout);
     }
 
     public abstract partial class CommandProcessor<T> : global::EventSourcing.Commands.CommandProcessor<T, ErrorTypeName>
