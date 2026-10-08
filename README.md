@@ -52,9 +52,9 @@ IServiceProvider serviceProvider = builder.Build();
 await serviceProvider.StartEventSourcing();
 ```
 
-Your own services can implement IInializer<TPhase> to register initialize callbacks for certain lifecycle events.
+Your own services can implement `IInitializer<TPhase>` to register initialize callbacks for certain lifecycle events.
 ```csharp
-class SomethingToBeDoneBeforeEventReplay : IInializer<BeforeEventReplay>
+class SomethingToBeDoneBeforeEventReplay : IInitializer<BeforeEventReplay>
 {
   async Task Initialize() => ...
 }
@@ -62,6 +62,30 @@ class SomethingToBeDoneBeforeEventReplay : IInializer<BeforeEventReplay>
 //register initializer:
 services.AddInitializer<SomethingToBeDoneBeforeEventReplay>();
 ```
+
+### Startup and replay readiness
+
+`StartEventSourcing()` awaits all registered lifecycle initializers. Phases are run only when an initializer is registered for them; defining a phase alone does not cause it to run.
+
+When using **Bluehands.EventSourcing.Commands**:
+
+- Registering an `IAfterEventReplayInitializer` (or `IInitializer<AfterEventReplay>`) makes `StartEventSourcing()` wait for replay to finish **before** running that initializer. Startup returns only after all registered initializers have completed, including those in the after-replay phase.
+- Without an after-replay initializer, `StartEventSourcing()` can return while replay is still running. Startup completion alone is therefore not a guarantee that projections are ready.
+
+If your command/query API requires replayed state, explicitly wait for replay before enabling access:
+
+```csharp
+using EventSourcing.Commands.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+
+await serviceProvider.StartEventSourcing();
+await serviceProvider.GetRequiredService<IEventReplayState>().WaitForReplayDone();
+
+// Projections consuming the replay synchronously are now caught up.
+// Enable command/query access here (for example, call app.RunAsync()).
+```
+
+Call `StartEventSourcing()` to begin replay, then await readiness where your application needs it. For a long-running replay in a Windows service, the service can report startup or expose health/progress information while keeping business functionality unavailable until replay completes. Projections that process events asynchronously need their own completion barrier as well.
 
 ## Example
 A little meetup planner example is implemented [here](https://github.com/bluehands/EventSourcing/blob/main/src/Playground/Meetup/Meetup)
