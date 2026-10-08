@@ -1,23 +1,24 @@
+using AwesomeAssertions;
+
 namespace EventSourcing.Benchmarks.Test;
 
-[TestClass]
 public class ReportingTests
 {
-    [TestMethod]
+    [Fact]
     public void MetricsExcludeFailuresFromThroughputAndSuccessfulLatencyPercentiles()
     {
         var samples = Enumerable.Range(1, 100).Select(i => new OperationSample("write", 0, i, i, 10, null))
             .Append(new("write", 0, 101, 10000, 0, "timeout"));
         var metrics = Metrics.Calculate(samples, 2);
-        Assert.AreEqual(500d, metrics.EventsPerSecond);
-        Assert.AreEqual(50d, metrics.OperationsPerSecond);
-        Assert.AreEqual(50d, metrics.MedianMilliseconds);
-        Assert.AreEqual(95d, metrics.P95Milliseconds);
-        Assert.AreEqual(99d, metrics.P99Milliseconds);
-        Assert.AreEqual(1, metrics.FailedOperations);
+        metrics.EventsPerSecond.Should().Be(500d);
+        metrics.OperationsPerSecond.Should().Be(50d);
+        metrics.MedianMilliseconds.Should().Be(50d);
+        metrics.P95Milliseconds.Should().Be(95d);
+        metrics.P99Milliseconds.Should().Be(99d);
+        metrics.FailedOperations.Should().Be(1);
     }
 
-    [TestMethod]
+    [Fact]
     public void MixedSummariesUseSeparateGroupDurationsAndRetainErrors()
     {
         var workload = new Workload("mixed", 100, 256, 10, 1, 1);
@@ -28,13 +29,13 @@ public class ReportingTests
         var summaries = Report.Summarize(measurements);
         var read = summaries.Single(s => s.Kind == "read");
         var write = summaries.Single(s => s.Kind == "write");
-        Assert.AreEqual(200d / 3, read.Metrics.EventsPerSecond, .00001);
-        Assert.AreEqual(10d / 15, write.Metrics.EventsPerSecond, .00001);
-        Assert.AreEqual(1, write.Errors["busy"]);
-        Assert.AreEqual(1d, read.Scaling);
+        read.Metrics.EventsPerSecond.Should().BeApproximately(200d / 3, .00001);
+        write.Metrics.EventsPerSecond.Should().BeApproximately(10d / 15, .00001);
+        write.Errors["busy"].Should().Be(1);
+        read.Scaling.Should().Be(1d);
     }
 
-    [TestMethod]
+    [Fact]
     public void ParallelScalingMatchesOnlyTheSameProviderAndWorkloadShape()
     {
         var single = new Workload("write", 100, 256, 10, 0, 1);
@@ -46,19 +47,20 @@ public class ReportingTests
             new("sqlite", parallel with { BatchSize = 100 }, 1, 4, 0, 4, [new("write", 0, 0, 1, 400, null)])
         ];
         var summaries = Report.Summarize(measurements);
-        Assert.AreEqual(2d, summaries.Single(s => s.Provider == "sqlite" && s.Workload == parallel).Scaling);
-        Assert.IsNull(summaries.Single(s => s.Provider == "sqlserver").Scaling);
-        Assert.IsNull(summaries.Single(s => s.Workload.BatchSize == 100).Scaling);
+        summaries.Single(s => s.Provider == "sqlite" && s.Workload == parallel).Scaling.Should().Be(2d);
+        summaries.Single(s => s.Provider == "sqlserver").Scaling.Should().BeNull();
+        summaries.Single(s => s.Workload.BatchSize == 100).Scaling.Should().BeNull();
     }
 
-    [TestMethod]
+    [Fact]
     public void MatrixOnlyVariesBatchSizeForWriteScenariosAndSupportsMixedOverrides()
     {
         var options = Options.Parse(["--profile", "smoke", "--scenarios", "stream,mixed", "--readers", "3", "--writers", "2"]);
         var workloads = options.Workloads().Distinct().ToArray();
-        Assert.AreEqual(2, workloads.Count(w => w.Scenario == "stream"));
-        Assert.AreEqual(2, workloads.Count(w => w.Scenario == "mixed"));
-        Assert.IsTrue(workloads.Where(w => w.Scenario == "mixed").All(w => w.Readers == 3 && w.Writers == 2));
-        Assert.Throws<ArgumentException>(() => Options.Parse(["--operations", "0"]));
+        workloads.Where(w => w.Scenario == "stream").Should().HaveCount(2);
+        workloads.Where(w => w.Scenario == "mixed").Should().HaveCount(2);
+        workloads.Where(w => w.Scenario == "mixed").Should().OnlyContain(w => w.Readers == 3 && w.Writers == 2);
+        Action parseInvalidOptions = () => Options.Parse(["--operations", "0"]);
+        parseInvalidOptions.Should().ThrowExactly<ArgumentException>();
     }
 }

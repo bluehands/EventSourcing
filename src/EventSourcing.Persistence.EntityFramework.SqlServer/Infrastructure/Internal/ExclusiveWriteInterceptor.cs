@@ -32,6 +32,6 @@ partial class ExclusiveWriteInterceptor : DbCommandInterceptor
         command.CommandText = EventInsert().Replace(commandText, "${tableAlias} WITH (TABLOCKX)");
     }
 
-    [GeneratedRegex(@"(?<tableAlias>INSERT INTO \[(.*\.)?Events\](?! WITH \(.*LOCK.*\)))", RegexOptions.IgnoreCase | RegexOptions.Multiline, "de-DE")]
+    [GeneratedRegex(@"(?<tableAlias>(?:INSERT INTO|MERGE) \[(.*\.)?Events\](?! WITH \(.*LOCK.*\)))", RegexOptions.IgnoreCase | RegexOptions.Multiline, "de-DE")]
     private static partial Regex EventInsert();
 }

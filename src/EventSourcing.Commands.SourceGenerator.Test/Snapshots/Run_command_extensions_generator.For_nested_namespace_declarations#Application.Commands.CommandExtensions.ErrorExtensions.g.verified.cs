@@ -1,8 +1,9 @@
-﻿#nullable enable
+﻿//HintName: Application.Commands.CommandExtensions.ErrorExtensions.g.cs
+#nullable enable
 
-namespace PersistenceTester
+namespace Application.Commands
 {
-    static partial class CommandExtensions
+    public static partial class CommandExtensions
     {
         public static global::System.Threading.Tasks.Task<global::EventSourcing.Event<global::EventSourcing.Commands.CommandProcessed<string>>> SendAndWaitForProcessedEvent(
             this global::EventSourcing.Commands.ICommandBus commandBus, global::EventSourcing.Commands.Command command, global::System.IObservable<global::EventSourcing.Event> events)

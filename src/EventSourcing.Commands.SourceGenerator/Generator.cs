@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using EventSourcing.Commands.SourceGenerator.Templates;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using PolyType.Roslyn;
 using PolyType.SourceGenerator.Helpers;
@@ -35,7 +36,9 @@ public class Generator : IIncrementalGenerator
         foreach (var attributedType in attributedTypes)
         {
             var extensionType = attributedType.TypeSymbol;
-            var targetNamespace = extensionType.ContainingNamespace.ToDisplayString(RoslynHelpers.QualifiedNameOnlyFormat);
+            var targetNamespace = extensionType.ContainingNamespace.IsGlobalNamespace
+                ? ""
+                : extensionType.ContainingNamespace.ToDisplayString(RoslynHelpers.QualifiedNameOnlyFormat);
 
             foreach (var attributeData in extensionType.GetAttributes())
             {
@@ -94,17 +97,18 @@ public class Generator : IIncrementalGenerator
 
         foreach (var resultModel in model.ResultModels)
         {
-            var errorExtensionsSource = TemplatesContents.ErrorTypeExtensions
-                .Replace("namespace EventSourcing.Commands.Templates", $"namespace {resultModel.TargetNamespace}")
+            var sourceName = string.IsNullOrEmpty(resultModel.TargetNamespace)
+                ? resultModel.ExtensionTypeName
+                : $"{resultModel.TargetNamespace}.{resultModel.ExtensionTypeName}";
+            var errorExtensionsSource = InNamespace(TemplatesContents.ErrorTypeExtensions, resultModel.TargetNamespace)
                 .Replace("public static partial class CommandBusExtensions", $"{string.Join(" ", resultModel.ExtensionTypeModifiers)} class {resultModel.ExtensionTypeName}")
                 .Replace("ErrorTypeName", resultModel.ErrorFullTypeName);
 
-            spc.AddSource($"{resultModel.TargetNamespace}.{resultModel.ExtensionTypeName}.ErrorExtensions.g.cs", errorExtensionsSource);
+            spc.AddSource($"{sourceName}.ErrorExtensions.g.cs", errorExtensionsSource);
 
             if (resultModel.ResultFullTypeName != null)
             {
-                var resultExtensionsSource = TemplatesContents.ResultTypeExtensions
-                    .Replace("namespace EventSourcing.Commands.Templates", $"namespace {resultModel.TargetNamespace}")
+                var resultExtensionsSource = InNamespace(TemplatesContents.ResultTypeExtensions, resultModel.TargetNamespace)
                     .Replace("public static partial class CommandBusExtensions", $"{string.Join(" ", resultModel.ExtensionTypeModifiers)} class {resultModel.ExtensionTypeName}")
                     .Replace("ResultTypeName", resultModel.ResultFullTypeName)
                     .Replace("ErrorTypeName", resultModel.ErrorFullTypeName);
@@ -121,9 +125,23 @@ public class Generator : IIncrementalGenerator
                     resultExtensionsSource += partialResult;
                 }
 
-                spc.AddSource($"{resultModel.TargetNamespace}.{resultModel.ExtensionTypeName}.ResultExtensions.g.cs", resultExtensionsSource);
+                spc.AddSource($"{sourceName}.ResultExtensions.g.cs", resultExtensionsSource);
             }
         }
+    }
+
+    static string InNamespace(string template, string targetNamespace)
+    {
+        if (!string.IsNullOrEmpty(targetNamespace))
+            return template.Replace("namespace EventSourcing.Commands.Templates", $"namespace {targetNamespace}");
+
+        var root = SyntaxFactory.ParseCompilationUnit(template);
+        var namespaceDeclaration = (NamespaceDeclarationSyntax)root.Members.Single();
+        // Preserve directives such as #nullable enable while lifting declarations into the global namespace.
+        return root.WithMembers(namespaceDeclaration.Members)
+            .WithLeadingTrivia(root.GetLeadingTrivia())
+            .NormalizeWhitespace()
+            .ToFullString() + "\n";
     }
 }
 

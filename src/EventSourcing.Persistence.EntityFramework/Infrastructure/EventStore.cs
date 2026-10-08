@@ -11,6 +11,7 @@ class EventStore(EventStoreContext eventStore) : IEventReader<Event>, IEventWrit
 
         return eventStore.Events
             .Where(e => e.StreamType == streamId.StreamType && e.StreamId == streamId.Id && e.Position >= positionInclusive)
+            .OrderBy(e => e.Position)
             .AsAsyncEnumerable();
     }
 
@@ -20,12 +21,27 @@ class EventStore(EventStoreContext eventStore) : IEventReader<Event>, IEventWrit
 
         return eventStore.Events
             .Where(e => e.Position >= positionInclusive)
+            .OrderBy(e => e.Position)
             .AsAsyncEnumerable();
     }
 
     public async Task WriteEvents(IEnumerable<Event> payloads)
     {
-        await eventStore.Events.AddRangeAsync(payloads);
-        await eventStore.SaveChangesAsync();
+        try
+        {
+            await eventStore.Events.AddRangeAsync(payloads);
+            await eventStore.SaveChangesAsync();
+        }
+        catch
+        {
+            // This context is dedicated to event persistence: abandon all pending changes
+            // so a later write cannot implicitly retry a failed operation.
+            var pendingEntries = eventStore.ChangeTracker.Entries()
+                .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+                .ToArray();
+            foreach (var entry in pendingEntries)
+                entry.State = EntityState.Detached;
+            throw;
+        }
     }
 }

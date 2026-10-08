@@ -75,6 +75,6 @@ The measured baseline and reproduction parameters are in [baseline-2026-10-08.md
 ## Validation
 
 ```powershell
-dotnet test src/EventSourcing.Benchmarks.Test -c Release
+dotnet test --project src/EventSourcing.Benchmarks.Test/EventSourcing.Benchmarks.Test.csproj -c Release
 dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider both --profile smoke
 ```

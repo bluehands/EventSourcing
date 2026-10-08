@@ -52,9 +52,9 @@ IServiceProvider serviceProvider = builder.Build();
 await serviceProvider.StartEventSourcing();
 ```
 
-Your own services can implement IInializer<TPhase> to register initialize callbacks for certain lifecycle events.
+Your own services can implement `IInitializer<TPhase>` to register initialize callbacks for certain lifecycle events.
 ```csharp
-class SomethingToBeDoneBeforeEventReplay : IInializer<BeforeEventReplay>
+class SomethingToBeDoneBeforeEventReplay : IInitializer<BeforeEventReplay>
 {
   async Task Initialize() => ...
 }
@@ -62,6 +62,30 @@ class SomethingToBeDoneBeforeEventReplay : IInializer<BeforeEventReplay>
 //register initializer:
 services.AddInitializer<SomethingToBeDoneBeforeEventReplay>();
 ```
+
+### Startup and replay readiness
+
+`StartEventSourcing()` awaits all registered lifecycle initializers. Phases are run only when an initializer is registered for them; defining a phase alone does not cause it to run.
+
+When using **Bluehands.EventSourcing.Commands**:
+
+- Registering an `IAfterEventReplayInitializer` (or `IInitializer<AfterEventReplay>`) makes `StartEventSourcing()` wait for replay to finish **before** running that initializer. Startup returns only after all registered initializers have completed, including those in the after-replay phase.
+- Without an after-replay initializer, `StartEventSourcing()` can return while replay is still running. Startup completion alone is therefore not a guarantee that projections are ready.
+
+If your command/query API requires replayed state, explicitly wait for replay before enabling access:
+
+```csharp
+using EventSourcing.Commands.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+
+await serviceProvider.StartEventSourcing();
+await serviceProvider.GetRequiredService<IEventReplayState>().WaitForReplayDone();
+
+// Projections consuming the replay synchronously are now caught up.
+// Enable command/query access here (for example, call app.RunAsync()).
+```
+
+Call `StartEventSourcing()` to begin replay, then await readiness where your application needs it. For a long-running replay in a Windows service, the service can report startup or expose health/progress information while keeping business functionality unavailable until replay completes. Projections that process events asynchronously need their own completion barrier as well.
 
 ## Example
 A little meetup planner example is implemented [here](https://github.com/bluehands/EventSourcing/blob/main/src/Playground/Meetup/Meetup)
@@ -76,7 +100,7 @@ Your are basically free to model a command layer (or not) on top of your event s
 
  - 'Functional approach': A command processor / handler is just a function that produces events given an intention (command).
  - Your command handlers can return a an error in case of functional errors. This error information is serialized to the event store and gives you a generic way to inform your caller about failed commands, without having to model everything into your application state. You can choose your error type freely. A source generator shipped with the package adds supporting types for your specific error type (TODO: sample links). 
- - Use a [Result](https://github.com/bluehands/Funicular-Switch) type that correspongs to you error type to ease validation and error handling in your command processors. See [RegisterParticipantCommandProcessor](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Commands.cs#L21) for an example.
+ - Use a [Result](https://github.com/bluehands/Funicular-Switch) type that corresponds to you error type to ease validation and error handling in your command processors. See [RegisterParticipantCommandProcessor](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Commands.cs#L21) for an example.
  - Possibility for the issuer of a command to wait until the effect of his command (the events) where processed by a particular projection. This is especially useful for scenarios were a non CQS[^1] api should be kept stable while evolving the underlying infrastructure towards event sourcing. Have a look a the [Meetup app api](https://github.com/bluehands/EventSourcing/blob/b285feedd0a18fec91dfb8381e169229e7b1bc57/src/Playground/Meetup/Meetup/Api.cs#L13) for an example of the ```SendCommandAndWaitUntilApplied``` method.
 
 [^1]: An API that does not respect the '[Command Query Separation](https://de.wikipedia.org/wiki/Command-Query-Separation)' principle. So commands actually return data, i.e. UpdateSomething returns the updated entity.
