@@ -7,10 +7,9 @@ using DbEvent = EventSourcing.Persistence.EntityFramework.Event;
 
 namespace EventSourcing.Test;
 
-[TestClass]
 public class MapperVersionCompatibilityTest
 {
-    [TestMethod]
+    [Fact]
     public async Task MultipleStoredVersionsReplayAsTheSameDomainPayload()
     {
         var services = new ServiceCollection()
@@ -26,9 +25,9 @@ public class MapperVersionCompatibilityTest
         var context = scope.ServiceProvider.GetRequiredService<EventStoreContext>();
         var timestamp = DateTimeOffset.UtcNow;
         context.Events.Add(new DbEvent(0, "Journal", "A", "VersionedEntry.v1", "{\"Text\":\"old\"}", timestamp));
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.Events.Add(new DbEvent(0, "Journal", "A", "VersionedEntry.v2", "{\"Content\":\"new\"}", timestamp));
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var events = new List<Event>();
         await foreach (var @event in scope.ServiceProvider.GetRequiredService<IEventStore>().ReadEvents(0))
@@ -44,7 +43,7 @@ public class MapperVersionCompatibilityTest
         second.Timestamp.Should().Be(timestamp);
     }
 
-    [TestMethod]
+    [Fact]
     public void DuplicateStoredEventTypesAreStillRejected()
     {
         Action createMappers = () => _ = new EventPayloadMappers([new VersionOneMapper(), new VersionOneMapper()]);

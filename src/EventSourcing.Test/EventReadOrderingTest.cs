@@ -6,14 +6,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace EventSourcing.Test;
 
-[TestClass]
 public class EventReadOrderingTest
 {
-    [TestMethod]
-    [DataRow(false, 0L)]
-    [DataRow(false, 3L)]
-    [DataRow(true, 0L)]
-    [DataRow(true, 3L)]
+    [Theory]
+    [InlineData(false, 0L)]
+    [InlineData(false, 3L)]
+    [InlineData(true, 0L)]
+    [InlineData(true, 3L)]
     public async Task ReadersReturnEventsInAscendingPositionOrder(bool byStream, long fromPositionInclusive)
     {
         await using var services = CreateServices();
@@ -34,7 +33,7 @@ public class EventReadOrderingTest
         events.Select(e => e.Position).Should().Equal(expected);
     }
 
-    [TestMethod]
+    [Fact]
     public async Task PollingDeliversEventsOnceAndInOrderAcrossTwoPolls()
     {
         await using var services = CreateServices();
@@ -64,7 +63,7 @@ public class EventReadOrderingTest
             () => Task.FromResult(0L), ReadTwoPolls, TimeSpan.Zero,
             new WakeUp(TimeSpan.Zero, TimeSpan.FromMilliseconds(10), logger: null), logger: null);
         using var subscription = polling.Subscribe(received.Add, error => secondPollCompleted.TrySetException(error));
-        var delivered = await secondPollCompleted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var delivered = await secondPollCompleted.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
         delivered.Select(e => e.Position).Should().Equal(1L, 2L, 3L, 4L, 5L);
     }

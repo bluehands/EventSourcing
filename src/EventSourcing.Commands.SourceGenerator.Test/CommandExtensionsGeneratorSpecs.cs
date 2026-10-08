@@ -1,9 +1,8 @@
 namespace EventSourcing.Commands.SourceGenerator.Test;
 
-[TestClass]
 public class Run_command_extensions_generator : VerifySourceGenerator
 {
-    [TestMethod]
+    [Fact]
     public Task For_error_only_attribute() => Verify(
         """
         using EventSourcing.Commands;
@@ -30,13 +29,13 @@ public class Run_command_extensions_generator : VerifySourceGenerator
         }
         """, 1);
 
-    [TestMethod]
+    [Fact]
     public Task For_partial_result_type() => Verify(ResultFixture("Application.Commands", true), 2);
 
-    [TestMethod]
+    [Fact]
     public Task For_existing_result_implementation() => Verify(ResultFixture("Application.Commands", false), 2);
 
-    [TestMethod]
+    [Fact]
     public Task For_global_namespace_error_extensions() => Verify(
         """
         using EventSourcing.Commands;
@@ -52,10 +51,10 @@ public class Run_command_extensions_generator : VerifySourceGenerator
         }
         """, 1);
 
-    [TestMethod]
+    [Fact]
     public Task For_global_namespace_extensions_with_named_result() => Verify(ResultFixture(null, true), 2);
 
-    [TestMethod]
+    [Fact]
     public Task For_nested_namespace_declarations() => Verify(
         """
         namespace Application
@@ -68,7 +67,7 @@ public class Run_command_extensions_generator : VerifySourceGenerator
         }
         """, 1);
 
-    [TestMethod]
+    [Fact]
     public Task For_multiple_extension_classes() => Verify(
         """
         namespace Application.First
@@ -83,7 +82,7 @@ public class Run_command_extensions_generator : VerifySourceGenerator
         }
         """, 2);
 
-    [TestMethod]
+    [Fact]
     public Task Without_matching_attribute() => Verify(
         """
         namespace Application.Commands;

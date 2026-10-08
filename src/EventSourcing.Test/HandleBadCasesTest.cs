@@ -10,10 +10,9 @@ using EFEvent = EventSourcing.Persistence.EntityFramework.Event;
 
 namespace EventSourcing.Test;
 
-[TestClass]
 public class HandleBadCasesTest
 {
-    [TestMethod]
+    [Fact]
     public async Task SkipCorruptedEvent()
     {
         var test = await TestHelper.SetupEventSourcing<TestService>();
@@ -26,7 +25,7 @@ public class HandleBadCasesTest
         receivedEvents[0].Payload.Should().BeOfType<EntryAdded>();
     }
 
-    [TestMethod]
+    [Fact]
     public async Task MapToErrorEvent()
     {
         var test = await TestHelper.SetupEventSourcing<TestService>(options => options
@@ -42,7 +41,7 @@ public class HandleBadCasesTest
         receivedEvents[1].Payload.Should().BeOfType<MapToErrorPayloadHandler.CorruptedEvent>();
     }
 
-    [TestMethod]
+    [Fact]
     public async Task ErrorReadingEvents()
     {
         const int failTimes = 3;

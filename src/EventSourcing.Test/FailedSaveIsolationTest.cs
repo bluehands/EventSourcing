@@ -11,16 +11,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace EventSourcing.Test;
 
-[TestClass]
 public class FailedSaveIsolationTest
 {
-    [TestMethod]
+    [Fact]
     public async Task SubsequentWriteInSameScopeDoesNotPersistFailedBatch()
     {
         var interceptor = new FailFirstSaveInterceptor();
         await using var services = CreateServices(interceptor);
         using var scope = services.CreateScope();
-        await scope.ServiceProvider.GetRequiredService<EventStoreContext>().Database.EnsureCreatedAsync();
+        await scope.ServiceProvider.GetRequiredService<EventStoreContext>().Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
         var store = scope.ServiceProvider.GetRequiredService<IEventStore>();
 
         Func<Task> failedWrite = () => store.WriteEvents([new EntryAdded("Failed batch")]);
@@ -31,25 +30,25 @@ public class FailedSaveIsolationTest
 
         using var readScope = services.CreateScope();
         var persisted = await readScope.ServiceProvider.GetRequiredService<EventStoreContext>()
-            .Events.ToListAsync();
+            .Events.ToListAsync(TestContext.Current.CancellationToken);
         persisted.Should().ContainSingle()
             .Which.Payload.Should().Contain("Independent write");
         interceptor.SaveAttempts.Should().Be(2);
     }
 
-    [TestMethod]
+    [Fact]
     public async Task FailedWriteDiscardsAllPendingChangesAndKeepsUnchangedEntries()
     {
         var interceptor = new FailFirstSaveInterceptor(failOnAttempt: 2);
         await using var services = CreateServices(interceptor);
         using var scope = services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<EventStoreContext>();
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
         var modified = DbEvent("Modified");
         var deleted = DbEvent("Deleted");
         var unchanged = DbEvent("Unchanged");
         context.Events.AddRange(modified, deleted, unchanged);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.Entry(modified).Property(e => e.Payload).CurrentValue = "Changed payload";
         context.Events.Remove(deleted);
         var added = DbEvent("Added");
@@ -72,7 +71,7 @@ public class FailedSaveIsolationTest
 
         using var readScope = services.CreateScope();
         var persisted = await readScope.ServiceProvider.GetRequiredService<EventStoreContext>()
-            .Events.ToListAsync();
+            .Events.ToListAsync(TestContext.Current.CancellationToken);
         persisted.Should().HaveCount(4);
         persisted.Should().ContainSingle(e => e.EventType == "Modified" && e.Payload == "{}");
         persisted.Should().ContainSingle(e => e.EventType == "Deleted");
@@ -80,14 +79,14 @@ public class FailedSaveIsolationTest
         persisted.Should().ContainSingle(e => e.Payload.Contains("Independent write"));
     }
 
-    [TestMethod]
+    [Fact]
     public async Task SecondEventSerializationFailureDoesNotContaminateSubsequentWrite()
     {
         var serializer = new FailSecondSerialization();
         await using var services = CreateServices(new FailFirstSaveInterceptor(failOnAttempt: int.MaxValue), serializer);
         using var scope = services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<EventStoreContext>();
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
         var store = scope.ServiceProvider.GetRequiredService<IEventStore>();
 
         Func<Task> failedWrite = () => store.WriteEvents([
@@ -98,24 +97,24 @@ public class FailedSaveIsolationTest
 
         using (var readScope = services.CreateScope())
             (await readScope.ServiceProvider.GetRequiredService<EventStoreContext>()
-                .Events.ToListAsync()).Should().BeEmpty();
+                .Events.ToListAsync(TestContext.Current.CancellationToken)).Should().BeEmpty();
         context.ChangeTracker.Entries().Should().BeEmpty();
 
         await store.WriteEvents([new EntryAdded("Independent write")]);
 
         using var finalReadScope = services.CreateScope();
         var persisted = await finalReadScope.ServiceProvider.GetRequiredService<EventStoreContext>()
-            .Events.ToListAsync();
+            .Events.ToListAsync(TestContext.Current.CancellationToken);
         persisted.Should().ContainSingle().Which.Payload.Should().Contain("Independent write");
     }
 
-    [TestMethod]
+    [Fact]
     public async Task CommandFallbackPersistsOnlyFaultMarkerAfterSaveFailure()
     {
         var interceptor = new FailFirstSaveInterceptor();
         await using var services = CreateServices(interceptor);
         using (var setupScope = services.CreateScope())
-            await setupScope.ServiceProvider.GetRequiredService<EventStoreContext>().Database.EnsureCreatedAsync();
+            await setupScope.ServiceProvider.GetRequiredService<EventStoreContext>().Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
 
         using var commandScope = new CompletionScope(services.CreateScope());
         using var commands = new Subject<ScopedCommand>();
@@ -124,11 +123,11 @@ public class FailedSaveIsolationTest
         var command = new AddEntry();
 
         commands.OnNext(new ScopedCommand(command, commandScope, DisposeAfterProcess: true));
-        await commandScope.Disposed.WaitAsync(TimeSpan.FromSeconds(10));
+        await commandScope.Disposed.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
         using var readScope = services.CreateScope();
         var persisted = await readScope.ServiceProvider.GetRequiredService<EventStoreContext>()
-            .Events.ToListAsync();
+            .Events.ToListAsync(TestContext.Current.CancellationToken);
         persisted.Should().ContainSingle()
             .Which.EventType.Should().Be(EventTypes.CommandProcessed);
 

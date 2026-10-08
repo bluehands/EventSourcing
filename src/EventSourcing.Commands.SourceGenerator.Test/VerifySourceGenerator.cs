@@ -5,12 +5,12 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace EventSourcing.Commands.SourceGenerator.Test;
 
-public abstract class VerifySourceGenerator : VerifyBase
+public abstract class VerifySourceGenerator
 {
     [ModuleInitializer]
     public static void InitializeSnapshots() => VerifySourceGenerators.Initialize();
 
-    protected Task Verify(string source, int expectedSourceCount)
+    protected Task Verify(string source, int expectedSourceCount, [CallerFilePath] string sourceFile = "")
     {
         var parseOptions = new CSharpParseOptions(LanguageVersion.CSharp14);
         var frameworkAssemblies = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
@@ -37,6 +37,6 @@ public abstract class VerifySourceGenerator : VerifyBase
         errors.Should().BeEmpty("the generated consumer must compile; generated sources: {0}",
             string.Join(Environment.NewLine, result.GeneratedTrees.Select(t => $"{t.FilePath}\n{t}")));
 
-        return Verify(driver).UseDirectory("Snapshots");
+        return VerifyXunit.Verifier.Verify(driver, sourceFile: sourceFile).UseDirectory("Snapshots");
     }
 }

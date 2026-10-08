@@ -11,26 +11,23 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace EventSourcing.Test;
 
-[TestClass]
-[Ignore]
-public class SqlServerBatchOrderingTest
+public class SqlServerBatchOrderingTest(ITestOutputHelper output)
 {
-    public TestContext TestContext { get; set; } = null!;
-
-    [TestMethod]
-    [TestCategory("SqlServerIntegration")]
-    [DataRow(2)]
-    [DataRow(4)]
-    [DataRow(41)]
-    [DataRow(42)]
-    [DataRow(43)]
-    [DataRow(50)]
-    [DataRow(100)]
+    [Theory]
+    [Trait("Category", "SqlServerIntegration")]
+    [InlineData(2, Skip = "Live SQL Server batch-order experiment is disabled.")]
+    [InlineData(4, Skip = "Live SQL Server batch-order experiment is disabled.")]
+    [InlineData(41, Skip = "Live SQL Server batch-order experiment is disabled.")]
+    [InlineData(42, Skip = "Live SQL Server batch-order experiment is disabled.")]
+    [InlineData(43, Skip = "Live SQL Server batch-order experiment is disabled.")]
+    [InlineData(50, Skip = "Live SQL Server batch-order experiment is disabled.")]
+    [InlineData(100, Skip = "Live SQL Server batch-order experiment is disabled.")]
     public async Task PersistedPositionsPreserveInputOrderAndCompletionMarkerIsLast(int eventCount)
     {
         var connectionString = Environment.GetEnvironmentVariable("TEST_SQLSERVER_CONNECTION_STRING");
         if (string.IsNullOrWhiteSpace(connectionString))
-            Assert.Inconclusive("Set TEST_SQLSERVER_CONNECTION_STRING to run the live SQL Server batch-order experiment.");
+            throw Xunit.Sdk.SkipException.ForSkip(
+                "Set TEST_SQLSERVER_CONNECTION_STRING to run the live SQL Server batch-order experiment.");
 
         var connection = new SqlConnectionStringBuilder(connectionString)
         {
@@ -48,7 +45,7 @@ public class SqlServerBatchOrderingTest
         try
         {
             using (var scope = services.CreateScope())
-                await scope.ServiceProvider.GetRequiredService<EventStoreContext>().Database.MigrateAsync();
+                await scope.ServiceProvider.GetRequiredService<EventStoreContext>().Database.MigrateAsync(TestContext.Current.CancellationToken);
 
             for (var iteration = 0; iteration < 25; iteration++)
             {
@@ -68,7 +65,7 @@ public class SqlServerBatchOrderingTest
                 using (var scope = services.CreateScope())
                 {
                     var context = scope.ServiceProvider.GetRequiredService<EventStoreContext>();
-                    fromPosition = (await context.Events.MaxAsync(e => (long?)e.Position) ?? 0) + 1;
+                    fromPosition = (await context.Events.MaxAsync(e => (long?)e.Position, TestContext.Current.CancellationToken) ?? 0) + 1;
                     await scope.ServiceProvider.GetRequiredService<IEventStore>().WriteEvents(payloads);
                 }
 
@@ -96,15 +93,15 @@ public class SqlServerBatchOrderingTest
                 capture.Commands.Should().OnlyContain(c => c.Sql.Contains("WITH (TABLOCKX)"));
                 if (iteration == 0)
                     foreach (var command in capture.Commands)
-                        TestContext.WriteLine($"Sequences: {string.Join(",", command.Sequences)}\n{command.Sql}");
+                        output.WriteLine($"Sequences: {string.Join(",", command.Sequences)}\n{command.Sql}");
             }
 
-            TestContext.WriteLine($"25 batches of {eventCount} events preserved input order and completion-marker position.");
+            output.WriteLine($"25 batches of {eventCount} events preserved input order and completion-marker position.");
         }
         finally
         {
             using var scope = services.CreateScope();
-            await scope.ServiceProvider.GetRequiredService<EventStoreContext>().Database.EnsureDeletedAsync();
+            await scope.ServiceProvider.GetRequiredService<EventStoreContext>().Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
         }
     }
 

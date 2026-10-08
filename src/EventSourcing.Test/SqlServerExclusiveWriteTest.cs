@@ -9,20 +9,17 @@ using StoredEvent = EventSourcing.Persistence.EntityFramework.Event;
 
 namespace EventSourcing.Test;
 
-[TestClass]
-public class SqlServerExclusiveWriteTest
+public class SqlServerExclusiveWriteTest(ITestOutputHelper output)
 {
-    public TestContext TestContext { get; set; } = null!;
-
-    [TestMethod]
-    [DataRow(1, false)]
-    [DataRow(2, false)]
-    [DataRow(4, false)]
-    [DataRow(50, false)]
-    [DataRow(1, true)]
-    [DataRow(2, true)]
-    [DataRow(4, true)]
-    [DataRow(50, true)]
+    [Theory]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(4, false)]
+    [InlineData(50, false)]
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    [InlineData(4, true)]
+    [InlineData(50, true)]
     public async Task FirstGeneratedWriteCommandLocksEveryEventWrite(int eventCount, bool saveAsync)
     {
         var capture = new CaptureWriteCommand();
@@ -39,20 +36,19 @@ public class SqlServerExclusiveWriteTest
         for (var i = 0; i < eventCount; i++)
             context.Events.Add(new StoredEvent(0, "LockRegression", "A", "EntryAdded", $"{{\"index\":{i}}}", DateTimeOffset.UtcNow));
 
-        try
+        Func<Task> saveChanges = async () =>
         {
             if (saveAsync)
-                await context.SaveChangesAsync();
+                await context.SaveChangesAsync(TestContext.Current.CancellationToken);
             else
                 context.SaveChanges();
-            Assert.Fail("Expected SQL capture to stop command execution.");
-        }
-        catch (DbUpdateException exception) when (exception.InnerException is CommandCapturedException)
-        {
-        }
+        };
+        var exception = await saveChanges.Should().ThrowAsync<DbUpdateException>(
+            "SQL capture must stop command execution");
+        exception.Which.InnerException.Should().BeOfType<CommandCapturedException>();
 
         capture.CommandText.Should().NotBeNullOrEmpty();
-        TestContext.WriteLine(capture.CommandText!);
+        output.WriteLine(capture.CommandText!);
         var writes = Regex.Matches(capture.CommandText!, @"(?:INSERT INTO|MERGE) \[Events\](?: WITH \([^)]*\))?", RegexOptions.IgnoreCase);
         writes.Should().NotBeEmpty("the real provider must generate an event-table write");
         foreach (Match write in writes)

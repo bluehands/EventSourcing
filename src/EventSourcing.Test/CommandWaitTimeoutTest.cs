@@ -5,12 +5,11 @@ using AwesomeAssertions;
 
 namespace EventSourcing.Test;
 
-[TestClass]
 public class CommandWaitTimeoutTest
 {
-    [TestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task CompletionDuringSendIsObservedAndSubscriptionIsReleased(bool untyped)
     {
         using var events = new Subject<Event<CommandProcessed<string>>>();
@@ -32,9 +31,9 @@ public class CommandWaitTimeoutTest
         events.HasObservers.Should().BeFalse();
     }
 
-    [TestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task TimeoutReleasesSubscriptionAndLaterWaitStillWorks(bool untyped)
     {
         using var events = new Subject<Event<CommandProcessed<string>>>();
@@ -43,7 +42,8 @@ public class CommandWaitTimeoutTest
         var wait = Wait(bus, command, events, untyped, TimeSpan.FromMilliseconds(100));
         events.HasObservers.Should().BeTrue();
 
-        await Assert.ThrowsExactlyAsync<TimeoutException>(() => wait.WaitAsync(TimeSpan.FromSeconds(5)));
+        Func<Task> awaitCompletion = () => wait.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await awaitCompletion.Should().ThrowExactlyAsync<TimeoutException>();
         events.HasObservers.Should().BeFalse();
 
         // Completion can still arrive after the caller timed out; it must not revive the old subscription.
@@ -60,7 +60,7 @@ public class CommandWaitTimeoutTest
         events.HasObservers.Should().BeFalse();
     }
 
-    [TestMethod]
+    [Fact]
     public async Task TimedSendFailurePropagatesAndReleasesSubscription()
     {
         using var events = new Subject<Event<CommandProcessed<string>>>();
@@ -69,12 +69,13 @@ public class CommandWaitTimeoutTest
         var command = new TestCommand();
         var wait = bus.SendAndWaitForProcessedEvent(command, events, TimeSpan.FromSeconds(5));
 
-        var actual = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => wait);
-        actual.Should().BeSameAs(failure);
+        Func<Task> awaitCompletion = () => wait;
+        var actual = await awaitCompletion.Should().ThrowExactlyAsync<InvalidOperationException>();
+        actual.Which.Should().BeSameAs(failure);
         events.HasObservers.Should().BeFalse();
     }
 
-    [TestMethod]
+    [Fact]
     public async Task TimeoutAlsoBoundsAnIncompleteSendWithoutCancellingIt()
     {
         using var events = new Subject<Event<CommandProcessed<string>>>();
@@ -82,15 +83,16 @@ public class CommandWaitTimeoutTest
         var bus = new StubBus(_ => send.Task);
         var wait = bus.SendAndWaitForProcessedEvent(new TestCommand(), events, TimeSpan.FromMilliseconds(100));
 
-        await Assert.ThrowsExactlyAsync<TimeoutException>(() => wait.WaitAsync(TimeSpan.FromSeconds(5)));
+        Func<Task> awaitCompletion = () => wait.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await awaitCompletion.Should().ThrowExactlyAsync<TimeoutException>();
         events.HasObservers.Should().BeFalse();
         send.Task.IsCompleted.Should().BeFalse();
         send.SetResult();
     }
 
-    [TestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task CallerContinuationCanWaitForPublisherToReturnFromOnNext(bool withTimeout)
     {
         using var events = new Subject<Event<CommandProcessed<string>>>();
@@ -134,8 +136,8 @@ public class CommandWaitTimeoutTest
         publisher.Start();
         try
         {
-            var outcome = await caller.WaitAsync(TimeSpan.FromSeconds(10));
-            await publication.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var outcome = await caller.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+            await publication.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
             outcome.result.Should().BeSameAs(expected);
             outcome.publisherWasAbleToReturn.Should().BeTrue(
                 "the caller must not block OnNext while waiting for the publisher to finish");
