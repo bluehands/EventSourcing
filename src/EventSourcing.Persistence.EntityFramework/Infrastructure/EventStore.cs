@@ -11,6 +11,7 @@ class EventStore(EventStoreContext eventStore) : IEventReader<Event>, IEventWrit
 
         return eventStore.Events
             .Where(e => e.StreamType == streamId.StreamType && e.StreamId == streamId.Id && e.Position >= positionInclusive)
+            .OrderBy(e => e.Position)
             .AsAsyncEnumerable();
     }
 
@@ -20,6 +21,7 @@ class EventStore(EventStoreContext eventStore) : IEventReader<Event>, IEventWrit
 
         return eventStore.Events
             .Where(e => e.Position >= positionInclusive)
+            .OrderBy(e => e.Position)
             .AsAsyncEnumerable();
     }
 
