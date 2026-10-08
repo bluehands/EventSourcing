@@ -44,7 +44,7 @@ public static class CommandBusExtension
             .ToTask(deadlineToken, Scheduler.Default); // Preserve scheduled task completion for sync / async mixtures.
         try
         {
-            await commandBus.SendCommand(command).WaitAsync(deadlineToken).ConfigureAwait(false);
+            await commandBus.SendCommand(command).ConfigureAwait(false);
             return await processed.WaitAsync(deadlineToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (timeout.HasValue && deadline?.IsCancellationRequested == true)
