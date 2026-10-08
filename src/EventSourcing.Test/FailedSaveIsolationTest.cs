@@ -4,7 +4,7 @@ using EventSourcing.Commands.Infrastructure.Internal;
 using EventSourcing.Commands.SerializablePayloads;
 using EventSourcing.Infrastructure;
 using EventSourcing.Persistence.EntityFramework;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;

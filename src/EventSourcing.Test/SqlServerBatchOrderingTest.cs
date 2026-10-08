@@ -3,7 +3,7 @@ using System.Text.Json;
 using EventSourcing.Commands;
 using EventSourcing.Commands.SerializablePayloads;
 using EventSourcing.Persistence.EntityFramework;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;

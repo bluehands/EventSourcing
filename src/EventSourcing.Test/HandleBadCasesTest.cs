@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using EventSourcing.Infrastructure;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using EFEvent = EventSourcing.Persistence.EntityFramework.Event;

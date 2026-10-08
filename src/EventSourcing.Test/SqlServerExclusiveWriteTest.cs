@@ -1,7 +1,7 @@
 using System.Data.Common;
 using System.Text.RegularExpressions;
 using EventSourcing.Persistence.EntityFramework;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;

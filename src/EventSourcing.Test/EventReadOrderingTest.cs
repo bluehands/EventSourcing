@@ -1,6 +1,6 @@
 using EventSourcing.Infrastructure.Internal;
 using EventSourcing.Persistence.EntityFramework;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

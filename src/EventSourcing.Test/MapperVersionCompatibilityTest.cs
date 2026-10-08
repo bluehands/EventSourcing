@@ -1,6 +1,6 @@
 using EventSourcing.Infrastructure.Internal;
 using EventSourcing.Persistence.EntityFramework;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using DbEvent = EventSourcing.Persistence.EntityFramework.Event;

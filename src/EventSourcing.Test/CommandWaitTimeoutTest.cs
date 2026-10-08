@@ -1,7 +1,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using EventSourcing.Commands;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace EventSourcing.Test;
 
