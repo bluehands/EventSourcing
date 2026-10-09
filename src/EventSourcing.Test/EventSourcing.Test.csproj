@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EventSourcing.Commands\EventSourcing.Commands.csproj" />
+    <ProjectReference Include="..\EventSourcing.Persistence.EntityFramework.Postgres\EventSourcing.Persistence.EntityFramework.Postgres.csproj" />
     <ProjectReference Include="..\EventSourcing.Persistence.EntityFramework.SqlServer\EventSourcing.Persistence.EntityFramework.SqlServer.csproj" />
     <ProjectReference Include="..\EventSourcing.Persistence.EntityFramework.Sqlite\EventSourcing.Persistence.EntityFramework.Sqlite.csproj" />
     <ProjectReference Include="..\EventSourcing\EventSourcing.csproj" />

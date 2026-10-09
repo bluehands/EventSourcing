@@ -11,7 +11,7 @@ public static class Program
         {
             Console.WriteLine("""
                 Event-store database benchmarks (run in Release)
-                --provider sqlite|sqlserver|both       Default: sqlite
+                --provider sqlite|sqlserver|postgres|all  Default: sqlite
                 --profile smoke|quick|full             Default: quick
                 --scenarios global,tail,stream,write,mixed
                 --workers 1,2,4,8 --batches 1,10,100,1000
@@ -21,7 +21,9 @@ public static class Program
                 --output PATH                         Default: artifacts/benchmarks
                 --keep-database                       Retain runner-owned databases
                 SQL Server: set EVENTSOURCING_BENCHMARK_SQLSERVER to an instance connection string.
-                Each selected SQL Server run creates and drops its own uniquely named database.
+                PostgreSQL: set EVENTSOURCING_BENCHMARK_POSTGRES to an instance connection string.
+                all selects SQLite, SQL Server and PostgreSQL.
+                Each server-backed run creates and drops its own uniquely named database.
                 """);
             return 0;
         }
@@ -45,7 +47,7 @@ public static class Program
             Console.WriteLine($"Reports: {directory}");
             try
             {
-                foreach (var provider in options.Provider == "both" ? new[] { "sqlite", "sqlserver" } : [options.Provider])
+                foreach (var provider in options.Providers())
                 {
                     await using var database = new BenchmarkDatabase(provider, options, directory);
                     await database.Initialize();

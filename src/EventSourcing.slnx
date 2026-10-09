@@ -17,6 +17,7 @@
   <Project Path="EventSourcing.Commands.SourceGenerator/EventSourcing.Commands.SourceGenerator.csproj" />
   <Project Path="EventSourcing.Commands.Templates/EventSourcing.Commands.Templates.csproj" />
   <Project Path="EventSourcing.Commands/EventSourcing.Commands.csproj" />
+  <Project Path="EventSourcing.Persistence.EntityFramework.Postgres/EventSourcing.Persistence.EntityFramework.Postgres.csproj" />
   <Project Path="EventSourcing.Persistence.EntityFramework.Sqlite/EventSourcing.Persistence.EntityFramework.Sqlite.csproj" />
   <Project Path="EventSourcing.Persistence.EntityFramework.SqlServer/EventSourcing.Persistence.EntityFramework.SqlServer.csproj" />
   <Project Path="EventSourcing.Persistence.EntityFramework/EventSourcing.Persistence.EntityFramework.csproj" />

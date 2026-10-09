@@ -8,6 +8,7 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\EventSourcing.Persistence.EntityFramework.Postgres\EventSourcing.Persistence.EntityFramework.Postgres.csproj" />
     <ProjectReference Include="..\EventSourcing.Persistence.EntityFramework.Sqlite\EventSourcing.Persistence.EntityFramework.Sqlite.csproj" />
     <ProjectReference Include="..\EventSourcing.Persistence.EntityFramework.SqlServer\EventSourcing.Persistence.EntityFramework.SqlServer.csproj" />
   </ItemGroup>

@@ -6,6 +6,7 @@ public sealed record Options
     public string Profile { get; init; } = "quick";
     public string Output { get; init; } = "artifacts/benchmarks";
     public string? SqlConnection { get; init; } = Environment.GetEnvironmentVariable("EVENTSOURCING_BENCHMARK_SQLSERVER");
+    public string? PostgresConnection { get; init; } = Environment.GetEnvironmentVariable("EVENTSOURCING_BENCHMARK_POSTGRES");
     public string[] Scenarios { get; init; } = ["global", "tail", "stream", "write", "mixed"];
     public int[] Workers { get; init; } = [1, 4];
     public int[] Batches { get; init; } = [1, 100];
@@ -54,9 +55,11 @@ public sealed record Options
             Writers = values.ContainsKey("--writers") ? Positive("--writers", 1) : null,
             KeepDatabase = values.ContainsKey("--keep-database")
         };
-        if (options.Provider is not ("sqlite" or "sqlserver" or "both")) throw new ArgumentException("Provider must be sqlite, sqlserver, or both.");
-        if (options.Provider != "sqlite" && string.IsNullOrWhiteSpace(options.SqlConnection))
+        if (options.Provider is not ("sqlite" or "sqlserver" or "postgres" or "all")) throw new ArgumentException("Provider must be sqlite, sqlserver, postgres, or all.");
+        if (options.Providers().Contains("sqlserver") && string.IsNullOrWhiteSpace(options.SqlConnection))
             throw new ArgumentException("Set EVENTSOURCING_BENCHMARK_SQLSERVER to an instance connection string.");
+        if (options.Providers().Contains("postgres") && string.IsNullOrWhiteSpace(options.PostgresConnection))
+            throw new ArgumentException("Set EVENTSOURCING_BENCHMARK_POSTGRES to an instance connection string.");
         if (options.Scenarios.Any(s => s is not ("global" or "tail" or "stream" or "write" or "mixed")))
             throw new ArgumentException("Scenarios: global,tail,stream,write,mixed.");
         return options;
@@ -64,6 +67,8 @@ public sealed record Options
 
     static int ParsePositive(string text) => int.TryParse(text, out var value) && value > 0
         ? value : throw new ArgumentException($"Expected a positive integer, got '{text}'.");
+
+    public string[] Providers() => Provider == "all" ? ["sqlite", "sqlserver", "postgres"] : [Provider];
 
     public IEnumerable<Workload> Workloads()
     {

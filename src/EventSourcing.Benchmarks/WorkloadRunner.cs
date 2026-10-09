@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace EventSourcing.Benchmarks;
 
@@ -113,6 +114,8 @@ public static class WorkloadRunner
         {
             SqlException sql => $"SqlException:{sql.Number}",
             SqliteException sqlite => $"SqliteException:{sqlite.SqliteErrorCode}:{sqlite.SqliteExtendedErrorCode}",
+            PostgresException postgres => $"PostgresException:{postgres.SqlState}",
+            NpgsqlException npgsql => $"NpgsqlException: {npgsql.Message}",
             _ => $"{root.GetType().Name}: {root.Message}"
         };
     }

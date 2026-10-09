@@ -4,6 +4,23 @@ namespace EventSourcing.Benchmarks.Test;
 
 public class ReportingTests
 {
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("sqlserver")]
+    [InlineData("postgres")]
+    public void SingleProviderSelectionDoesNotIncludeOtherProviders(string provider)
+    {
+        (new Options { Provider = provider }).Providers().Should().Equal(provider);
+    }
+
+    [Fact]
+    public void AllSelectsEveryProviderAndBothIsRejected()
+    {
+        (new Options { Provider = "all" }).Providers().Should().Equal("sqlite", "sqlserver", "postgres");
+        Action parse = () => Options.Parse(["--provider", "both"]);
+        parse.Should().ThrowExactly<ArgumentException>().WithMessage("Provider must be sqlite, sqlserver, postgres, or all.");
+    }
+
     [Fact]
     public void MetricsExcludeFailuresFromThroughputAndSuccessfulLatencyPercentiles()
     {

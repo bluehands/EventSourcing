@@ -3,6 +3,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace EventSourcing.Benchmarks;
 
@@ -28,15 +29,22 @@ public sealed class BenchmarkDatabase : IAsyncDisposable
             sqlitePath = Path.Combine(directory, Name + ".db");
             connectionString = new SqliteConnectionStringBuilder { DataSource = sqlitePath, Pooling = true, DefaultTimeout = 30 }.ToString();
         }
-        else
+        else if (provider == "postgres")
+        {
+            connectionString = new NpgsqlConnectionStringBuilder(options.PostgresConnection) { Database = Name }.ToString();
+        }
+        else if (provider == "sqlserver")
         {
             var builder = new SqlConnectionStringBuilder(options.SqlConnection) { InitialCatalog = Name };
             connectionString = builder.ToString();
         }
+        else
+            throw new ArgumentException($"Unknown benchmark provider '{provider}'.", nameof(provider));
         Services = new ServiceCollection().AddLogging().AddEventSourcing(b =>
         {
             b.PayloadAssemblies(typeof(BenchmarkPayload).Assembly);
             if (provider == "sqlite") b.UseSqliteEventStore(connectionString);
+            else if (provider == "postgres") b.UsePostgresEventStore(connectionString);
             else b.UseSqlServerEventStore(connectionString);
         }).BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
@@ -56,13 +64,25 @@ public sealed class BenchmarkDatabase : IAsyncDisposable
             return Convert.ToString(await command.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture) ?? "";
         }
         Metadata["Database"] = Name;
-        Metadata["Version"] = await Scalar(Provider == "sqlite" ? "SELECT sqlite_version()" : "SELECT @@VERSION");
+        Metadata["Version"] = await Scalar(Provider switch
+        {
+            "sqlite" => "SELECT sqlite_version()",
+            "postgres" => "SELECT version()",
+            _ => "SELECT @@VERSION"
+        });
         if (Provider == "sqlite")
         {
             Metadata["File"] = sqlitePath!;
             Metadata["CommandTimeoutSeconds"] = "30";
             foreach (var pragma in new[] { "journal_mode", "synchronous", "busy_timeout", "page_size" })
                 Metadata[pragma] = await Scalar($"PRAGMA {pragma}");
+        }
+        else if (Provider == "postgres")
+        {
+            Metadata["CommandTimeoutSeconds"] = (context.Database.GetCommandTimeout() ?? 30).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            foreach (var setting in new[] { "transaction_isolation", "synchronous_commit", "fsync", "full_page_writes", "wal_level", "max_connections" })
+                Metadata[setting] = await Scalar($"SHOW {setting}");
+            Metadata["PositionAllocation"] = "Transactional counter; one EF save per batch";
         }
         else
         {
@@ -78,9 +98,19 @@ public sealed class BenchmarkDatabase : IAsyncDisposable
         await using (var scope = Services.CreateAsyncScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<EventStoreContext>();
-            await context.Database.ExecuteSqlRawAsync(Provider == "sqlite"
-                ? "DELETE FROM Events; DELETE FROM sqlite_sequence WHERE name = 'Events';"
-                : "TRUNCATE TABLE [Events];");
+            if (Provider == "postgres")
+            {
+                await using var transaction = await context.Database.BeginTransactionAsync();
+                await context.Database.ExecuteSqlRawAsync("""
+                    TRUNCATE TABLE public."Events";
+                    UPDATE public."EventPositionCounter" SET "LastPosition" = 0 WHERE "Id" = 1;
+                    """);
+                await transaction.CommitAsync();
+            }
+            else
+                await context.Database.ExecuteSqlRawAsync(Provider == "sqlite"
+                    ? "DELETE FROM Events; DELETE FROM sqlite_sequence WHERE name = 'Events';"
+                    : "TRUNCATE TABLE [Events];");
         }
         var data = new string('x', workload.PayloadBytes);
         for (var start = 0; start < workload.History; start += 1000)
@@ -114,6 +144,14 @@ public sealed class BenchmarkDatabase : IAsyncDisposable
             SqliteConnection.ClearAllPools();
             if (!keep)
                 foreach (var suffix in new[] { "", "-wal", "-shm" }) File.Delete(sqlitePath + suffix);
+        }
+        else if (Provider == "postgres")
+        {
+            if (keep) return;
+            await using var context = new Persistence.EntityFramework.Postgres.Infrastructure.PostgresEventStoreContext(
+                new DbContextOptionsBuilder<Persistence.EntityFramework.Postgres.Infrastructure.PostgresEventStoreContext>()
+                    .UseNpgsql(connectionString).Options);
+            await context.Database.EnsureDeletedAsync();
         }
         else
         {
