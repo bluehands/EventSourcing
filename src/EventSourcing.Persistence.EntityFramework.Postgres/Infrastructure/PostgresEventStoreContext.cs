@@ -11,23 +11,14 @@ public class PostgresEventStoreContext(DbContextOptions<PostgresEventStoreContex
         {
             entity.ToTable("Events", "public");
             entity.Property(e => e.Position).ValueGeneratedNever();
+            entity.Property(e => e.StreamType).HasMaxLength(128);
+            entity.Property(e => e.StreamId).HasMaxLength(256);
+            entity.Property(e => e.EventType).HasMaxLength(450);
             entity.Property(e => e.Timestamp)
                 .HasConversion(timestamp => timestamp.ToUniversalTime(), timestamp => timestamp)
                 .HasColumnType("timestamp with time zone");
         });
-        modelBuilder.Entity<EventPositionCounter>(entity =>
-        {
-            entity.ToTable("EventPositionCounter", "public", table =>
-                table.HasCheckConstraint("CK_EventPositionCounter_SingleRow", "\"Id\" = 1 AND \"LastPosition\" >= 0"));
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.HasData(new EventPositionCounter { Id = 1, LastPosition = 0 });
-        });
+        // PostgreSQL defaults to CACHE 1 and NO CYCLE. The append protocol requires both.
+        modelBuilder.HasSequence<long>("EventPosition", "public");
     }
-}
-
-internal sealed class EventPositionCounter
-{
-    public int Id { get; set; }
-    public long LastPosition { get; set; }
 }

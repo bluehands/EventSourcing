@@ -22,6 +22,8 @@ namespace EventSourcing.Persistence.EntityFramework.Postgres.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.HasSequence("EventPosition", "public");
+
             modelBuilder.Entity("EventSourcing.Persistence.EntityFramework.Event", b =>
                 {
                     b.Property<long>("Position")
@@ -29,7 +31,8 @@ namespace EventSourcing.Persistence.EntityFramework.Postgres.Migrations
 
                     b.Property<string>("EventType")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
 
                     b.Property<string>("Payload")
                         .IsRequired()
@@ -37,11 +40,13 @@ namespace EventSourcing.Persistence.EntityFramework.Postgres.Migrations
 
                     b.Property<string>("StreamId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("StreamType")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<DateTimeOffset>("Timestamp")
                         .HasColumnType("timestamp with time zone");
@@ -53,28 +58,6 @@ namespace EventSourcing.Persistence.EntityFramework.Postgres.Migrations
                     b.ToTable("Events", "public");
                 });
 
-            modelBuilder.Entity("EventSourcing.Persistence.EntityFramework.Postgres.Infrastructure.EventPositionCounter", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("integer");
-
-                    b.Property<long>("LastPosition")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("EventPositionCounter", "public", t =>
-                        {
-                            t.HasCheckConstraint("CK_EventPositionCounter_SingleRow", "\"Id\" = 1 AND \"LastPosition\" >= 0");
-                        });
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            LastPosition = 0L
-                        });
-                });
 #pragma warning restore 612, 618
         }
     }

@@ -14,19 +14,8 @@ namespace EventSourcing.Persistence.EntityFramework.Postgres.Migrations
             migrationBuilder.EnsureSchema(
                 name: "public");
 
-            migrationBuilder.CreateTable(
-                name: "EventPositionCounter",
-                schema: "public",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false),
-                    LastPosition = table.Column<long>(type: "bigint", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_EventPositionCounter", x => x.Id);
-                    table.CheckConstraint("CK_EventPositionCounter_SingleRow", "\"Id\" = 1 AND \"LastPosition\" >= 0");
-                });
+            migrationBuilder.CreateSequence<long>(name: "EventPosition", schema: "public");
+            migrationBuilder.Sql("ALTER SEQUENCE public.\"EventPosition\" CACHE 1 NO CYCLE;");
 
             migrationBuilder.CreateTable(
                 name: "Events",
@@ -34,9 +23,9 @@ namespace EventSourcing.Persistence.EntityFramework.Postgres.Migrations
                 columns: table => new
                 {
                     Position = table.Column<long>(type: "bigint", nullable: false),
-                    StreamType = table.Column<string>(type: "text", nullable: false),
-                    StreamId = table.Column<string>(type: "text", nullable: false),
-                    EventType = table.Column<string>(type: "text", nullable: false),
+                    StreamType = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    StreamId = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    EventType = table.Column<string>(type: "character varying(450)", maxLength: 450, nullable: false),
                     Payload = table.Column<string>(type: "text", nullable: false),
                     Timestamp = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
@@ -44,12 +33,6 @@ namespace EventSourcing.Persistence.EntityFramework.Postgres.Migrations
                 {
                     table.PrimaryKey("PK_Events", x => x.Position);
                 });
-
-            migrationBuilder.InsertData(
-                schema: "public",
-                table: "EventPositionCounter",
-                columns: new[] { "Id", "LastPosition" },
-                values: new object[] { 1, 0L });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Events_StreamType_StreamId",
@@ -61,9 +44,7 @@ namespace EventSourcing.Persistence.EntityFramework.Postgres.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "EventPositionCounter",
-                schema: "public");
+            migrationBuilder.DropSequence(name: "EventPosition", schema: "public");
 
             migrationBuilder.DropTable(
                 name: "Events",

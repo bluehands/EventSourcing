@@ -40,13 +40,14 @@ public sealed class BenchmarkDatabase : IAsyncDisposable
         }
         else
             throw new ArgumentException($"Unknown benchmark provider '{provider}'.", nameof(provider));
-        Services = new ServiceCollection().AddLogging().AddEventSourcing(b =>
+        var services = new ServiceCollection().AddLogging().AddEventSourcing(b =>
         {
             b.PayloadAssemblies(typeof(BenchmarkPayload).Assembly);
             if (provider == "sqlite") b.UseSqliteEventStore(connectionString);
             else if (provider == "postgres") b.UsePostgresEventStore(connectionString);
             else b.UseSqlServerEventStore(connectionString);
-        }).BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        });
+        Services = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
 
     public async Task Initialize()
@@ -82,7 +83,7 @@ public sealed class BenchmarkDatabase : IAsyncDisposable
             Metadata["CommandTimeoutSeconds"] = (context.Database.GetCommandTimeout() ?? 30).ToString(System.Globalization.CultureInfo.InvariantCulture);
             foreach (var setting in new[] { "transaction_isolation", "synchronous_commit", "fsync", "full_page_writes", "wal_level", "max_connections" })
                 Metadata[setting] = await Scalar($"SHOW {setting}");
-            Metadata["PositionAllocation"] = "Transactional counter; one EF save per batch";
+            Metadata["PositionAllocation"] = "Transaction-level advisory lock; CACHE 1 sequence; native arrays/COPY";
         }
         else
         {
@@ -103,7 +104,7 @@ public sealed class BenchmarkDatabase : IAsyncDisposable
                 await using var transaction = await context.Database.BeginTransactionAsync();
                 await context.Database.ExecuteSqlRawAsync("""
                     TRUNCATE TABLE public."Events";
-                    UPDATE public."EventPositionCounter" SET "LastPosition" = 0 WHERE "Id" = 1;
+                    ALTER SEQUENCE public."EventPosition" RESTART WITH 1;
                     """);
                 await transaction.CommitAsync();
             }

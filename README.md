@@ -129,7 +129,7 @@ If you prefer not to insert competing events into your store this would have to 
   - [Bluehands.EventSourcing.Persistence.SqlServer](https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.SqlServer)
   - [Bluehands.EventSourcing.Persistence.Postgres](https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.Postgres)
 
-All three persistence packages are based on [Bluehands.EventSourcing.Persistence.EntityFramework](https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.EntityFramework/). Events are stored in a straightforward, non-normalized table. PostgreSQL also uses a single-row counter table to allocate ordered batch positions atomically.
+All three persistence packages are based on [Bluehands.EventSourcing.Persistence.EntityFramework](https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.EntityFramework/). Events are stored in a straightforward, non-normalized table. PostgreSQL uses a sequence and transaction-level advisory lock to allocate ordered batch positions without an additional counter table.
 
 ### PostgreSQL
 
@@ -143,24 +143,9 @@ services.AddEventSourcing(options => options
 
 `UsePostgresEventStore` also accepts a `Func<IServiceProvider, string>` connection-string factory and an optional provider builder callback. Polling is the default event stream. Call `StartEventSourcing()` during application startup to apply migrations and start the stream.
 
-The provider uses Npgsql EF Core 10 and is integration-tested against PostgreSQL 18. Tables and migration history are explicitly placed in `public`; names such as `"Events"` are case-sensitive quoted identifiers. Payloads and stream identifiers are stored as `text`, and stream matching uses PostgreSQL's case-sensitive text equality. Very large stream identifiers can exceed PostgreSQL B-tree index-entry limits.
 
-**Batch ordering:** each non-empty append owns a short transaction. A transactional update of `"EventPositionCounter"` allocates the batch's positions and serializes competing writers until commit or rollback. Positions are assigned in input order before one `AddRange` / `SaveChangesAsync` call. EF can split inserts into database command batches without changing event order. `"Position"` is a `bigint` primary key with explicit values, not an identity/sequence column. Readers remain unblocked and see committed batches only. This guarantees persistence ordering across application instances; domain-level optimistic concurrency remains application-defined.
 
-**Transactions and failures:** existing EF transactions, enlisted transactions, and ambient `TransactionScope` transactions are rejected for non-empty appends. New events must have position zero, and the dedicated persistence context must have no unrelated pending changes. A failed append rolls back both events and allocation and detaches the batch from tracking. Automatic write retries are not enabled: a lost connection during commit can have an unknown outcome, so blindly repeating an append can duplicate events. Writes use the context command timeout (30 seconds by default) for counter allocation.
-
-**Timestamps:** this provider generates UTC timestamps and normalizes supplied offsets to UTC. PostgreSQL stores the instant, not the original offset, with microsecond precision.
-
-**Database administration:** startup migrations require database/schema DDL privileges. Alternatively, generate a deployment script with `dotnet ef migrations script --idempotent --project src/EventSourcing.Persistence.EntityFramework.Postgres --context PostgresEventStoreContext` and apply it using a deployment account. Appends require SELECT/UPDATE on the counter and INSERT on events; reads require SELECT on events. For imports, stop all writers, import explicit positions, and set the counter to at least the maximum stored position in the same maintenance transaction. Direct `SaveChanges`, raw inserts, counter resets, and deletion of the counter bypass the append protocol and are not supported append paths.
-
-To run the PostgreSQL integration tests locally, supply a connection to a server whose user can create/drop isolated test databases:
-
-```powershell
-$env:TEST_POSTGRES_CONNECTION_STRING = 'Host=localhost;Port=5432;Username=postgres;Password=your-password'
-dotnet test src/EventSourcing.Test --filter TestCategory=PostgresIntegration
-```
-
-CI provisions PostgreSQL and requires these tests. Without the connection variable, local runs mark them inconclusive.
+**Database administration:** startup migrations require database/schema DDL privileges. Alternatively, generate a deployment script with `dotnet ef migrations script --idempotent --project src/EventSourcing.Persistence.EntityFramework.Postgres --context PostgresEventStoreContext` and apply it using a deployment account. Appends require USAGE/UPDATE on `public."EventPosition"` and INSERT on events; reads require SELECT on events. For imports, stop all writers, import explicit positions, and advance the sequence to at least the maximum stored position before restarting writers. Sequence changes are not rolled back. Direct `SaveChanges`, raw inserts, sequence resets, or changing its cache bypass the append protocol and are not supported append paths.
 
 To write your own persistence provider, perhaps to have a more optimized storage schema for specific needs or even to abstract from an existing event store like [EventStoreDb](https://www.eventstore.com/) you might want to take [EventSourcing.Persistence.EntityFramework](https://github.com/bluehands/EventSourcing/tree/main/src/EventSourcing.Persistence.EntityFramework) as a template project. Persistence requirements are designed to be minimal:
  - store events in deterministic order 

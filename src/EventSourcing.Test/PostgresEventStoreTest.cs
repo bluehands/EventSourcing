@@ -1,168 +1,185 @@
-using System.Data.Common;
 using System.Transactions;
 using EventSourcing.Commands;
 using EventSourcing.Commands.SerializablePayloads;
 using EventSourcing.Infrastructure;
 using EventSourcing.Persistence.EntityFramework;
 using EventSourcing.Persistence.EntityFramework.Postgres.Infrastructure;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using NpgsqlTypes;
 using DbEvent = EventSourcing.Persistence.EntityFramework.Event;
 
 namespace EventSourcing.Test;
 
-[TestClass]
-[TestCategory("PostgresIntegration")]
+[Trait("Category", "PostgresIntegration")]
 public class PostgresEventStoreTest
 {
     static readonly TimeSpan Timeout = TimeSpan.FromSeconds(15);
+    const string Allocate = """
+        WITH locked AS MATERIALIZED (
+            SELECT pg_advisory_xact_lock(19467218, 'public."EventPosition"'::regclass::oid::int)
+        ), first AS MATERIALIZED (SELECT nextval('public."EventPosition"') AS position FROM locked)
+        SELECT setval('public."EventPosition"', first.position + $1::bigint - 1, true) FROM first
+        """;
 
-    [TestMethod]
-    [DataRow(1)]
-    [DataRow(50)]
-    [DataRow(1000)]
-    public async Task BatchPreservesInputOrderAndCompletionMarkerWithOneSave(int count)
+    [Theory]
+    [InlineData(1)]
+    [InlineData(50)]
+    [InlineData(1000)]
+    [InlineData(10000)]
+    public async Task BatchPreservesInputOrderAndCompletionMarker(int count)
     {
-        var saves = new CountSaves();
-        await using var database = await TestDatabase.Create(saves);
+        await using var database = await TestDatabase.Create();
         using var scope = database.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<EventStoreContext>();
         context.Should().BeSameAs(scope.ServiceProvider.GetRequiredService<PostgresEventStoreContext>());
         context.Database.HasPendingModelChanges().Should().BeFalse();
-        await context.Database.MigrateAsync(); // Repeated startup is harmless.
+        await context.Database.MigrateAsync(TestContext.Current.CancellationToken);
         var store = scope.ServiceProvider.GetRequiredService<IEventStore>();
         var commandId = CommandId.NewCommandId();
         await store.WriteEvents([
             .. Enumerable.Range(0, count).Select(i => new Entry(i, $"Stream-{(i * 17) % 7}", new string('x', i % 513))),
             new CommandProcessed<string>(CommandResult<string>.Processed(commandId, FunctionalResult<string>.Ok("Done")))
         ]);
-        saves.Attempts.Should().Be(1);
         context.ChangeTracker.Entries().Should().BeEmpty();
-
         var events = await Read(store.ReadEvents());
         events.Select(e => e.Position).Should().Equal(Enumerable.Range(1, count + 1).Select(i => (long)i));
         events.Take(count).Select(e => ((Entry)e.Payload).Ordinal).Should().Equal(Enumerable.Range(0, count));
         events[^1].Payload.Should().BeOfType<CommandProcessed<string>>().Which.CommandId.Should().Be(commandId);
         events.Should().OnlyContain(e => e.Timestamp.Offset == TimeSpan.Zero);
-
         var streamEvents = await Read(store.ReadEvents(new StreamId("PostgresTest", "Stream-0"), 1));
-        streamEvents.Select(e => ((Entry)e.Payload).Ordinal).Should().Equal(
-            Enumerable.Range(0, count).Where(i => (i * 17) % 7 == 0));
+        streamEvents.Select(e => ((Entry)e.Payload).Ordinal).Should().Equal(Enumerable.Range(0, count).Where(i => (i * 17) % 7 == 0));
         (await Read(store.ReadEvents(count + 1))).Should().ContainSingle();
-
         await store.WriteEvents([]);
-        saves.Attempts.Should().Be(1);
-        (await database.Counter()).Should().Be(count + 1);
+        (await database.Position()).Should().Be(count + 1);
+        (await database.Scalar("SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND tablename <> '__EFMigrationsHistory'"))
+            .Should().Be(1);
+        (await database.Scalar("SELECT cache_size FROM pg_sequences WHERE schemaname = 'public' AND sequencename = 'EventPosition'"))
+            .Should().Be(1);
     }
 
-    [TestMethod]
-    public async Task FailedLaterInsertRollsBackCounterAndBatchAndAllowsSameScopeRecovery()
+    [Theory]
+    [InlineData(3, 10)] // Arrays.
+    [InlineData(1024, 10)] // Count-based COPY.
+    [InlineData(3, 400000)] // Byte-based COPY with a small event count.
+    public async Task InvalidFinalRowRollsBackWholeBatchAndRecoversAcrossGap(int count, int bytes)
     {
-        var capture = new CaptureInserts();
-        await using var database = await TestDatabase.Create(capture, maxBatchSize: 1);
+        await using var database = await TestDatabase.Create();
         using var scope = database.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PostgresEventStoreContext>();
-        // A one-command batch size makes a valid insert reach PostgreSQL before the invalid one.
         var writer = scope.ServiceProvider.GetRequiredService<IEventWriter<DbEvent>>();
-        Func<Task> fail = () => writer.WriteEvents([
-            Raw("valid"), Raw("invalid") with { Payload = null! }, Raw("never committed")]);
-        await fail.Should().ThrowAsync<DbUpdateException>();
-        capture.ExecutedInserts.Should().BeGreaterThan(0);
+        var batch = Enumerable.Range(0, count).Select(i => Raw(new string('x', bytes))).ToArray();
+        batch[^1] = batch[^1] with { Payload = null! };
+        Func<Task> fail = () => writer.WriteEvents(batch);
+        await fail.Should().ThrowAsync<PostgresException>();
         context.ChangeTracker.Entries().Should().BeEmpty();
-        (await database.Counter()).Should().Be(0);
-        (await context.Events.CountAsync()).Should().Be(0);
-
+        (await context.Events.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        (await database.Position()).Should().Be(count);
         await writer.WriteEvents([Raw("recovered")]);
-        var persisted = await context.Events.SingleAsync();
-        persisted.Position.Should().Be(1);
+        var persisted = await context.Events.SingleAsync(TestContext.Current.CancellationToken);
+        persisted.Position.Should().Be(count + 1);
         persisted.Payload.Should().Be("recovered");
     }
 
-    [TestMethod]
-    public async Task FailureAfterSaveBeforeCommitDetachesUnchangedEventsAndRollsBack()
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task CompetingWriterWaitsThroughCommitOrRollbackAndPollingLosesNoEvents(bool rollback, bool copy)
     {
-        var fail = new FailAfterSave();
-        await using var database = await TestDatabase.Create(fail);
+        await using var database = await TestDatabase.Create();
         using var scope = database.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<EventStoreContext>();
-        var writer = scope.ServiceProvider.GetRequiredService<IEventWriter<DbEvent>>();
-        Func<Task> append = () => writer.WriteEvents([Raw("abandoned")]);
-        await append.Should().ThrowAsync<InvalidOperationException>().WithMessage("Injected after-save failure");
-        context.ChangeTracker.Entries().Should().BeEmpty();
-        (await database.Counter()).Should().Be(0);
-        await writer.WriteEvents([Raw("recovered")]);
-        (await context.Events.SingleAsync()).Payload.Should().Be("recovered");
-    }
-
-    [TestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
-    public async Task CompetingWriterWaitsThroughCommitOrRollbackAndPollingLosesNoEvents(bool rollback)
-    {
-        var gate = new HoldFirstSave(rollback);
-        await using var database = await TestDatabase.Create(gate);
-        using var scopeA = database.Services.CreateScope();
-        using var scopeB = database.Services.CreateScope();
-        var first = scopeA.ServiceProvider.GetRequiredService<IEventStore>()
-            .WriteEvents([new Entry(0, "A", "first"), new Entry(1, "A", "second")]);
-        Task? second = null;
+        var context = scope.ServiceProvider.GetRequiredService<PostgresEventStoreContext>();
+        var store = scope.ServiceProvider.GetRequiredService<IEventStore>();
+        // Obtain the provider's actual serialized rows, then hold them uncommitted using its lock protocol.
+        await store.WriteEvents([new Entry(0, "A", "first"), new Entry(1, "A", "second")]);
+        var rows = await context.Events.AsNoTracking().OrderBy(e => e.Position).ToArrayAsync(TestContext.Current.CancellationToken);
+        await context.Database.ExecuteSqlRawAsync("TRUNCATE public.\"Events\"; ALTER SEQUENCE public.\"EventPosition\" RESTART WITH 1;", TestContext.Current.CancellationToken);
+        await using var blocker = new NpgsqlConnection(context.Database.GetConnectionString());
+        await blocker.OpenAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await blocker.BeginTransactionAsync(TestContext.Current.CancellationToken);
+        await using var allocate = new NpgsqlCommand(Allocate, blocker);
+        allocate.Parameters.Add(new NpgsqlParameter<long> { TypedValue = 2 });
+        (await allocate.ExecuteScalarAsync(TestContext.Current.CancellationToken)).Should().Be(2L);
+        foreach (var row in rows)
+        {
+            await using var insert = new NpgsqlCommand("INSERT INTO public.\"Events\" VALUES ($1, $2, $3, $4, $5, $6)", blocker);
+            insert.Parameters.Add(new NpgsqlParameter<long> { TypedValue = row.Position });
+            foreach (var text in new[] { row.StreamType, row.StreamId, row.EventType, row.Payload })
+                insert.Parameters.Add(new NpgsqlParameter<string> { TypedValue = text });
+            insert.Parameters.Add(new NpgsqlParameter<DateTime> { TypedValue = row.Timestamp.UtcDateTime, NpgsqlDbType = NpgsqlDbType.TimestampTz });
+            await insert.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        }
+        using var competingScope = database.Services.CreateScope();
+        var second = competingScope.ServiceProvider.GetRequiredService<IEventStore>().WriteEvents([
+            new Entry(2, "B", copy ? new string('界', 400000) : "third"), new Entry(3, "B", "fourth")]);
         try
         {
-            await gate.Saved.Task.WaitAsync(Timeout);
-            second = scopeB.ServiceProvider.GetRequiredService<IEventStore>()
-                .WriteEvents([new Entry(2, "B", "third"), new Entry(3, "B", "fourth")]);
-            await database.WaitForCounterLock();
+            await database.WaitForAppendLock();
             second.IsCompleted.Should().BeFalse();
-
-            // Reads remain unblocked and see no uncommitted batch.
-            using var readScope = database.Services.CreateScope();
-            var store = readScope.ServiceProvider.GetRequiredService<IEventStore>();
-            (await Read(store.ReadEvents()).WaitAsync(Timeout)).Should().BeEmpty();
+            (await Read(store.ReadEvents()).WaitAsync(Timeout, TestContext.Current.CancellationToken)).Should().BeEmpty();
             var delivered = new List<Event>();
             var allDelivered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var expected = rollback ? new[] { 2, 3 } : new[] { 0, 1, 2, 3 };
             using var subscription = database.Services.GetRequiredService<IObservable<Event>>().Subscribe(e =>
             {
                 delivered.Add(e);
-                if (delivered.Count == expected.Length)
-                    allDelivered.TrySetResult();
+                if (delivered.Count == expected.Length) allDelivered.TrySetResult();
             }, error => allDelivered.TrySetException(error));
             database.Services.GetRequiredService<EventStream<Event>>().Start();
-
-            gate.Release.TrySetResult();
-            if (rollback)
-            {
-                Func<Task> failingFirst = () => first;
-                await failingFirst.Should().ThrowAsync<InvalidOperationException>();
-            }
-            else
-                await first.WaitAsync(Timeout);
-            await second.WaitAsync(Timeout);
-            await allDelivered.Task.WaitAsync(Timeout);
+            if (rollback) await transaction.RollbackAsync(TestContext.Current.CancellationToken); else await transaction.CommitAsync(TestContext.Current.CancellationToken);
+            await second.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            await allDelivered.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
             delivered.Select(e => ((Entry)e.Payload).Ordinal).Should().Equal(expected);
-            delivered.Select(e => e.Position).Should().Equal(Enumerable.Range(1, expected.Length).Select(i => (long)i));
-            (await database.Counter()).Should().Be(expected.Length);
+            delivered.Select(e => e.Position).Should().Equal(rollback ? new long[] { 3, 4 } : [1L, 2L, 3L, 4L]);
+            (await database.Position()).Should().Be(4);
         }
         finally
         {
-            gate.Release.TrySetResult();
-            try { await first.WaitAsync(Timeout); } catch { /* Observe the injected rollback. */ }
-            if (second != null)
-                await second.WaitAsync(Timeout);
+            if (!second.IsCompleted) await transaction.RollbackAsync(TestContext.Current.CancellationToken);
+            await second.WaitAsync(Timeout, TestContext.Current.CancellationToken);
         }
     }
 
-    [TestMethod]
+    [Theory]
+    [InlineData(2)]
+    [InlineData(1024)]
+    public async Task DeferredFailureAtCommitRollsBackAndAllowsSameScopeRecovery(int count)
+    {
+        await using var database = await TestDatabase.Create();
+        using var scope = database.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PostgresEventStoreContext>();
+        await context.Database.ExecuteSqlRawAsync("""
+            CREATE FUNCTION public.reject_abandoned() RETURNS trigger LANGUAGE plpgsql AS $body$
+            BEGIN
+                IF NEW."Payload" = 'abandoned' THEN RAISE EXCEPTION 'Injected commit failure'; END IF;
+                RETURN NEW;
+            END $body$;
+            CREATE CONSTRAINT TRIGGER reject_abandoned AFTER INSERT ON public."Events"
+                DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.reject_abandoned();
+            """, TestContext.Current.CancellationToken);
+        var writer = scope.ServiceProvider.GetRequiredService<IEventWriter<DbEvent>>();
+        Func<Task> append = () => writer.WriteEvents(Enumerable.Range(0, count).Select(_ => Raw("abandoned")));
+        await append.Should().ThrowAsync<PostgresException>().WithMessage("*Injected commit failure*");
+        context.ChangeTracker.Entries().Should().BeEmpty();
+        (await context.Events.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        await writer.WriteEvents([Raw("recovered")]);
+        var recovered = await context.Events.SingleAsync(TestContext.Current.CancellationToken);
+        recovered.Position.Should().Be(count + 1);
+        recovered.Payload.Should().Be("recovered");
+    }
+
+    [Fact]
     public async Task RejectsExternalTransactionsExplicitPositionsAndUnrelatedPendingChanges()
     {
         await using var database = await TestDatabase.Create();
         using var scope = database.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<EventStoreContext>();
         var writer = scope.ServiceProvider.GetRequiredService<IEventWriter<DbEvent>>();
-        await using (var transaction = await context.Database.BeginTransactionAsync())
+        await using (var transaction = await context.Database.BeginTransactionAsync(TestContext.Current.CancellationToken))
         {
             Func<Task> append = () => writer.WriteEvents([Raw("external")]);
             await append.Should().ThrowAsync<InvalidOperationException>().WithMessage("*provider-owned*");
@@ -179,21 +196,23 @@ public class PostgresEventStoreTest
         Func<Task> unrelated = () => writer.WriteEvents([Raw("append")]);
         await unrelated.Should().ThrowAsync<InvalidOperationException>().WithMessage("*pending changes*");
         context.Entry(pending).State.Should().Be(EntityState.Added);
-        (await database.Counter()).Should().Be(0);
+        (await database.Position()).Should().Be(0);
     }
 
-    [TestMethod]
-    public async Task NonUtcTimestampIsNormalizedAndEnumerationFailureAllocatesNothing()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UnevenUnicodePayloadsAndUtcTimestampsRoundTripAndEnumerationFailureAllocatesNothing(bool copy)
     {
         await using var database = await TestDatabase.Create();
         using var scope = database.Services.CreateScope();
         var writer = scope.ServiceProvider.GetRequiredService<IEventWriter<DbEvent>>();
         var timestamp = new DateTimeOffset(2026, 10, 9, 12, 30, 0, TimeSpan.FromHours(5));
-        await writer.WriteEvents([Raw("offset") with { Timestamp = timestamp }]);
-        var persisted = await scope.ServiceProvider.GetRequiredService<EventStoreContext>().Events.SingleAsync();
-        persisted.Timestamp.Should().Be(timestamp.ToUniversalTime());
-        persisted.Timestamp.Offset.Should().Be(TimeSpan.Zero);
-
+        var payloads = new[] { "ä🙂", copy ? new string('界', 400000) : "界", "" };
+        await writer.WriteEvents(payloads.Select(text => Raw(text) with { Timestamp = timestamp }));
+        var persisted = await scope.ServiceProvider.GetRequiredService<EventStoreContext>().Events.OrderBy(e => e.Position).ToArrayAsync(TestContext.Current.CancellationToken);
+        persisted.Select(e => e.Payload).Should().Equal(payloads);
+        persisted.Should().OnlyContain(e => e.Timestamp == timestamp.ToUniversalTime() && e.Timestamp.Offset == TimeSpan.Zero);
         IEnumerable<DbEvent> BrokenBatch()
         {
             yield return Raw("partial enumeration");
@@ -201,16 +220,53 @@ public class PostgresEventStoreTest
         }
         Func<Task> append = () => writer.WriteEvents(BrokenBatch());
         await append.Should().ThrowAsync<InvalidOperationException>().WithMessage("Enumeration failed");
-        (await database.Counter()).Should().Be(1);
+        (await database.Position()).Should().Be(3);
     }
 
     static DbEvent Raw(string payload) => new(0, "Raw", "A", "Raw.Entry", payload, DateTimeOffset.UtcNow);
 
+    [Theory]
+    [InlineData(false, "StreamType", 128)]
+    [InlineData(true, "StreamType", 128)]
+    [InlineData(false, "StreamId", 256)]
+    [InlineData(true, "StreamId", 256)]
+    [InlineData(false, "EventType", 450)]
+    [InlineData(true, "EventType", 450)]
+    public async Task IdentifierLimitsPreserveUnicodeBoundaryAndRejectWholeOverlengthBatch(bool copy, string column, int limit)
+    {
+        await using var database = await TestDatabase.Create();
+        using var scope = database.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PostgresEventStoreContext>();
+        context.Database.HasPendingModelChanges().Should().BeFalse();
+        var writer = scope.ServiceProvider.GetRequiredService<IEventWriter<DbEvent>>();
+        // Four-byte Unicode characters count as one PostgreSQL character each. Both indexed keys
+        // reach their limits together, exercising the worst-case encoded composite-key size.
+        static string Key(int length) => string.Concat(Enumerable.Repeat("🙂", length));
+        var boundary = Raw(copy ? new string('x', 1100000) : "boundary") with
+        {
+            StreamType = Key(128), StreamId = Key(256), EventType = Key(450)
+        };
+        await writer.WriteEvents([boundary]);
+        var persisted = await context.Events.SingleAsync(TestContext.Current.CancellationToken);
+        persisted.StreamType.Should().Be(boundary.StreamType);
+        persisted.StreamId.Should().Be(boundary.StreamId);
+        persisted.EventType.Should().Be(boundary.EventType);
+        var invalid = column switch
+        {
+            "StreamType" => boundary with { StreamType = Key(limit + 1) },
+            "StreamId" => boundary with { StreamId = Key(limit + 1) },
+            _ => boundary with { EventType = Key(limit + 1) }
+        };
+        Func<Task> append = () => writer.WriteEvents([Raw("must roll back"), invalid]);
+        await append.Should().ThrowAsync<PostgresException>().Where(e => e.SqlState == PostgresErrorCodes.StringDataRightTruncation);
+        (await context.Events.CountAsync(TestContext.Current.CancellationToken)).Should().Be(1);
+        await writer.WriteEvents([Raw("recovered")]);
+        (await context.Events.OrderBy(e => e.Position).LastAsync(TestContext.Current.CancellationToken)).Payload.Should().Be("recovered");
+    }
     static async Task<List<Event>> Read(IAsyncEnumerable<Event> source)
     {
         var events = new List<Event>();
-        await foreach (var e in source)
-            events.Add(e);
+        await foreach (var e in source) events.Add(e);
         return events;
     }
 
@@ -221,33 +277,23 @@ public class PostgresEventStoreTest
     sealed class TestDatabase(string connectionString, ServiceProvider services) : IAsyncDisposable
     {
         public ServiceProvider Services => services;
-
-        public static async Task<TestDatabase> Create(IInterceptor? interceptor = null, int? maxBatchSize = null)
+        public static async Task<TestDatabase> Create()
         {
             var configured = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION_STRING");
             if (string.IsNullOrWhiteSpace(configured))
             {
                 if (Environment.GetEnvironmentVariable("TEST_POSTGRES_REQUIRED") == "true")
-                    Assert.Fail("PostgreSQL integration tests are required, but TEST_POSTGRES_CONNECTION_STRING is missing.");
-                Assert.Inconclusive("Set TEST_POSTGRES_CONNECTION_STRING to run PostgreSQL integration tests.");
+                    throw new InvalidOperationException("PostgreSQL integration tests are required, but TEST_POSTGRES_CONNECTION_STRING is missing.");
+                throw Xunit.Sdk.SkipException.ForSkip("Set TEST_POSTGRES_CONNECTION_STRING to run PostgreSQL integration tests.");
             }
             var connection = new NpgsqlConnectionStringBuilder(configured)
             {
-                Database = $"eventsourcing_test_{Guid.NewGuid():N}",
-                ApplicationName = $"eventsourcing_test_{Guid.NewGuid():N}"
+                Database = $"eventsourcing_test_{Guid.NewGuid():N}", ApplicationName = $"eventsourcing_test_{Guid.NewGuid():N}"
             };
             var services = new ServiceCollection()
-                .AddEventSourcing(options => options
-                    .UsePostgresEventStore(_ => connection.ConnectionString)
+                .AddEventSourcing(options => options.UsePostgresEventStore(_ => connection.ConnectionString)
                     .PayloadAssemblies(typeof(PostgresEventStoreTest).Assembly))
                 .AddSingleton<EventPayloadMapper>(new CommandProcessedMapper<string, FailedSaveIsolationTest.ErrorPayload>())
-                .AddDbContext<PostgresEventStoreContext>(options =>
-                {
-                    if (maxBatchSize.HasValue)
-                        options.UseNpgsql(connection.ConnectionString, postgres => postgres.MaxBatchSize(maxBatchSize.Value));
-                    if (interceptor != null)
-                        options.AddInterceptors(interceptor);
-                })
                 .BuildServiceProvider();
             var database = new TestDatabase(connection.ConnectionString, services);
             try
@@ -256,106 +302,35 @@ public class PostgresEventStoreTest
                 await scope.ServiceProvider.GetRequiredService<EventStoreContext>().Database.MigrateAsync();
                 return database;
             }
-            catch
-            {
-                await database.DisposeAsync();
-                throw;
-            }
+            catch { await database.DisposeAsync(); throw; }
         }
 
-        public async Task<long> Counter()
+        public Task<long> Position() => Scalar("SELECT CASE WHEN is_called THEN last_value ELSE 0 END FROM public.\"EventPosition\"");
+        public async Task<long> Scalar(string sql)
         {
             await using var connection = new NpgsqlConnection(connectionString);
             await connection.OpenAsync();
-            await using var command = new NpgsqlCommand("SELECT \"LastPosition\" FROM public.\"EventPositionCounter\" WHERE \"Id\" = 1", connection);
-            return (long)(await command.ExecuteScalarAsync())!;
+            await using var command = new NpgsqlCommand(sql, connection);
+            return Convert.ToInt64(await command.ExecuteScalarAsync());
         }
-
-        public async Task WaitForCounterLock()
+        public async Task WaitForAppendLock()
         {
-            await using var connection = new NpgsqlConnection(connectionString);
-            await connection.OpenAsync();
-            await using var command = new NpgsqlCommand("""
-                SELECT EXISTS (
-                    SELECT 1 FROM pg_stat_activity
-                    WHERE datname = current_database() AND pid <> pg_backend_pid()
-                      AND wait_event_type = 'Lock' AND query LIKE '%UPDATE public."EventPositionCounter"%'
-                )
-                """, connection);
             using var cancellation = new CancellationTokenSource(Timeout);
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync(cancellation.Token);
+            await using var command = new NpgsqlCommand("""
+                SELECT EXISTS (SELECT 1 FROM pg_stat_activity
+                    WHERE datname = current_database() AND pid <> pg_backend_pid()
+                      AND wait_event_type = 'Lock' AND query LIKE '%pg_advisory_xact_lock%')
+                """, connection);
             while (!(bool)(await command.ExecuteScalarAsync(cancellation.Token))!)
                 await Task.Delay(20, cancellation.Token);
         }
-
         public async ValueTask DisposeAsync()
         {
             await services.DisposeAsync();
-            await using var context = new PostgresEventStoreContext(new DbContextOptionsBuilder<PostgresEventStoreContext>()
-                .UseNpgsql(connectionString).Options);
+            await using var context = new PostgresEventStoreContext(new DbContextOptionsBuilder<PostgresEventStoreContext>().UseNpgsql(connectionString).Options);
             await context.Database.EnsureDeletedAsync();
-        }
-    }
-
-    sealed class CountSaves : SaveChangesInterceptor
-    {
-        public int Attempts { get; private set; }
-        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
-            InterceptionResult<int> result, CancellationToken cancellationToken = default)
-        {
-            Attempts++;
-            return ValueTask.FromResult(result);
-        }
-    }
-
-    sealed class CaptureInserts : DbCommandInterceptor
-    {
-        public int ExecutedInserts { get; private set; }
-        public override ValueTask<DbDataReader> ReaderExecutedAsync(DbCommand command, CommandExecutedEventData eventData,
-            DbDataReader result, CancellationToken cancellationToken = default)
-        {
-            if (command.CommandText.Contains("INSERT INTO public.\"Events\""))
-                ExecutedInserts++;
-            return ValueTask.FromResult(result);
-        }
-
-        public override ValueTask<int> NonQueryExecutedAsync(DbCommand command, CommandExecutedEventData eventData,
-            int result, CancellationToken cancellationToken = default)
-        {
-            if (command.CommandText.Contains("INSERT INTO public.\"Events\""))
-                ExecutedInserts++;
-            return ValueTask.FromResult(result);
-        }
-    }
-
-    sealed class FailAfterSave : SaveChangesInterceptor
-    {
-        int attempts;
-        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
-            CancellationToken cancellationToken = default)
-        {
-            if (++attempts == 1)
-                throw new InvalidOperationException("Injected after-save failure");
-            return ValueTask.FromResult(result);
-        }
-    }
-
-    sealed class HoldFirstSave(bool rollback) : SaveChangesInterceptor
-    {
-        int attempts;
-        public TaskCompletionSource Saved { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
-            CancellationToken cancellationToken = default)
-        {
-            if (Interlocked.Increment(ref attempts) == 1)
-            {
-                Saved.TrySetResult();
-                await Release.Task.WaitAsync(Timeout, cancellationToken);
-                if (rollback)
-                    throw new InvalidOperationException("Injected competing-writer rollback");
-            }
-            return result;
         }
     }
 }

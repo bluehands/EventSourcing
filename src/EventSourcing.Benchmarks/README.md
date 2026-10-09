@@ -50,15 +50,15 @@ The full profile is a large Cartesian matrix and can take a long time. Filter it
 - **write**: each operation commits one batch to a worker-specific stream.
 - **mixed**: independent reader and writer groups run concurrently against the same table. Readers replay fixed seeded streams; writers append to separate streams. `--workers` sets both group sizes unless overridden with `--readers` / `--writers`.
 
-Every operation creates a fresh DI scope/context. Workers prime contexts/connections before a synchronized start. All payload objects are prepared outside timing. Reads are fully enumerated and counts are checked. Successful writes are checked against the persisted table count after each run. Production provider write strategies are used, including SQL Server's interceptor and PostgreSQL's transactional position counter with one EF save per batch.
+Every operation creates a fresh DI scope/context. Workers prime contexts/connections before a synchronized start. All payload objects are prepared outside timing. Reads are fully enumerated and counts are checked. Successful writes are checked against the persisted table count after each run. Production provider write strategies are used, including SQL Server's interceptor and PostgreSQL's advisory-lock/sequence allocation with native typed arrays and binary COPY.
 
-Schema migration, seeding, warmup, verification and reset are excluded from timing. Before each measured repetition the events table is cleared (including identity reset for SQLite/SQL Server, or transactional counter reset for PostgreSQL) and identical history is seeded through `IEventStore`. This is a warm-cache workload; file allocation, database statistics, OS caches and transaction logs are not reset. No background event stream or command processors are started.
+Schema migration, seeding, warmup, verification and reset are excluded from timing. Before each measured repetition the events table is cleared (including identity reset for SQLite/SQL Server, or sequence restart for PostgreSQL) and identical history is seeded through `IEventStore`. This is a warm-cache workload; file allocation, database statistics, OS caches and transaction logs are not reset. No background event stream or command processors are started.
 
 SQLite async calls can execute synchronously; workers use separate thread-pool tasks to allow actual connection concurrency. SQLite still serializes writes and may wait up to the configured 30-second busy timeout. SQL Server retains the instance/model's default database configuration; isolation, RCSI and recovery settings are recorded, not overridden. Errors are not retried by the benchmark runner; provider-internal waiting remains part of measured latency.
 
 The SQLite connection's 30-second command timeout controls provider lock retries. `PRAGMA busy_timeout` is recorded separately and can be zero because Microsoft.Data.Sqlite implements its own retries.
 
-PostgreSQL retains the server's default durability and isolation settings. Reports record its version, transaction isolation, `synchronous_commit`, `fsync`, `full_page_writes`, `wal_level`, and `max_connections`. Counter-lock waiting is part of measured append latency; concurrent writers serialize their database append transactions while ordinary readers remain unblocked. PostgreSQL server failures are classified by SQLSTATE.
+PostgreSQL retains the server's default durability and isolation settings. Reports record its version, transaction isolation, `synchronous_commit`, `fsync`, `full_page_writes`, `wal_level`, and `max_connections`. Advisory-lock waiting is part of measured append latency; concurrent writers serialize their database append transactions while ordinary readers remain unblocked. PostgreSQL server failures are classified by SQLSTATE.
 
 ## Reports and comparison
 
@@ -74,11 +74,9 @@ Latency samples include scope disposal. Median/p95/p99 use nearest-rank percenti
 
 Metadata includes runtime, OS, processor count, machine, Git revision/status, workload parameters, database version and settings. Exit codes: **0** successful run, **1** setup/verification/runner failure, **2** completed with operation failures. Completed results are saved even if a later workload fails.
 
-Save a Release baseline before fixing findings, then rerun identical arguments on the same machine/server and compare matching CSV rows. Keep server load, storage, power settings and database configuration comparable. Do not interpret faster runs with operation failures as improvements. This suite checks counts, not the review's event-order or commit-order correctness guarantees.
+This suite checks counts, not event-order or commit-order correctness guarantees. The agent run-and-compare workflow is in the project [event-store-benchmarking skill](../../.opencode/skills/event-store-benchmarking/SKILL.md).
 
-The measured baseline and reproduction parameters are in [baseline-2026-10-08.md](baseline-2026-10-08.md).
-The PostgreSQL quick run and comparison with that baseline are in [postgres-comparison-2026-10-09.md](postgres-comparison-2026-10-09.md).
-The rerun against native local PostgreSQL is in [postgres-local-baseline-2026-10-09.md](postgres-local-baseline-2026-10-09.md).
+The measured baseline and reproduction parameters are in [baseline-2026-10-08.md](baseline-2026-10-08.md)
 
 ## Validation
 
