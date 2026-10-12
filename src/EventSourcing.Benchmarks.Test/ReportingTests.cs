@@ -4,6 +4,19 @@ namespace EventSourcing.Benchmarks.Test;
 
 public class ReportingTests
 {
+    [Fact]
+    public void CommandBatchOptionsIncludeMarkerAndValidateTransportSelection()
+    {
+        var options = Options.Parse(["--command-batches", "--batches", "2", "--sql-transfer", "bulk"]);
+        options.CommandBatches.Should().BeTrue();
+        options.Batches.Should().Equal(2);
+        options.SqlTransfer.Should().Be("bulk");
+        Action tooSmall = () => Options.Parse(["--command-batches", "--batches", "1"]);
+        tooSmall.Should().Throw<ArgumentException>().WithMessage("*completion marker*");
+        Action invalidTransport = () => Options.Parse(["--sql-transfer", "invalid"]);
+        invalidTransport.Should().Throw<ArgumentException>().WithMessage("*SQL transfer*");
+    }
+
     [Theory]
     [InlineData("sqlite")]
     [InlineData("sqlserver")]

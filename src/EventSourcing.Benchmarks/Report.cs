@@ -72,5 +72,13 @@ public static class Report
         }
         await File.WriteAllTextAsync(Path.Combine(directory, "summary.csv"), csv.ToString());
         await File.WriteAllTextAsync(Path.Combine(directory, "summary.md"), text.ToString());
+        var allocations = new StringBuilder("# Process-wide allocations\n\nIncludes harness, serialization and all concurrent workers; mixed workloads include reads and writes. Not writer-only allocations or peak memory.\n\n| Provider | Scenario | Bytes | Batch | R/W | Allocated bytes/operation | Max write ms |\n|---|---|---:|---:|---|---:|---:|\n");
+        foreach (var group in measurements.GroupBy(m => (m.Provider, m.Workload)))
+        {
+            var w = group.Key.Workload;
+            var samples = group.SelectMany(m => m.Samples).ToArray();
+            allocations.AppendLine($"| {group.Key.Provider} | {w.Scenario} | {w.PayloadBytes} | {w.BatchSize} | {w.Readers}/{w.Writers} | {Number((double)group.Sum(m => m.AllocatedBytes) / samples.Length)} | {Number(samples.Where(s => s.Kind == "write").Select(s => s.Milliseconds).DefaultIfEmpty(0).Max())} |");
+        }
+        await File.WriteAllTextAsync(Path.Combine(directory, "allocations.md"), allocations.ToString());
     }
 }

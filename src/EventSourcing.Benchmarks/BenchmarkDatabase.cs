@@ -4,6 +4,10 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using EventSourcing.Commands.SerializablePayloads;
+using EventSourcing.Infrastructure;
+using EventSourcing.Persistence.EntityFramework.SqlServer.Infrastructure;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace EventSourcing.Benchmarks;
 
@@ -47,6 +51,12 @@ public sealed class BenchmarkDatabase : IAsyncDisposable
             else if (provider == "postgres") b.UsePostgresEventStore(connectionString);
             else b.UseSqlServerEventStore(connectionString);
         });
+        services.AddSingleton<EventPayloadMapper>(new CommandProcessedMapper<string, BenchmarkErrorPayload>());
+        if (provider == "sqlserver" && options.SqlTransfer != "auto")
+            services.Replace(ServiceDescriptor.Transient<IEventWriter<Persistence.EntityFramework.Event>>(sp =>
+                new SqlServerEventWriter(sp.GetRequiredService<EventStoreContext>(),
+                    options.SqlTransfer == "bulk" ? 0 : int.MaxValue,
+                    options.SqlTransfer == "bulk" ? 0 : long.MaxValue)));
         Services = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
 
@@ -91,6 +101,8 @@ public sealed class BenchmarkDatabase : IAsyncDisposable
             Metadata["SnapshotIsolation"] = await Scalar("SELECT snapshot_isolation_state_desc FROM sys.databases WHERE name = DB_NAME()");
             Metadata["RecoveryModel"] = await Scalar("SELECT recovery_model_desc FROM sys.databases WHERE name = DB_NAME()");
             Metadata["IsolationLevel"] = await Scalar("SELECT transaction_isolation_level FROM sys.dm_exec_sessions WHERE session_id = @@SPID");
+            Metadata["DelayedDurability"] = await Scalar("SELECT delayed_durability_desc FROM sys.databases WHERE name = DB_NAME()");
+            Metadata["PositionAllocation"] = "TABLOCKX through commit; identity; ordered scalar/TVP insert or staged streaming SqlBulkCopy";
         }
     }
 
@@ -111,7 +123,7 @@ public sealed class BenchmarkDatabase : IAsyncDisposable
             else
                 await context.Database.ExecuteSqlRawAsync(Provider == "sqlite"
                     ? "DELETE FROM Events; DELETE FROM sqlite_sequence WHERE name = 'Events';"
-                    : "TRUNCATE TABLE [Events];");
+                    : "TRUNCATE TABLE dbo.Events;");
         }
         var data = new string('x', workload.PayloadBytes);
         for (var start = 0; start < workload.History; start += 1000)

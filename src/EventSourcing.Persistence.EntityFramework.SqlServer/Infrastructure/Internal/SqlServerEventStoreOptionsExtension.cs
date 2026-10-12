@@ -17,19 +17,19 @@ public record SqlServerEventStoreOptionsExtension(Func<IServiceProvider, string?
         if (!builder.EventStreamOptionsConfigured())
         {
             new SqlServerEventStoreOptionsBuilder(builder)
-                .UseBrokerNotificationEventStream();
+                .UsePollingEventStream();
         }
     }
 
     public void ApplyServices(IServiceCollection serviceCollection)
     {
-        serviceCollection.AddDbContext<EventStoreContext>((sp, options) =>
+        serviceCollection.AddDbContext<EventStoreContext, SqlServerEventStoreContext>((sp, options) =>
             options
                 .UseSqlServer(ConnectionString(sp), 
                     o => o.MigrationsAssembly(typeof(Marker).Assembly.GetName().Name!))
-                .AddInterceptors([new ExclusiveWriteInterceptor()])
         );
 
+        serviceCollection.AddTransient<IEventWriter<Event>, SqlServerEventWriter>();
         serviceCollection.AddEntityFrameworkServices();
     }
 

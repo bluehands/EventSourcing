@@ -20,6 +20,8 @@ public static class Program
                 --readers N --writers N                Mixed workload overrides
                 --output PATH                         Default: artifacts/benchmarks
                 --keep-database                       Retain runner-owned databases
+                --command-batches                     Last event is CommandProcessed (batch >= 2)
+                --sql-transfer auto|tvp|bulk           SQL Server path evaluation; default auto
                 SQL Server: set EVENTSOURCING_BENCHMARK_SQLSERVER to an instance connection string.
                 PostgreSQL: set EVENTSOURCING_BENCHMARK_POSTGRES to an instance connection string.
                 all selects SQLite, SQL Server and PostgreSQL.
@@ -41,7 +43,8 @@ public static class Program
                 Machine = Environment.MachineName, Processors = Environment.ProcessorCount,
                 GitRevision = await Git("rev-parse HEAD"), GitStatus = await Git("status --short"),
                 Configuration = new { options.Provider, options.Profile, options.Scenarios, options.Workers, options.Batches,
-                    options.Payloads, options.Histories, options.Operations, options.Repetitions, options.Streams, options.Readers, options.Writers },
+                    options.Payloads, options.Histories, options.Operations, options.Repetitions, options.Streams, options.Readers, options.Writers,
+                    options.CommandBatches, options.SqlTransfer },
                 Databases = databases
             };
             Console.WriteLine($"Reports: {directory}");
