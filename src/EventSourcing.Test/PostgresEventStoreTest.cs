@@ -61,10 +61,10 @@ public class PostgresEventStoreTest
     }
 
     [Theory]
-    [InlineData(3, 10)] // Arrays.
-    [InlineData(1024, 10)] // Count-based COPY.
-    [InlineData(3, 400000)] // Byte-based COPY with a small event count.
-    public async Task InvalidFinalRowRollsBackWholeBatchAndRecoversAcrossGap(int count, int bytes)
+    [InlineData(3, 10, false)] // Arrays.
+    [InlineData(1024, 10, true)] // Count-based COPY.
+    [InlineData(3, 600000, true)] // Remaining payloads exceed the COPY byte threshold even with the final payload null.
+    public async Task InvalidFinalRowRollsBackWholeBatchAndRecoversAcrossGap(int count, int bytes, bool copy)
     {
         await using var database = await TestDatabase.Create();
         using var scope = database.Services.CreateScope();
@@ -73,7 +73,9 @@ public class PostgresEventStoreTest
         var batch = Enumerable.Range(0, count).Select(i => Raw(new string('x', bytes))).ToArray();
         batch[^1] = batch[^1] with { Payload = null! };
         Func<Task> fail = () => writer.WriteEvents(batch);
-        await fail.Should().ThrowAsync<PostgresException>();
+        var error = (await fail.Should().ThrowAsync<PostgresException>()).Which;
+        if (copy)
+            error.Where.Should().StartWith("COPY ");
         context.ChangeTracker.Entries().Should().BeEmpty();
         (await context.Events.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
         (await database.Position()).Should().Be(count);

@@ -84,6 +84,6 @@ This suite checks counts, not event-order or commit-order correctness guarantees
 ## Validation
 
 ```powershell
-dotnet test src/EventSourcing.Benchmarks.Test/EventSourcing.Benchmarks.Test.csproj -c Release
+dotnet test --project src/EventSourcing.Benchmarks.Test/EventSourcing.Benchmarks.Test.csproj -c Release
 dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider all --profile smoke
 ```
