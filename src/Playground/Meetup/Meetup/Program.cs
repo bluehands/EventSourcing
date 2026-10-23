@@ -21,11 +21,20 @@ public static class Program
 		var builder = WebApplication.CreateBuilder(args);
 		var services = builder.Services;
 		
-		services.AddEventSourcing(es => es
-            //.UseSqlServerEventStore(@"Data Source=.\SQLSERVEREXPRESS;Initial Catalog=Meetup;Integrated Security=True;TrustServerCertificate=True")
-            .UseSqliteEventStore(@"Data Source=.\EventStore.db")
-            //.UseInMemoryEventStore()
-            .UseFunicularCommands<Error, ErrorPayload>());
+		services.AddEventSourcing(es =>
+        {
+            var postgres = builder.Configuration.GetConnectionString("Postgres");
+            var sqlServer = builder.Configuration.GetConnectionString("SqlServer");
+            if (!string.IsNullOrWhiteSpace(postgres) && !string.IsNullOrWhiteSpace(sqlServer))
+                throw new InvalidOperationException("Configure only one of ConnectionStrings:Postgres or ConnectionStrings:SqlServer.");
+            if (!string.IsNullOrWhiteSpace(postgres))
+                es.UsePostgresEventStore(postgres);
+            else if (!string.IsNullOrWhiteSpace(sqlServer))
+                es.UseSqlServerEventStore(sqlServer);
+            else
+                es.UseSqliteEventStore(@"Data Source=.\EventStore.db");
+            es.UseFunicularCommands<Error, ErrorPayload>();
+        });
 
 		services
             .AddInitializer<TalksProjection>(serviceLifetime: ServiceLifetime.Singleton, asSelf: true);
@@ -33,6 +42,8 @@ public static class Program
         services.AddGraphQLApi();
 
 		var app = builder.Build();
+		app.UseDefaultFiles();
+		app.UseStaticFiles();
 
 		app
 			.UseRouting()

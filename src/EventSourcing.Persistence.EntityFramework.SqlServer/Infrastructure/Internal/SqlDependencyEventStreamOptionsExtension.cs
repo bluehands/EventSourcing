@@ -15,7 +15,7 @@ public record SqlDependencyEventStreamOptionsExtension(uint? MaxRowsPerSelect, F
 
     public void ApplyServices(IServiceCollection serviceCollection)
     {
-        BrokerNotificationEventStream.AddEventStream(serviceCollection, MaxRowsPerSelect ?? 10000, GetPositionToStartFrom ?? (() =>Task.FromResult(0L)));
+        BrokerNotificationEventStream.AddEventStream(serviceCollection, MaxRowsPerSelect ?? SqlServerEventStoreConstants.BrokerMaxRowsPerSelect, GetPositionToStartFrom ?? (() =>Task.FromResult(0L)));
         serviceCollection.AddSingleton<IObservable<EventSourcing.Event>>(sp => sp.GetRequiredService<EventStream<EventSourcing.Event>>());
     }
 

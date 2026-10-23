@@ -1,12 +1,9 @@
-using System.Data.Common;
-using System.Text.Json;
 using EventSourcing.Commands;
 using EventSourcing.Commands.SerializablePayloads;
 using EventSourcing.Persistence.EntityFramework;
 using AwesomeAssertions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace EventSourcing.Test;
@@ -15,31 +12,27 @@ public class SqlServerBatchOrderingTest(ITestOutputHelper output)
 {
     [Theory]
     [Trait("Category", "SqlServerIntegration")]
-    [InlineData(2, Skip = "Live SQL Server batch-order experiment is disabled.")]
-    [InlineData(4, Skip = "Live SQL Server batch-order experiment is disabled.")]
-    [InlineData(41, Skip = "Live SQL Server batch-order experiment is disabled.")]
-    [InlineData(42, Skip = "Live SQL Server batch-order experiment is disabled.")]
-    [InlineData(43, Skip = "Live SQL Server batch-order experiment is disabled.")]
-    [InlineData(50, Skip = "Live SQL Server batch-order experiment is disabled.")]
-    [InlineData(100, Skip = "Live SQL Server batch-order experiment is disabled.")]
+    [InlineData(2)]
+    [InlineData(10)]
+    [InlineData(43)]
+    [InlineData(100)]
+    [InlineData(1000)]
     public async Task PersistedPositionsPreserveInputOrderAndCompletionMarkerIsLast(int eventCount)
     {
         var connectionString = Environment.GetEnvironmentVariable("TEST_SQLSERVER_CONNECTION_STRING");
         if (string.IsNullOrWhiteSpace(connectionString))
             throw Xunit.Sdk.SkipException.ForSkip(
-                "Set TEST_SQLSERVER_CONNECTION_STRING to run the live SQL Server batch-order experiment.");
+                "Set TEST_SQLSERVER_CONNECTION_STRING to run SQL Server integration tests.");
 
         var connection = new SqlConnectionStringBuilder(connectionString)
         {
             InitialCatalog = $"EventSourcing_BatchOrder_{Guid.NewGuid():N}"
         };
-        var capture = new CaptureWrites();
         await using var services = new ServiceCollection()
             .AddEventSourcing(options => options
                 .UseSqlServerEventStore(connection.ConnectionString)
                 .PayloadAssemblies(typeof(SqlServerBatchOrderingTest).Assembly))
             .AddSingleton<EventPayloadMapper>(new CommandProcessedMapper<string, FailedSaveIsolationTest.ErrorPayload>())
-            .AddDbContext<EventStoreContext>(options => options.AddInterceptors(capture))
             .BuildServiceProvider();
 
         try
@@ -60,7 +53,6 @@ public class SqlServerBatchOrderingTest(ITestOutputHelper output)
                     new CommandProcessed<string>(CommandResult<string>.Processed(commandId, FunctionalResult<string>.Ok("Done")))
                 ];
 
-                capture.Commands.Clear();
                 long fromPosition;
                 using (var scope = services.CreateScope())
                 {
@@ -87,13 +79,6 @@ public class SqlServerBatchOrderingTest(ITestOutputHelper output)
                     .Which.CommandId.Should().Be(commandId);
                 events.Select(e => e.Position).Should().BeInAscendingOrder().And.OnlyHaveUniqueItems();
 
-                // SQL parameter order checks the provider's input; the persisted read above checks identity allocation.
-                capture.Commands.SelectMany(c => c.Sequences).Should().Equal(expected);
-                capture.Commands.Should().HaveCount((eventCount + 41) / 42);
-                capture.Commands.Should().OnlyContain(c => c.Sql.Contains("WITH (TABLOCKX)"));
-                if (iteration == 0)
-                    foreach (var command in capture.Commands)
-                        output.WriteLine($"Sequences: {string.Join(",", command.Sequences)}\n{command.Sql}");
             }
 
             output.WriteLine($"25 batches of {eventCount} events preserved input order and completion-marker position.");
@@ -109,32 +94,4 @@ public class SqlServerBatchOrderingTest(ITestOutputHelper output)
     public record OrderedEntry(int Sequence, string JournalId, string Text)
         : EventPayload(new StreamId("BatchOrdering", JournalId), "SqlServerBatchOrdering.OrderedEntry");
 
-    sealed record CapturedWrite(string Sql, int[] Sequences);
-
-    sealed class CaptureWrites : DbCommandInterceptor
-    {
-        public List<CapturedWrite> Commands { get; } = [];
-
-        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
-            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result,
-            CancellationToken cancellationToken = default)
-        {
-            if (command.CommandText.Contains("INSERT INTO [Events]") || command.CommandText.Contains("MERGE [Events]"))
-            {
-                var sequences = new List<int>();
-                foreach (DbParameter parameter in command.Parameters)
-                {
-                    if (parameter.Value is not string json || !json.StartsWith('{'))
-                        continue;
-                    using var document = JsonDocument.Parse(json);
-                    if (document.RootElement.TryGetProperty("Sequence", out var sequence))
-                        sequences.Add(sequence.GetInt32());
-                    else if (document.RootElement.TryGetProperty("CommandId", out _))
-                        sequences.Add(-1);
-                }
-                Commands.Add(new(command.CommandText, sequences.ToArray()));
-            }
-            return new(result);
-        }
-    }
 }

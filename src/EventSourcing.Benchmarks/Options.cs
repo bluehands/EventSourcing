@@ -6,6 +6,7 @@ public sealed record Options
     public string Profile { get; init; } = "quick";
     public string Output { get; init; } = "artifacts/benchmarks";
     public string? SqlConnection { get; init; } = Environment.GetEnvironmentVariable("EVENTSOURCING_BENCHMARK_SQLSERVER");
+    public string? PostgresConnection { get; init; } = Environment.GetEnvironmentVariable("EVENTSOURCING_BENCHMARK_POSTGRES");
     public string[] Scenarios { get; init; } = ["global", "tail", "stream", "write", "mixed"];
     public int[] Workers { get; init; } = [1, 4];
     public int[] Batches { get; init; } = [1, 100];
@@ -17,18 +18,20 @@ public sealed record Options
     public int? Readers { get; init; }
     public int? Writers { get; init; }
     public bool KeepDatabase { get; init; }
+    public bool CommandBatches { get; init; }
+    public string SqlTransfer { get; init; } = "auto";
 
     public static Options Parse(string[] args)
     {
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < args.Length; i++)
         {
-            if (args[i] == "--keep-database") { values.Add(args[i], "true"); continue; }
+            if (args[i] is "--keep-database" or "--command-batches") { values.Add(args[i], "true"); continue; }
             if (!args[i].StartsWith("--") || i + 1 == args.Length || args[i + 1].StartsWith("--"))
                 throw new ArgumentException($"Expected --option value, got '{args[i]}'. Use --help.");
             values.Add(args[i], args[++i]);
         }
-        string[] allowed = ["--provider", "--profile", "--output", "--scenarios", "--workers", "--batches", "--payloads", "--histories", "--operations", "--repetitions", "--streams", "--readers", "--writers", "--keep-database"];
+        string[] allowed = ["--provider", "--profile", "--output", "--scenarios", "--workers", "--batches", "--payloads", "--histories", "--operations", "--repetitions", "--streams", "--readers", "--writers", "--keep-database", "--command-batches", "--sql-transfer"];
         foreach (var key in values.Keys)
             if (!allowed.Contains(key)) throw new ArgumentException($"Unknown option {key}.");
         var profile = values.GetValueOrDefault("--profile", "quick");
@@ -52,11 +55,17 @@ public sealed record Options
             Streams = Positive("--streams", options.Streams),
             Readers = values.ContainsKey("--readers") ? Positive("--readers", 1) : null,
             Writers = values.ContainsKey("--writers") ? Positive("--writers", 1) : null,
-            KeepDatabase = values.ContainsKey("--keep-database")
+            KeepDatabase = values.ContainsKey("--keep-database"),
+            CommandBatches = values.ContainsKey("--command-batches"),
+            SqlTransfer = values.GetValueOrDefault("--sql-transfer", "auto")
         };
-        if (options.Provider is not ("sqlite" or "sqlserver" or "both")) throw new ArgumentException("Provider must be sqlite, sqlserver, or both.");
-        if (options.Provider != "sqlite" && string.IsNullOrWhiteSpace(options.SqlConnection))
+        if (options.Provider is not ("sqlite" or "sqlserver" or "postgres" or "all")) throw new ArgumentException("Provider must be sqlite, sqlserver, postgres, or all.");
+        if (options.SqlTransfer is not ("auto" or "tvp" or "bulk")) throw new ArgumentException("SQL transfer must be auto, tvp, or bulk.");
+        if (options.CommandBatches && options.Batches.Any(b => b < 2)) throw new ArgumentException("Command batches must include at least one domain event and one completion marker.");
+        if (options.Providers().Contains("sqlserver") && string.IsNullOrWhiteSpace(options.SqlConnection))
             throw new ArgumentException("Set EVENTSOURCING_BENCHMARK_SQLSERVER to an instance connection string.");
+        if (options.Providers().Contains("postgres") && string.IsNullOrWhiteSpace(options.PostgresConnection))
+            throw new ArgumentException("Set EVENTSOURCING_BENCHMARK_POSTGRES to an instance connection string.");
         if (options.Scenarios.Any(s => s is not ("global" or "tail" or "stream" or "write" or "mixed")))
             throw new ArgumentException("Scenarios: global,tail,stream,write,mixed.");
         return options;
@@ -64,6 +73,8 @@ public sealed record Options
 
     static int ParsePositive(string text) => int.TryParse(text, out var value) && value > 0
         ? value : throw new ArgumentException($"Expected a positive integer, got '{text}'.");
+
+    public string[] Providers() => Provider == "all" ? ["sqlite", "sqlserver", "postgres"] : [Provider];
 
     public IEnumerable<Workload> Workloads()
     {

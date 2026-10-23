@@ -4,7 +4,7 @@
 
 Original read-only static review of the core event-sourcing library, command processing, EF persistence, SQLite and SQL Server providers, source generation, and existing tests. No builds or tests were run during that review. Subsequent implementation and validation are recorded under each finding; regression tests without such a validation entry remain proposals.
 
-Findings 1–9 describe defects or failure-handling gaps identified from the code. Finding 1 and follow-up 1a are resolved with validated discard-on-failure semantics. Point 10 is a separate ordering concern that needs verification before being treated as a confirmed defect. Follow-up 1b requires behavior decisions before implementation.
+Findings 1–9 record the original defects or failure-handling gaps and their subsequent reassessments. Findings 1/1a, 2, 3, 6, 7 (under its narrowed scope), 9, and 10 are resolved. Finding 4's startup/readiness documentation and Meetup readiness gate are implemented. Finding 5's startup validation is addressed by existing normal polling behavior; runtime cleanup and subscription-error handling remain open. Finding 8 remains open. Follow-up 1b requires behavior decisions before implementation.
 
 ## 1. High — Failed saves contaminate subsequent writes
 
@@ -111,65 +111,49 @@ Use SQLite with `PRAGMA reverse_unordered_selects = ON` on the reader connection
 
 Add `.OrderBy(e => e.Position)` to both queries before `.AsAsyncEnumerable()`.
 
-## 3. High — SQL Server batch writes bypass the exclusive-write interceptor
+### Reproduction and validation — 2026-10-08
 
-### Locations
+Added `src/EventSourcing.Test/EventReadOrderingTest.cs` using SQLite's connection-local `PRAGMA reverse_unordered_selects = ON` on an explicitly opened reader connection. Five events are written individually across two interleaved streams, establishing known positions without relying on within-batch insertion order.
 
-- `src/EventSourcing.Persistence.EntityFramework.SqlServer/Infrastructure/Internal/ExclusiveWriteInterceptor.cs:29–35`
-- `src/EventSourcing.Persistence.EntityFramework.SqlServer/Infrastructure/Internal/SqlServerEventStoreOptionsExtension.cs:26–30`
+- Four reader cases cover global and stream reads, starting at positions 0 and 3. All fail because results arrive in descending position order.
+- A polling regression observes two complete reads through the real event store. Instead of delivering positions `1, 2, 3, 4, 5` exactly once, it delivers `5, 4, 3, 2, 1, 5, 4, 3, 2`: the second poll starts at position 2 because position 1 was emitted last.
 
-### Incorrect behavior
+Ran `dotnet test "src/EventSourcing.Test/EventSourcing.Test.csproj" --filter "FullyQualifiedName~EventReadOrderingTest"`: **5 failed**, reproducing the defect. Ran the remaining tests with `--filter "FullyQualifiedName!~EventReadOrderingTest"`: **7 passed, 0 failed**.
 
-The regex adds `TABLOCKX` only to statements matching `INSERT INTO [Events]`. EF Core's SQL Server provider can generate `MERGE [Events] ...` for multi-row inserts with generated values, which applies to this identity-key table. Those writes bypass the intended serialization mechanism.
+### Resolution and validation — Completed 2026-10-08
 
-Without writer serialization, identity allocation and commit order can diverge. With `READ_COMMITTED_SNAPSHOT`, for example, a reader can observe a later committed position while an earlier-position transaction is still uncommitted. Advancing the cursor can then permanently miss the earlier event.
+Both EF reader queries now apply `.OrderBy(e => e.Position)` before `.AsAsyncEnumerable()`. Global and stream reads return events in ascending position order, allowing polling to advance past the greatest emitted position without redelivering the previous batch.
 
-### Agreed clarification
+Ran `dotnet test "src/EventSourcing.Test/EventSourcing.Test.csproj"`: **12 passed, 0 failed**, including all five ordering regression cases and the seven existing tests.
 
-`TABLOCKX` is a reasonable writer-serialization mechanism provided every relevant write acquires it before allocating positions and holds it through commit or rollback. Multi-statement writes must retain protection for the entire transaction. The identified defect is incomplete write-statement coverage, not that `TABLOCKX` is inherently unsuitable.
+## 3. Resolved — SQL Server writer serialization
 
-Snapshot readers seeing the previous committed state do not, by themselves, invalidate this mechanism when writers are correctly serialized.
+The native `SqlServerEventWriter` applies `TABLOCKX` directly to every Events insert and holds the exclusive table lock through commit or rollback. SQL rewriting and EF-generated write statements are no longer involved. Scalar and TVP appends use one atomic autocommit INSERT; staged bulk appends own a client transaction.
 
-### Proposed regression tests
+`SqlServerEventStoreTest.WriterWaitsUntilEarlierBatchCommitsOrRollsBackAndPollingCrossesGaps` observes actual Events table-lock waiters and verifies commit, rollback, and polling across identity gaps for all three transports. Snapshot readers can see prior committed state while a writer holds the lock, but another writer cannot publish higher positions ahead of it. Within-batch ordering is covered in finding 10.
 
-- Capture generated SQL for single inserts, `MERGE` batches, and writes split across multiple statements. Verify that all relevant writes receive the intended protection.
-- SQL Server integration test with `READ_COMMITTED_SNAPSHOT` enabled:
-  1. Insert a batch in transaction A and hold it uncommitted.
-  2. Attempt another batch in transaction B.
-  3. Read before committing A.
-  4. Assert B cannot become visible ahead of A.
-  5. Commit and verify that every event is eventually delivered exactly once.
-
-Use synchronization barriers to control transaction timing.
-
-### Proposed fix
-
-Retain the `TABLOCKX` mechanism if integration tests establish the required lock behavior. Extend coverage to the actual generated statements and verify transaction-wide protection. An explicit transaction-level lock is an alternative if statement rewriting cannot reliably provide that protection.
-
-Ordering within a single batch is a separate verification topic in point 10.
-
-## 4. High — Startup can return before replay finishes
+## 4. Documentation — Clarify startup and replay readiness
 
 ### Locations
 
 - `src/EventSourcing.Commands/Infrastructure/Internal/FunicularCommandsInitializer.cs:17–22,30–34`
 - `src/EventSourcing/EventSourcingContext.cs:21–33`
 
-### Incorrect behavior
+### Clarified contract
 
-Replay is awaited only when the initializer loop encounters an `AfterEventReplay` group. Without an initializer for that phase, the group does not exist and `WaitForReplayDone()` is never called. `CommandsInitializer.Initialize()` starts the no-op command and immediately returns.
+Returning before replay finishes is intentional when no after-replay initializer is registered. `StartEventSourcing()` calls the context's parameterless `Initialize()` independently, but its per-phase hook runs only for phases represented by registered initializers.
 
-`StartEventSourcing()` can therefore complete while projections are still replaying. The Meetup application has no after-replay initializer and can accept queries or commands against partially initialized state.
+Registering an `IAfterEventReplayInitializer` (or `IInitializer<AfterEventReplay>`) makes startup await replay before running that initializer. `StartEventSourcing()` then waits for all registered initializers to complete. Without such a registration, the command initializer schedules the no-op marker and startup can return while replay continues.
 
-### Proposed regression test
+Applications requiring replayed state must explicitly await `IEventReplayState.WaitForReplayDone()` after starting event sourcing and before enabling command/query access. Starting event sourcing later only delays replay; starting and readiness can instead be separate milestones, for example during a long replay in a Windows service.
 
-Configure commands and a projection without an after-replay initializer. Prepopulate history and gate the reader with a `TaskCompletionSource`. Assert startup remains incomplete while replay is blocked, then completes only after historical state is applied and the no-op marker is observed.
+### Documentation resolution — 2026-10-08
 
-### Proposed fix
+Documented both registration-dependent startup behavior and explicit replay waiting in `README.md`, including a readiness example and the additional barrier required by asynchronously processing projections. No unconditional startup barrier is required under this contract.
 
-Introduce an unconditional replay-completion barrier in the command-enabled lifecycle, after replay has started and the no-op has been scheduled. Do not make the barrier depend on application registration of an after-replay initializer.
+The Meetup application now explicitly awaits `IEventReplayState.WaitForReplayDone()` after `StartEventSourcing()` and before `app.RunAsync()` in `src/Playground/Meetup/Meetup/Program.cs`. The example's replay-readiness gate is implemented.
 
-## 5. High — Command-enabled startup must validate its event store
+## 5. Reassessed — Existing startup validation; runtime command cleanup remains open
 
 ### Locations
 
@@ -193,6 +177,12 @@ Configure the command layer without an `IEventStore`, then call `StartEventSourc
 Resolve `IEventStore` in a startup scope before subscribing processors or accepting commands. Validate constructibility as well as registration; do not retain the scoped instance in a singleton.
 
 Separately, move per-command service resolution inside the scope's `try/finally` so unexpected runtime construction failures still dispose the scope and are surfaced explicitly. Add an explicit terminal-error handler for the shared subscription.
+
+### Reassessment — Redundant startup check reverted 2026-10-08
+
+The normal polling configuration already resolves `IEventStore` via `GetRequiredService` in `PollingEventStreamOptionsExtension.BuildPollingEventStream`. Startup constructs that stream through `EventStreamStarter`, so missing registration or construction failure already fails startup independently of the commands package. The proposed command-specific early check was added briefly and then reverted as redundant for this configuration. No additional startup validation is required under the agreed scope; custom stream configurations that do not resolve `IEventStore` are not covered by this existing check.
+
+Reclassify the startup-validation portion as addressed by existing behavior rather than a general startup defect. Runtime per-command scope cleanup and subscription terminal-error handling remain open: store resolution still occurs outside the per-command `try/finally`, so an unexpected runtime construction failure can leak the command scope and terminate the subscription.
 
 ## 6. Medium — Multiple persisted versions mapping to one domain payload break startup
 
@@ -220,7 +210,15 @@ return payloadTypes
 
 Continue enforcing persisted event-type uniqueness separately.
 
-## 7. Medium — Generated code fails for global-namespace and nested types
+### Resolution and validation — Completed 2026-10-08
+
+Added `.Distinct()` before constructing the factory dictionary in `EventFactory.WarmupFactoryCache`. Multiple persisted versions can now share one domain payload type and its typed event factory, while mapper selection remains keyed by distinct persisted event types.
+
+Added `src/EventSourcing.Test/MapperVersionCompatibilityTest.cs`. The compatibility regression initially failed during `StartEventSourcing()` with a duplicate domain-type key. With the fix, startup succeeds and reading two stored JSON versions produces `Event<VersionedEntry>` instances with correctly mapped text, stream identity, ordered positions, and preserved timestamps. A separate regression confirms duplicate persisted event-type registrations still throw `ArgumentException`.
+
+Ran `dotnet test "src/EventSourcing.Test/EventSourcing.Test.csproj"`: **22 passed, 0 failed**.
+
+## 7. Resolved — Global-namespace command extension classes
 
 ### Location
 
@@ -228,21 +226,44 @@ Continue enforcing persisted event-type uniqueness separately.
 
 ### Incorrect behavior
 
-The generator reconstructs type identities from namespace strings and simple names. Global-namespace extension classes produce invalid namespace declarations. Nested result types lose their containing types, and nested extension classes are emitted at namespace level instead of extending the actual class.
+Global-namespace command extension classes produce invalid namespace declarations in the generated templates. This is independent of the result type's namespace: a global-namespace extension class referring to a supported top-level result in a named namespace is affected too. Ordinary and nested namespaces are already extracted from Roslyn symbols.
+
+Nested result types are outside the agreed support scope; source inspection of FunicularSwitch's current `main` result generator shows it does not recreate containing type declarations. This is not a version-specific compilation verification of the referenced 4.6.0 package. Nested command extension classes are also outside scope, since C# extension methods require a top-level static class.
 
 ### Proposed regression tests
 
 Use `CSharpGeneratorDriver` compilation fixtures for:
 
-1. An attributed extension class in the global namespace.
-2. A result type nested in a container.
-3. An attributed extension class nested in a container.
+1. Error-only attributed extension classes in the global namespace.
+2. Global-namespace extension classes referring to top-level result/error types in named namespaces.
+3. Existing top-level generation paths, different namespaces, nested namespace syntax, multiple attributed classes, and unmatched attributes.
 
 Assert error-free resulting compilations and that generated methods belong to the intended types.
 
 ### Proposed fix
 
-Preserve fully qualified type identities and containing declarations using Roslyn symbols. Omit namespace declarations for global-namespace types. If a declaration form is deliberately unsupported, emit a clear diagnostic instead of invalid source.
+Omit the template namespace wrapper for global-namespace command extension classes. Preserve existing named-namespace output and add compilation plus generated-source snapshot coverage in the style of FunicularSwitch's generator specs. Nested-type support and new unsupported-declaration diagnostics are outside this change.
+
+### Resolution and validation — Completed 2026-10-08
+
+The generator explicitly detects the global namespace and uses Roslyn syntax to lift the embedded template's declarations out of its namespace wrapper, preserving `#nullable enable`. Global-namespace source hint names no longer start with a dot. Named-namespace generation retains its existing template replacement path.
+
+Added `src/EventSourcing.Commands.SourceGenerator.Test` to the solution. Its MSTest specs follow FunicularSwitch's inline-source and Verify snapshot style. The helper runs `CSharpGeneratorDriver` against the actual Commands/core/Rx assemblies, rejects generator exceptions and error diagnostics, checks the expected generated-source count, and requires the updated consumer compilation to have no errors before snapshot verification. Snapshot baselines are checked in and excluded from compilation; normal tests compare snapshots rather than automatically approving changes.
+
+Eight cases cover:
+
+- Error-only generation, including async/synchronous processor bases and processing-result helpers.
+- Partial result augmentation with `IResult` and a non-partial result with an existing implementation.
+- Different extension/result/error namespaces and block-scoped nested namespace declarations.
+- Global-namespace error-only extensions and global-namespace extensions with a named partial result.
+- Multiple attributed classes with the same name in distinct namespaces.
+- No matching attribute producing no source.
+
+Consumer fixtures call typed/untyped command-wait helpers, timeout overloads, result-wait helpers, and result conversion, so the tests verify usable generated APIs as well as source shape. Results are self-contained fixtures; these tests do not run the upstream FunicularSwitch result generator.
+
+Supported-output baseline verification: the initial pre-fix run covered only the two global-namespace regressions; supported-case snapshots were first created after the fix. Subsequently restored the original generator logic temporarily (verified against Git's original version; only whitespace differed) and ran `dotnet test "src/EventSourcing.Commands.SourceGenerator.Test/EventSourcing.Commands.SourceGenerator.Test.csproj" --filter "FullyQualifiedName!~global_namespace"`: **6 passed, 0 failed**, comparing against the same snapshots without updating them. This verifies unchanged source content and hint names for the covered supported cases, plus no output for unmatched attributes. Restored the fix and reran the entire generator project: **8 passed, 0 failed**. The snapshots were unchanged throughout this baseline comparison.
+
+Both global-namespace cases first failed with invalid namespace declarations (`CS1001`), reproducing the defect. After the fix, ran `dotnet test "src/EventSourcing.Commands.SourceGenerator.Test/EventSourcing.Commands.SourceGenerator.Test.csproj"`: **8 passed, 0 failed**. Ran `dotnet test "src/EventSourcing.Test/EventSourcing.Test.csproj" --filter "TestCategory!=SqlServerIntegration"`: **30 passed, 0 failed**. The Meetup project built with **0 warnings, 0 errors**, exercising its existing FunicularSwitch integration. `git diff --check` passed.
 
 ## 8. Medium — Skipped corrupt events do not advance stream checkpoints
 
@@ -264,7 +285,7 @@ Store valid position 1 and corrupt positions 2 and 3. Run several polls with a c
 
 Track the highest consumed raw database position independently of emitted domain events, using batch/checkpoint metadata or cursor tracking below mapping. If the corruption handler throws, do not advance past that event.
 
-## 9. High — Command waiters never finish if both persistence attempts fail
+## 9. Resolved — Caller-supplied command wait timeout
 
 ### Locations
 
@@ -281,43 +302,37 @@ An external `Task.WaitAsync(timeout)` stops the caller's wait but does not cance
 
 Use a store that fails both writes. Assert the wait API terminates with an explicit persistence failure, or can be cancelled through the API. Verify subscription cleanup, then recover the store and confirm a subsequent command completes normally.
 
-### Proposed fix
+### Agreed contract and resolution — Completed 2026-10-08
 
-Provide a terminal command-failure channel for failures that cannot be persisted, and observe it alongside processed events. Add cancellation-token overloads and dispose subscriptions on cancellation and send failure. Cancellation alone does not communicate the underlying persistence failure.
+A caller-supplied timeout is sufficient under the clarified contract. Added `TimeSpan timeout` overloads for typed and untyped `SendAndWaitForProcessedEvent`, and matching generated helpers including `SendCommandAndWaitUntilApplied`. Existing overloads retain indefinite waiting for compatibility. A deadline bounds both sending and waiting, throws `TimeoutException`, and releases the event subscription before the call returns. The existing scheduled Rx `ToTask` bridge is retained, with `ConfigureAwait(false)` on the awaits. Timed waits use a single deadline token for both the waits and Rx subscription. In `finally`, cancellation is requested and the Rx task is awaited to ensure unsubscription has finished, including when timer cancellation is concurrently underway. Cleanup observes task errors without replacing the original result or send/wait exception.
 
-## 10. Follow-up — Verify event order within SQL Server write batches
+A timeout ends the caller's wait, not command execution. It does not establish whether persistence succeeded, and the command can complete later, so retrying is not automatically safe. No terminal persistence-failure channel is required for this agreed resolution. The command layer's logging/fault-marker behavior is unchanged. The public overloads describe the timeout contract in XML comments; no timeout documentation in `README.md` is required under the agreed scope.
 
-### Locations
+Added eight cases in `src/EventSourcing.Test/CommandWaitTimeoutTest.cs` covering typed/untyped streams, completion during send, filtering unrelated command IDs, timeout cleanup followed by a successful independent wait, timed send-failure cleanup, and timeout during an incomplete send without cancelling that send. The initial two non-pumping-context cases passed even without `Scheduler.Default`; they did not protect the scheduler workaround and were replaced with the publisher/continuation regression below. These are focused wait-API tests, not an end-to-end double-persistence-failure reproduction.
 
-- `src/EventSourcing.Persistence.EntityFramework/Infrastructure/EventStore.cs:26–29`
-- `src/EventSourcing.Commands/Infrastructure/Internal/CommandRegistrationExtensions.cs:23–24`
+Per the subsequent simplification, no cancellation source is allocated when no timeout is supplied. That path uses `ToTask(CancellationToken.None, Scheduler.Default)` and retains the original Rx lifecycle: completion or stream errors release the subscription internally, while exceptional send failures no longer trigger explicit subscription cleanup. Timed waits now use only the deadline cancellation source, with cleanup awaiting the scheduled Rx task rather than allocating a separate subscription cancellation source.
 
-### Concern — not yet a reproduced defect
+An initial shared cancellation token exposed a cleanup race during an incomplete send. A replacement using `ObserveOn` and a manual task-completion source passed the functional tests but changed scheduling semantics. After the historical mixed sync/async deadlocks were raised, that replacement was removed and the original scheduled `ToTask` conversion was restored. Separate deadline/subscription sources temporarily addressed cleanup, but were subsequently replaced by the single-source implementation described above. Awaiting the Rx task in `finally` ensures unsubscription completes even when deadline cancellation is already underway.
 
-Passing events to `AddRangeAsync` in order does not by itself establish a contractual guarantee that SQL Server assigns identity positions in that order. EF may generate a multi-row `MERGE`; its synthetic input-position mapping associates returned identities with the correct entities but does not itself establish ascending identity allocation in input order.
+Validation after restoring the scheduled task bridge: **31 non-integration tests passed, 0 failed**, including all nine wait-API cases. The prior template build passed with **0 warnings, 0 errors**, and the Meetup project also built successfully.
 
-Unordered `OUTPUT` rows alone do not prove reordered identity allocation. These are distinct guarantees and must be checked separately. No reordering has been demonstrated with the current provider.
+### Final single-source cleanup validation — 2026-10-08
 
-`TABLOCKX` serializes competing writers but does not specify row execution order inside one statement.
+The no-timeout send-failure cleanup test was removed to retain the original no-timeout lifecycle, leaving eight wait-API cases. With the single deadline source but no `finally` block, four cases failed: typed and untyped timeout cleanup, timed send-failure cleanup, and timeout during an incomplete send. Both scheduler-sensitive regressions still passed. Restoring `finally` to cancel the deadline and await the Rx task resolved all four failures without a separate subscription cancellation source.
 
-### Potential impact
+Ran `dotnet test "src/EventSourcing.Test/EventSourcing.Test.csproj" --filter "FullyQualifiedName~CommandWaitTimeoutTest"`: **8 passed, 0 failed**. `git diff --check` passed. The earlier full-suite and build results above precede this final simplification; the final single-source implementation has focused wait-API validation.
 
-The command layer appends `CommandProcessed` after domain events. If its persisted position precedes a domain event, a waiter could complete before all effects reach the projection. Order-sensitive domain events could also replay incorrectly.
+### Scheduler-sensitive deadlock regression — 2026-10-08
 
-### Proposed verification
+`CallerContinuationCanWaitForPublisherToReturnFromOnNext` covers timeout and no-timeout overloads. A dedicated publisher thread emits the matching event. A caller continuation registered with `ExecuteSynchronously` synchronously waits for the publisher to return from `OnNext`. Without scheduled task completion, the continuation runs inline inside `OnNext`, creating a circular wait: the publisher cannot return until the continuation returns, and the continuation waits for the publisher. A two-second escape timeout bounds the reproduction and reports failure rather than hanging the test runner; thread cleanup is also bounded.
 
-1. Capture SQL generated by the actual EF/SQL Server provider.
-2. Write distinguishable ordered events followed by a completion marker.
-3. Read with explicit `ORDER BY Position`.
-4. Assert input order is preserved and the completion marker comes last.
-5. Cover small batches and batches spanning multiple statements.
-6. Check the documented ordering guarantees of the generated statements; repeated passing tests alone do not establish a contractual guarantee.
+Mutation validation: temporarily changed only `.ToTask(subscriptionCancellation.Token, Scheduler.Default)` to `.ToTask(subscriptionCancellation.Token)`. **Both cases failed**, each after the two-second escape timeout, because the publisher could not return while the continuation was running. Restored `Scheduler.Default`; **all 31 non-integration tests passed**. The successful cases additionally verify that the caller continuation runs on a different thread from the publisher. This reproduces a concrete inline-continuation deadlock mechanism protected by the scheduler; it is not claimed to identify the original historical incident.
 
-### Proposed fix if ordering is not guaranteed
+## 10. Resolved — SQL Server batch ordering
 
-Use a write strategy that explicitly preserves input order, such as sequential single-row inserts within one transaction while retaining writer serialization. Evaluate the performance cost before selecting an implementation.
+The native writer uses `INSERT ... SELECT ... ORDER BY InputOrdinal` for scalar, TVP, and staged-bulk inputs. The explicit source order defines identity computation order, independently of physical row insertion order, as documented in [SQL Server INSERT](https://learn.microsoft.com/en-us/sql/t-sql/statements/insert-transact-sql?view=sql-server-ver17).
 
-Keep point 3 focused on incomplete write-statement coverage.
+`SqlServerBatchOrderingTest` verifies input order and an actual `CommandProcessed<string>` marker at the final position across all three transports, with varying stream IDs and payload widths. The opt-in tests use `TEST_SQLSERVER_CONNECTION_STRING`, create isolated databases with the production migration, and delete them after execution. Writer serialization remains a separate guarantee, covered by finding 3.
 
 ## Existing test weakness — Subscription occurs after writing
 
@@ -333,18 +348,17 @@ The helper writes before subscribing to the hot stream. The poller can publish i
 
 Use a writer that waits until the poller has delivered an event before returning to expose the race deterministically. Create the observable subscription/task before writing, and cancel/dispose it if writing fails.
 
-The test project currently contains three tests and references neither Commands nor SQL Server. Add appropriate project references or separate test projects for the proposed coverage.
+The test project now references both Commands and the SQL Server provider and contains the additional regression coverage recorded above. Those original coverage prerequisites are satisfied; the subscribe-after-write race in this helper remains open.
 
 ## Implementation order
 
-1. Failed-save isolation and cleanup (1).
-2. Explicit read ordering (2).
-3. SQL Server write-statement coverage and transaction-wide locking verification (3).
-4. Unconditional startup replay barrier (4).
-5. Startup event-store validation and per-command scope cleanup (5).
-6. Terminal failure reporting and waiter cancellation/cleanup (9).
-7. Mapper-version compatibility (6), generator cases (7), and raw-position checkpoints (8).
-8. Independently verify within-batch ordering (10). Serialization-failure semantics (1a) were resolved alongside finding 1.
-9. Design and validate an event-write retry policy (1b), including ambiguous commit recovery and duplicate prevention, after failed-save isolation is complete.
+Completed: failed-save isolation and serialization-failure cleanup (1/1a), explicit read ordering (2), SQL Server writer serialization and within-batch ordering (3/10), startup/readiness documentation and the Meetup replay gate (4), mapper-version compatibility (6), global-namespace command extension generation and supported-path regression coverage (7), and caller-supplied wait timeout/cleanup (9). Normal polling startup already validates the event store (5).
+
+Remaining work, in suggested order:
+
+1. Fix runtime per-command scope cleanup and shared subscription terminal-error handling (5).
+2. Advance checkpoints independently of successfully mapped events (8).
+3. Fix the existing subscribe-after-write test race.
+4. Design and validate an event-write retry policy (1b), including ambiguous commit recovery and duplicate prevention. Failed-save isolation is complete; retry behavior decisions remain required.
 
 Use deterministic tests with interceptors, controlled readers, and synchronization barriers. SQL Server commit-order and batch-order behavior require actual SQL Server integration coverage; SQLite cannot validate those guarantees.

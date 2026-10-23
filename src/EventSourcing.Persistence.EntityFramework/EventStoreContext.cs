@@ -4,8 +4,12 @@ using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Persistence.EntityFramework;
 
-public class EventStoreContext(DbContextOptions<EventStoreContext> contextOptions) : DbContext(contextOptions)
+public class EventStoreContext : DbContext
 {
+    public EventStoreContext(DbContextOptions<EventStoreContext> contextOptions) : base(contextOptions) { }
+
+    protected EventStoreContext(DbContextOptions contextOptions) : base(contextOptions) { }
+
     public DbSet<Event> Events { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

@@ -5,6 +5,59 @@ namespace EventSourcing.Benchmarks.Test;
 public class ReportingTests
 {
     [Fact]
+    public async Task AllocationReportDistinguishesHistorySizes()
+    {
+        var directory = Directory.CreateTempSubdirectory("eventsourcing-report-");
+        try
+        {
+            var workload = new Workload("write", 100, 256, 10, 0, 1);
+            Measurement[] measurements = [
+                new("postgres", workload, 1, 1, 0, 1, [new("write", 0, 0, 2, 10, null)], 1000),
+                new("postgres", workload with { History = 1000 }, 1, 1, 0, 1, [new("write", 0, 0, 3, 10, null)], 2000)
+            ];
+            await Report.Save(directory.FullName, new { }, measurements);
+            var report = await File.ReadAllTextAsync(Path.Combine(directory.FullName, "allocations.md"), TestContext.Current.CancellationToken);
+            report.Should().Contain("| Provider | Scenario | History | Bytes |");
+            report.Should().Contain("| postgres | write | 100 | 256 | 10 | 0/1 | 1000.000 | 2.000 |");
+            report.Should().Contain("| postgres | write | 1000 | 256 | 10 | 0/1 | 2000.000 | 3.000 |");
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CommandBatchOptionsIncludeMarkerAndValidateTransportSelection()
+    {
+        var options = Options.Parse(["--command-batches", "--batches", "2", "--sql-transfer", "bulk"]);
+        options.CommandBatches.Should().BeTrue();
+        options.Batches.Should().Equal(2);
+        options.SqlTransfer.Should().Be("bulk");
+        Action tooSmall = () => Options.Parse(["--command-batches", "--batches", "1"]);
+        tooSmall.Should().Throw<ArgumentException>().WithMessage("*completion marker*");
+        Action invalidTransport = () => Options.Parse(["--sql-transfer", "invalid"]);
+        invalidTransport.Should().Throw<ArgumentException>().WithMessage("*SQL transfer*");
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("sqlserver")]
+    [InlineData("postgres")]
+    public void SingleProviderSelectionDoesNotIncludeOtherProviders(string provider)
+    {
+        (new Options { Provider = provider }).Providers().Should().Equal(provider);
+    }
+
+    [Fact]
+    public void AllSelectsEveryProviderAndBothIsRejected()
+    {
+        (new Options { Provider = "all" }).Providers().Should().Equal("sqlite", "sqlserver", "postgres");
+        Action parse = () => Options.Parse(["--provider", "both"]);
+        parse.Should().ThrowExactly<ArgumentException>().WithMessage("Provider must be sqlite, sqlserver, postgres, or all.");
+    }
+
+    [Fact]
     public void MetricsExcludeFailuresFromThroughputAndSuccessfulLatencyPercentiles()
     {
         var samples = Enumerable.Range(1, 100).Select(i => new OperationSample("write", 0, i, i, 10, null))

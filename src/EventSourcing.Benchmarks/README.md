@@ -10,20 +10,24 @@ From the repository root (PowerShell):
 dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider sqlite --profile quick
 
 $env:EVENTSOURCING_BENCHMARK_SQLSERVER = 'Server=localhost;Integrated Security=True;TrustServerCertificate=True'
-dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider both --profile smoke
+$env:EVENTSOURCING_BENCHMARK_POSTGRES = 'Host=localhost;Port=5432;Username=postgres;Password=your-password'
+dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider postgres --profile smoke
+dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider all --profile smoke
 ```
 
 SQL Server uses the supplied instance and creates a unique `EventSourcingBenchmark_<guid>` database with the existing migrations. The login needs permissions to create, use, truncate tables in, and drop that database. The supplied initial catalog is replaced; existing databases are never reset. SQLite uses a real file under the result directory, with WAL enabled by the existing migration. Runner-owned databases are removed after execution unless `--keep-database` is supplied. Results and metadata remain. Credentials/connection strings are not exported.
+
+PostgreSQL similarly creates a unique database using the supplied server connection and the PostgreSQL provider migrations; the supplied database name is replaced. The login needs permission to create/drop databases and administer the runner-owned schema. `--provider all` selects SQLite, SQL Server and PostgreSQL and requires both server connection variables. Select `sqlite`, `sqlserver`, or `postgres` for an individual provider; `all` replaces the previous `both` option.
 
 For installed LocalDB, an example connection is `Server=(localdb)\MSSQLLocalDB;Integrated Security=True;TrustServerCertificate=True`. LocalDB is a real SQL Server engine but does not represent a remote production server's networking or resources.
 
 ```powershell
 # Focused write scaling baseline
-dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider both --scenarios write --workers 1,2,4,8 --batches 1,10,100,1000 --operations 100 --repetitions 5
+dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider all --scenarios write --workers 1,2,4,8 --batches 1,10,100,1000 --operations 100 --repetitions 5
 
 # Parallel reads and independently sized mixed groups
 dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider sqlite --scenarios global,tail,stream --workers 1,2,4,8
-dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider both --scenarios mixed --readers 4 --writers 2 --batches 100 --workers 1
+dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider all --scenarios mixed --readers 4 --writers 2 --batches 100 --workers 1
 
 dotnet run -c Release --project src/EventSourcing.Benchmarks -- --help
 ```
@@ -46,21 +50,28 @@ The full profile is a large Cartesian matrix and can take a long time. Filter it
 - **write**: each operation commits one batch to a worker-specific stream.
 - **mixed**: independent reader and writer groups run concurrently against the same table. Readers replay fixed seeded streams; writers append to separate streams. `--workers` sets both group sizes unless overridden with `--readers` / `--writers`.
 
-Every operation creates a fresh DI scope/context. Workers prime contexts/connections before a synchronized start. All payload objects are prepared outside timing. Reads are fully enumerated and counts are checked. Successful writes are checked against the persisted table count after each run. The existing library's write strategy and SQL Server interceptor are used unchanged.
+Every operation creates a fresh DI scope/context. Workers prime contexts/connections before a synchronized start. All payload objects are prepared outside timing. Reads are fully enumerated and counts are checked. Successful writes are checked against the persisted table count after each run. Production provider write strategies are used, including SQL Server's `TABLOCKX` through commit with ordered identity inserts (scalar parameters, TVPs or staged streaming bulk copy), and PostgreSQL's advisory-lock/sequence allocation with native typed arrays and binary COPY.
 
-Schema migration, seeding, warmup, verification and reset are excluded from timing. Before each measured repetition the events table is cleared (including identity reset) and identical history is seeded through `IEventStore`. This is a warm-cache workload; file allocation, database statistics, OS caches and transaction logs are not reset. No background event stream or command processors are started.
+Schema migration, seeding, warmup, verification and reset are excluded from timing. Before each measured repetition the events table is cleared (including identity reset for SQLite/SQL Server, or sequence restart for PostgreSQL) and identical history is seeded through `IEventStore`. This is a warm-cache workload; file allocation, database statistics, OS caches and transaction logs are not reset. No background event stream or command processors are started.
 
-SQLite async calls can execute synchronously; workers use separate thread-pool tasks to allow actual connection concurrency. SQLite still serializes writes and may wait up to the configured 30-second busy timeout. SQL Server retains the instance/model's default database configuration; isolation, RCSI and recovery settings are recorded, not overridden. Errors are not retried by the benchmark runner; provider-internal waiting remains part of measured latency.
+SQLite async calls can execute synchronously; workers use separate thread-pool tasks to allow actual connection concurrency. SQLite still serializes writes and may wait up to the configured 30-second busy timeout. SQL Server retains the instance/model's default database configuration; isolation, RCSI, recovery and delayed-durability settings are recorded, not overridden. Errors are not retried by the benchmark runner; provider-internal waiting remains part of measured latency.
 
 The SQLite connection's 30-second command timeout controls provider lock retries. `PRAGMA busy_timeout` is recorded separately and can be zero because Microsoft.Data.Sqlite implements its own retries.
 
+PostgreSQL retains the server's default durability and isolation settings. Reports record its version, transaction isolation, `synchronous_commit`, `fsync`, `full_page_writes`, `wal_level`, and `max_connections`. Advisory-lock waiting is part of measured append latency; concurrent writers serialize their database append transactions while ordinary readers remain unblocked. PostgreSQL server failures are classified by SQLSTATE.
+
 ## Reports and comparison
+
+The [compact all-provider baseline](baseline-2026-10-12.md) defines a bounded matrix targeting under 10 minutes across SQLite, SQL Server, and PostgreSQL, with its exact reproduction command and measured results.
 
 Each run gets its own folder under `artifacts/benchmarks` (override with `--output`):
 
 - `results.json`: metadata, every operation sample, per-repetition timings and aggregate summaries.
 - `summary.csv`: one row per provider/workload/operation kind.
 - `summary.md`: readable aggregate table.
+- `allocations.md`: process-wide allocated bytes/operation and maximum write latency. Includes harness and serialization; mixed groups include both reads and writes.
+
+Use `--command-batches --batches 2` to measure one domain event followed by a real `CommandProcessed` marker; the batch size includes the marker. For SQL Server transfer-path evaluation, `--sql-transfer tvp|bulk` forces a path; `auto` uses scalar parameters up to 10 events, TVPs for medium batches, and staged bulk copy at 1,000 events or 4 MiB estimated UTF-16 encoded row bytes. The byte threshold takes precedence over the small-event-count path. These thresholds select a transport, not a public batch-size limit.
 
 Reported throughput is total successful events or operations divided by the sum of that group's active wall times across repetitions. For writes, operations are committed batches; for reads, operations are complete enumerations. Mixed readers and writers may finish at different times, so both active times and total workload time are retained. This is fixed-work concurrency, not a claim that contention persists for the full interval.
 
@@ -68,13 +79,11 @@ Latency samples include scope disposal. Median/p95/p99 use nearest-rank percenti
 
 Metadata includes runtime, OS, processor count, machine, Git revision/status, workload parameters, database version and settings. Exit codes: **0** successful run, **1** setup/verification/runner failure, **2** completed with operation failures. Completed results are saved even if a later workload fails.
 
-Save a Release baseline before fixing findings, then rerun identical arguments on the same machine/server and compare matching CSV rows. Keep server load, storage, power settings and database configuration comparable. Do not interpret faster runs with operation failures as improvements. This suite checks counts, not the review's event-order or commit-order correctness guarantees.
-
-The measured baseline and reproduction parameters are in [baseline-2026-10-08.md](baseline-2026-10-08.md).
+This suite checks counts, not event-order or commit-order correctness guarantees. The agent run-and-compare workflow is in the project [event-store-benchmarking skill](../../.opencode/skills/event-store-benchmarking/SKILL.md).
 
 ## Validation
 
 ```powershell
 dotnet test --project src/EventSourcing.Benchmarks.Test/EventSourcing.Benchmarks.Test.csproj -c Release
-dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider both --profile smoke
+dotnet run -c Release --project src/EventSourcing.Benchmarks -- --provider all --profile smoke
 ```

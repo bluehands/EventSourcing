@@ -90,6 +90,8 @@ Call `StartEventSourcing()` to begin replay, then await readiness where your app
 ## Example
 A little meetup planner example is implemented [here](https://github.com/bluehands/EventSourcing/blob/main/src/Playground/Meetup/Meetup)
 
+Run the Meetup example with .NET Aspire and PostgreSQL using its [Aspire AppHost](src/Playground/Meetup/Meetup/README.md#run-with-aspire-and-postgresql).
+
 ## Extensibility
 
 Packages are designed to be easily extensible to support other persistence types, event serialization formats (like binary payload serialization) or new lifecycle phases (see ```AfterEventReplayPhase``` introduced by Bluehands.EventSourcing.Commands). Exensibility patterns are inspired by the ones used in current EntityFramework versions.
@@ -125,10 +127,27 @@ If validation is performed in a command processor looking at a specific version 
 If you prefer not to insert competing events into your store this would have to be handled in a custom persistence implementation.
 
 ## Persistence providers
-  - [Bluehands.EventSourcing.Persistence.Sqlite]([https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.Sqlite)
-  - [Bluehands.EventSourcing.Persistence.SqlServer]([https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.SqlServer)
+  - [Bluehands.EventSourcing.Persistence.Sqlite](https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.Sqlite)
+  - [Bluehands.EventSourcing.Persistence.SqlServer](https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.SqlServer)
+  - [Bluehands.EventSourcing.Persistence.Postgres](https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.Postgres)
 
-Sqlite and SqlServer persistence packages are based on [Bluehands.EventSourcing.Persistence.EntityFramework](https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.EntityFramework/) package. We use a very straight forward event store schema here (single table, no normalization). If you're fine with that, it's trivial to use an other entity framework provider to support a new persistence.
+All three persistence packages are based on [Bluehands.EventSourcing.Persistence.EntityFramework](https://www.nuget.org/packages/Bluehands.EventSourcing.Persistence.EntityFramework/). Events are stored in a straightforward, non-normalized table. PostgreSQL uses a sequence and transaction-level advisory lock to allocate ordered batch positions without an additional counter table.
+
+### PostgreSQL
+
+Install `Bluehands.EventSourcing.Persistence.Postgres`, then configure:
+
+```csharp
+services.AddEventSourcing(options => options
+    .UsePostgresEventStore(connectionString)
+    .PayloadAssemblies(typeof(MyEventPayload).Assembly));
+```
+
+`UsePostgresEventStore` also accepts a `Func<IServiceProvider, string>` connection-string factory and an optional provider builder callback. Polling is the default event stream. Call `StartEventSourcing()` during application startup to apply migrations and start the stream.
+
+
+
+**Database administration:** startup migrations require database/schema DDL privileges. Alternatively, generate a deployment script with `dotnet ef migrations script --idempotent --project src/EventSourcing.Persistence.EntityFramework.Postgres --context PostgresEventStoreContext` and apply it using a deployment account. Appends require USAGE/UPDATE on `public."EventPosition"` and INSERT on events; reads require SELECT on events. For imports, stop all writers, import explicit positions, and advance the sequence to at least the maximum stored position before restarting writers. Sequence changes are not rolled back. Direct `SaveChanges`, raw inserts, sequence resets, or changing its cache bypass the append protocol and are not supported append paths.
 
 To write your own persistence provider, perhaps to have a more optimized storage schema for specific needs or even to abstract from an existing event store like [EventStoreDb](https://www.eventstore.com/) you might want to take [EventSourcing.Persistence.EntityFramework](https://github.com/bluehands/EventSourcing/tree/main/src/EventSourcing.Persistence.EntityFramework) as a template project. Persistence requirements are designed to be minimal:
  - store events in deterministic order 

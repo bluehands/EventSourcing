@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Meetup · GraphQL examples</title>
+    <style>
+        :root { color-scheme: light dark; font-family: system-ui, sans-serif; line-height: 1.6; }
+        body { max-width: 54rem; margin: auto; padding: 2rem 1rem 4rem; }
+        h1, h2 { line-height: 1.2; }
+        section { margin-top: 2.5rem; }
+        pre { padding: 1rem; border: 1px solid GrayText; border-radius: .5rem; overflow-x: auto; }
+        code { font-family: ui-monospace, monospace; }
+        .playground { display: inline-block; padding: .65rem 1rem; border: 1px solid currentColor; border-radius: .5rem; }
+        a:focus-visible { outline: 3px solid currentColor; outline-offset: 4px; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Meetup GraphQL examples</h1>
+        <p>Plan a user-group talk, register attendees, and watch changes arrive through the event stream.</p>
+        <p><a class="playground" href="/graphql">Open the GraphQL playground →</a></p>
+        <p>Copy an operation below into the playground and run it. Start by creating a talk, then use its returned ID to register an attendee.</p>
+
+        <section aria-labelledby="create">
+            <h2 id="create">1. Create a talk</h2>
+            <p>The response includes the talk ID. Save it for the registration operation.</p>
+            <pre><code>mutation AddTalk {
+  newUserGroupTalk(title: "Event sourcing in 20 minutes", maxAttendees: 5) {
+    id
+    title
+  }
+}</code></pre>
+        </section>
+
+        <section aria-labelledby="query">
+            <h2 id="query">2. List talks and attendees</h2>
+            <pre><code>query GetTalks {
+  talks {
+    id
+    title
+    maxAttendees
+    talkPublished
+    attendees {
+      name
+      isOnWaitList
+    }
+  }
+}</code></pre>
+        </section>
+
+        <section aria-labelledby="register">
+            <h2 id="register">3. Register an attendee</h2>
+            <p>Replace <code>YOUR_TALK_ID</code> with the ID returned when you created the talk. Once the talk is full, new attendees join the waitlist.</p>
+            <pre><code>mutation RegisterAttendee {
+  registerParticipant(
+    talkId: "YOUR_TALK_ID"
+    name: "Alex"
+    mailAddress: "alex@example.com"
+  )
+}</code></pre>
+        </section>
+
+        <section aria-labelledby="subscribe">
+            <h2 id="subscribe">4. Watch changes live</h2>
+            <p>Run this subscription in a second playground tab, then create a talk or register another attendee in the first tab.</p>
+            <pre><code>subscription WatchTalks {
+  onTalkChanged {
+    changeInfo
+    talk {
+      id
+      title
+      attendees {
+        name
+        isOnWaitList
+      }
+    }
+  }
+}</code></pre>
+        </section>
+    </main>
+</body>
+</html>

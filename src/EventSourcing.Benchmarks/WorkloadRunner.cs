@@ -3,12 +3,14 @@ using System.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
+using EventSourcing.Commands;
 
 namespace EventSourcing.Benchmarks;
 
 public sealed record OperationSample(string Kind, int Worker, int Operation, double Milliseconds, long Events, string? Error);
 public sealed record Measurement(string Provider, Workload Workload, int Repetition, double ElapsedSeconds,
-    double ReadActiveSeconds, double WriteActiveSeconds, OperationSample[] Samples);
+    double ReadActiveSeconds, double WriteActiveSeconds, OperationSample[] Samples, long AllocatedBytes = 0);
 
 public static class WorkloadRunner
 {
@@ -26,8 +28,14 @@ public static class WorkloadRunner
         {
             // Generate the complete worker input outside the measured interval.
             var payloads = write ? Enumerable.Range(0, options.Operations).Select(operation =>
-                Enumerable.Range(0, workload.BatchSize).Select(i => (IEventPayload)new BenchmarkPayload(
-                    $"writer-{worker}", operation * workload.BatchSize + i, data)).ToArray()).ToArray() : [];
+            {
+                var batch = Enumerable.Range(0, workload.BatchSize).Select(i => (IEventPayload)new BenchmarkPayload(
+                    $"writer-{worker}", operation * workload.BatchSize + i, data)).ToArray();
+                if (options.CommandBatches)
+                    batch[^1] = new CommandProcessed<string>(CommandResult<string>.Processed(
+                        CommandId.NewCommandId(), FunctionalResult<string>.Ok("Done")));
+                return batch;
+            }).ToArray() : [];
             return Task.Run(async () =>
             {
                 // Prime each worker's context and connection before the synchronized start.
@@ -96,14 +104,16 @@ public static class WorkloadRunner
             }
             await Task.Delay(1);
         }
+        var allocatedBefore = GC.GetTotalAllocatedBytes(true);
         timer.Start();
         startGate.SetResult();
         await Task.WhenAll(tasks);
         timer.Stop();
+        var allocated = GC.GetTotalAllocatedBytes(true) - allocatedBefore;
         var ordered = samples.OrderBy(s => s.Kind).ThenBy(s => s.Worker).ThenBy(s => s.Operation).ToArray();
         await database.Verify(ordered.Where(s => s.Kind == "write").Sum(s => s.Events), workload.History);
         return new(database.Provider, workload, repetition, timer.Elapsed.TotalSeconds,
-            readFinished.DefaultIfEmpty(0).Max(), writeFinished.DefaultIfEmpty(0).Max(), ordered);
+            readFinished.DefaultIfEmpty(0).Max(), writeFinished.DefaultIfEmpty(0).Max(), ordered, allocated);
     }
 
     static string Describe(Exception exception)
@@ -113,6 +123,8 @@ public static class WorkloadRunner
         {
             SqlException sql => $"SqlException:{sql.Number}",
             SqliteException sqlite => $"SqliteException:{sqlite.SqliteErrorCode}:{sqlite.SqliteExtendedErrorCode}",
+            PostgresException postgres => $"PostgresException:{postgres.SqlState}",
+            NpgsqlException npgsql => $"NpgsqlException: {npgsql.Message}",
             _ => $"{root.GetType().Name}: {root.Message}"
         };
     }

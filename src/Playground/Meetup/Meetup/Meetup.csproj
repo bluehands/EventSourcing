@@ -22,14 +22,17 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Bluehands.EventSourcing.Commands" Version="1.0.0--main-20261008.4" />
-		<PackageReference Include="Bluehands.EventSourcing.Persistence.Sqlite" Version="1.0.0--main-20261008.4" />
+		<ProjectReference Include="..\..\..\EventSourcing.Commands\EventSourcing.Commands.csproj" />
+		<ProjectReference Include="..\..\..\EventSourcing.Commands.SourceGenerator\EventSourcing.Commands.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\..\..\EventSourcing.Persistence.EntityFramework.Postgres\EventSourcing.Persistence.EntityFramework.Postgres.csproj" />
+		<ProjectReference Include="..\..\..\EventSourcing.Persistence.EntityFramework.SqlServer\EventSourcing.Persistence.EntityFramework.SqlServer.csproj" />
+		<ProjectReference Include="..\..\..\EventSourcing.Persistence.EntityFramework.Sqlite\EventSourcing.Persistence.EntityFramework.Sqlite.csproj" />
 		<PackageReference Include="FunicularSwitch" Version="6.4.1" />
 		<PackageReference Include="FunicularSwitch.Generators" Version="4.6.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="HotChocolate.AspNetCore" Version="16.6.7" />
+		<PackageReference Include="HotChocolate.AspNetCore" Version="16.6.9" />
 		<PackageReference Include="System.Linq.Async" Version="7.0.1" />
 	</ItemGroup>
 </Project>

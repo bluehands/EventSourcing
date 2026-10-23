@@ -38,8 +38,26 @@ steps:
       --no-restore
       /p:ContinuousIntegrationBuild=true
 
+- bash: |
+    set -euo pipefail
+    docker run --detach --rm --name eventsourcing-postgres-test \
+      --publish 127.0.0.1:55432:5432 \
+      --env POSTGRES_PASSWORD=eventsourcing-test postgres:18
+    for attempt in $(seq 1 60); do
+      if docker exec eventsourcing-postgres-test pg_isready -h 127.0.0.1 -U postgres; then
+        exit 0
+      fi
+      sleep 1
+    done
+    docker logs eventsourcing-postgres-test
+    exit 1
+  displayName: Start PostgreSQL integration database
+
 - task: DotNetCoreCLI@2
   displayName: Test
+  env:
+    TEST_POSTGRES_CONNECTION_STRING: 'Host=localhost;Port=55432;Username=postgres;Password=eventsourcing-test'
+    TEST_POSTGRES_REQUIRED: 'true'
   inputs:
     command: test
     projects: '**/*.Test.csproj'
@@ -47,6 +65,10 @@ steps:
       --configuration $(buildConfiguration)
       --no-build
     publishTestResults: true
+
+- bash: docker stop eventsourcing-postgres-test
+  displayName: Stop PostgreSQL integration database
+  condition: always()
 
 - task: DotNetCoreCLI@2
   inputs:
