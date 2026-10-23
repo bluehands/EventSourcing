@@ -29,7 +29,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="HotChocolate.AspNetCore" Version="16.6.7" />
+		<PackageReference Include="HotChocolate.AspNetCore" Version="16.6.9" />
 		<PackageReference Include="System.Linq.Async" Version="7.0.1" />
 	</ItemGroup>
 </Project>
