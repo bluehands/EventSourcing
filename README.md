@@ -3,7 +3,7 @@
 # EventSourcing
 Extensible, unobstrusive, functional and flexible multi persistence event sourcing framework for .NET. Unobstrusive means that you are free to model your domain objects, aggregates or whatever the way you like it based on an event stream that is simply abstracted as `IObservable<Event>`.
 
-Currently packages are available in prerelease versions only. Nevertheless they are the essence of event sourcing implementations running in production at different scale for several years at various persistence types, so feel encouraged to have a look :). 
+Those packages are the essence of event sourcing implementations running in production at different scale for several years at various persistence types, so feel encouraged to have a look :).
 
 ## Basic Usage
 
