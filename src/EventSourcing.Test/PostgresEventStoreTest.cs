@@ -84,6 +84,99 @@ public class PostgresEventStoreTest
     }
 
     [Theory]
+    [InlineData(2)]
+    [InlineData(1024)]
+    public async Task SilentlySkippedRowRollsBackWholeBatchAndAllowsSameScopeRecovery(int count)
+    {
+        await using var database = await TestDatabase.Create();
+        using var scope = database.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PostgresEventStoreContext>();
+        await context.Database.ExecuteSqlRawAsync("""
+            CREATE FUNCTION public.skip_abandoned() RETURNS trigger LANGUAGE plpgsql AS $body$
+            BEGIN
+                IF NEW."Payload" = 'abandoned' THEN RETURN NULL; END IF;
+                RETURN NEW;
+            END $body$;
+            CREATE TRIGGER skip_abandoned BEFORE INSERT ON public."Events"
+                FOR EACH ROW EXECUTE FUNCTION public.skip_abandoned();
+            """, TestContext.Current.CancellationToken);
+        var writer = scope.ServiceProvider.GetRequiredService<IEventWriter<DbEvent>>();
+        var batch = Enumerable.Range(0, count).Select(_ => Raw("must roll back")).ToArray();
+        batch[^1] = Raw("abandoned");
+        Func<Task> append = () => writer.WriteEvents(batch);
+        await append.Should().ThrowAsync<InvalidOperationException>().WithMessage("*count mismatch*");
+        (await context.Events.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        await writer.WriteEvents([Raw("recovered")]);
+        var recovered = await context.Events.SingleAsync(TestContext.Current.CancellationToken);
+        recovered.Position.Should().Be(count + 1);
+        recovered.Payload.Should().Be("recovered");
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(1024)]
+    public async Task RejectsTransactionStartedDirectlyOnConnectionBeforeAllocatingPositions(int count)
+    {
+        await using var database = await TestDatabase.Create();
+        using var scope = database.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PostgresEventStoreContext>();
+        var writer = scope.ServiceProvider.GetRequiredService<IEventWriter<DbEvent>>();
+        await context.Database.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        var connection = (NpgsqlConnection)context.Database.GetDbConnection();
+        await using (var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken))
+        {
+            context.Database.CurrentTransaction.Should().BeNull();
+            Func<Task> append = () => writer.WriteEvents(Enumerable.Range(0, count).Select(_ => Raw("external")));
+            await append.Should().ThrowAsync<InvalidOperationException>();
+            (await database.Position()).Should().Be(0);
+            (await context.Events.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+            await transaction.RollbackAsync(TestContext.Current.CancellationToken);
+        }
+        await writer.WriteEvents([Raw("recovered")]);
+        (await context.Events.SingleAsync(TestContext.Current.CancellationToken)).Payload.Should().Be("recovered");
+    }
+
+    [Theory]
+    [InlineData(2, 1, null)]
+    [InlineData(1024, 1, null)]
+    [InlineData(2, 0, 1)]
+    [InlineData(1024, 0, 1)]
+    public async Task AppendLockWaitRespectsConnectionTimeoutAndEfOverride(int count, int connectionTimeout, int? efTimeout)
+    {
+        await using var database = await TestDatabase.Create();
+        using var scope = database.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PostgresEventStoreContext>();
+        context.Database.SetConnectionString(new NpgsqlConnectionStringBuilder(context.Database.GetConnectionString())
+        {
+            CommandTimeout = connectionTimeout
+        }.ConnectionString);
+        context.Database.SetCommandTimeout(efTimeout);
+        await using var blocker = new NpgsqlConnection(context.Database.GetConnectionString());
+        await blocker.OpenAsync(TestContext.Current.CancellationToken);
+        await using var transaction = await blocker.BeginTransactionAsync(TestContext.Current.CancellationToken);
+        await using var acquire = new NpgsqlCommand("SELECT pg_advisory_xact_lock(19467218, 'public.\"EventPosition\"'::regclass::oid::int)", blocker);
+        await acquire.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        var writer = scope.ServiceProvider.GetRequiredService<IEventWriter<DbEvent>>();
+        var append = writer.WriteEvents(Enumerable.Range(0, count).Select(_ => Raw("blocked")));
+        try
+        {
+            await database.WaitForAppendLock();
+            Func<Task> wait = () => append.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            (await wait.Should().ThrowAsync<NpgsqlException>()).Which.InnerException.Should().BeOfType<TimeoutException>();
+            (await database.Position()).Should().Be(0);
+        }
+        finally
+        {
+            await transaction.RollbackAsync(TestContext.Current.CancellationToken);
+            try { await append.WaitAsync(Timeout, TestContext.Current.CancellationToken); }
+            catch (NpgsqlException) { }
+        }
+        (await context.Events.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        await writer.WriteEvents([Raw("recovered")]);
+        (await context.Events.SingleAsync(TestContext.Current.CancellationToken)).Payload.Should().Be("recovered");
+    }
+
+    [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
     [InlineData(false, true)]

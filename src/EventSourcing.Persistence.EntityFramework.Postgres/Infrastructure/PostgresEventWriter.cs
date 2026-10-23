@@ -68,26 +68,21 @@ internal sealed class PostgresEventWriter(PostgresEventStoreContext context) : I
 
     async Task InsertArrays(Event[] events)
     {
-        await using var command = new NpgsqlCommand(ArraysSql) { CommandTimeout = context.Database.GetCommandTimeout() ?? 30 };
+        var connection = (NpgsqlConnection)context.Database.GetDbConnection();
+        await using var command = new NpgsqlCommand(ArraysSql, connection)
+        {
+            CommandTimeout = context.Database.GetCommandTimeout() ?? connection.CommandTimeout
+        };
         command.Parameters.Add(new NpgsqlParameter<long> { TypedValue = events.Length });
         AddArray(command, events.Select(e => e.StreamType).ToArray(), NpgsqlDbType.Text);
         AddArray(command, events.Select(e => e.StreamId).ToArray(), NpgsqlDbType.Text);
         AddArray(command, events.Select(e => e.EventType).ToArray(), NpgsqlDbType.Text);
         AddArray(command, events.Select(e => e.Payload).ToArray(), NpgsqlDbType.Text);
         AddArray(command, events.Select(e => e.Timestamp.UtcDateTime).ToArray(), NpgsqlDbType.TimestampTz);
-        await context.Database.OpenConnectionAsync();
-        try
-        {
-            command.Connection = (NpgsqlConnection)context.Database.GetDbConnection();
-            // One statement owns an implicit transaction; its response follows commit. The advisory lock
-            // is retained until then, so no lower position can become visible after a higher one.
-            if (await command.ExecuteNonQueryAsync() != events.Length)
-                throw new InvalidOperationException("PostgreSQL append count mismatch.");
-        }
-        finally
-        {
-            await context.Database.CloseConnectionAsync();
-        }
+        await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
+        if (await command.ExecuteNonQueryAsync() != events.Length)
+            throw new InvalidOperationException("PostgreSQL append count mismatch.");
+        await transaction.CommitAsync();
     }
 
     static void AddArray<T>(NpgsqlCommand command, T[] values, NpgsqlDbType elementType) =>
@@ -97,7 +92,7 @@ internal sealed class PostgresEventWriter(PostgresEventStoreContext context) : I
     {
         await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
         var connection = (NpgsqlConnection)context.Database.GetDbConnection();
-        var timeout = context.Database.GetCommandTimeout() ?? 30;
+        var timeout = context.Database.GetCommandTimeout() ?? connection.CommandTimeout;
         await using var allocate = new NpgsqlCommand(AllocateSql, connection) { CommandTimeout = timeout };
         allocate.Parameters.Add(new NpgsqlParameter<long> { TypedValue = events.Length });
         var last = (long)(await allocate.ExecuteScalarAsync())!;

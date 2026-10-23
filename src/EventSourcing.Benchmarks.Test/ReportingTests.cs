@@ -5,6 +5,29 @@ namespace EventSourcing.Benchmarks.Test;
 public class ReportingTests
 {
     [Fact]
+    public async Task AllocationReportDistinguishesHistorySizes()
+    {
+        var directory = Directory.CreateTempSubdirectory("eventsourcing-report-");
+        try
+        {
+            var workload = new Workload("write", 100, 256, 10, 0, 1);
+            Measurement[] measurements = [
+                new("postgres", workload, 1, 1, 0, 1, [new("write", 0, 0, 2, 10, null)], 1000),
+                new("postgres", workload with { History = 1000 }, 1, 1, 0, 1, [new("write", 0, 0, 3, 10, null)], 2000)
+            ];
+            await Report.Save(directory.FullName, new { }, measurements);
+            var report = await File.ReadAllTextAsync(Path.Combine(directory.FullName, "allocations.md"), TestContext.Current.CancellationToken);
+            report.Should().Contain("| Provider | Scenario | History | Bytes |");
+            report.Should().Contain("| postgres | write | 100 | 256 | 10 | 0/1 | 1000.000 | 2.000 |");
+            report.Should().Contain("| postgres | write | 1000 | 256 | 10 | 0/1 | 2000.000 | 3.000 |");
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public void CommandBatchOptionsIncludeMarkerAndValidateTransportSelection()
     {
         var options = Options.Parse(["--command-batches", "--batches", "2", "--sql-transfer", "bulk"]);
