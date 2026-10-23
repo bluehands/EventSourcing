@@ -90,6 +90,8 @@ Call `StartEventSourcing()` to begin replay, then await readiness where your app
 ## Example
 A little meetup planner example is implemented [here](https://github.com/bluehands/EventSourcing/blob/main/src/Playground/Meetup/Meetup)
 
+Run the Meetup example with .NET Aspire and PostgreSQL using its [Aspire AppHost](src/Playground/Meetup/Meetup/README.md#run-with-aspire-and-postgresql).
+
 ## Extensibility
 
 Packages are designed to be easily extensible to support other persistence types, event serialization formats (like binary payload serialization) or new lifecycle phases (see ```AfterEventReplayPhase``` introduced by Bluehands.EventSourcing.Commands). Exensibility patterns are inspired by the ones used in current EntityFramework versions.

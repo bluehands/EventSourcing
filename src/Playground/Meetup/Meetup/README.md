@@ -21,6 +21,36 @@ Optionally, you can start another instance:
 dotnet run --urls http://localhost:60869
 ```
 
+### Run with Aspire and PostgreSQL
+
+With the .NET 10 SDK and a running Docker-compatible runtime using Linux containers,
+run this command from the repository root:
+
+```powershell
+dotnet run --project src/Playground/Meetup/Meetup.AppHost
+```
+
+No Aspire workload or CLI installation is required. The AppHost starts PostgreSQL,
+creates the `events` database, and passes its connection string to this existing
+Meetup application as `ConnectionStrings:Postgres`. Do not also configure a SQL
+Server connection string in the Meetup application's environment or configuration.
+
+Open the dashboard URL printed by the AppHost. Once `meetup` has started, open
+its HTTP endpoint from the dashboard, then navigate to `/graphql` and try the
+operations below. Aspire assigns a free port rather than using the standalone
+instance's port 60868. Meetup applies event-store migrations and waits for projection replay
+before accepting requests. The AppHost uses HTTP without the standalone project's
+HTTPS launch profile; no development certificate is needed.
+
+PostgreSQL uses a Docker volume, so talks and registrations survive stopping and
+restarting the AppHost. Create a talk, restart the AppHost, then query `talks` to
+verify that the projection is rebuilt from persisted events. Removing the volume
+deletes that history. Existing SQLite or other PostgreSQL databases are not imported.
+
+This setup is for local development: the API has no authentication and the API
+and dashboard use HTTP on localhost. Do not expose them publicly. No custom health
+checks or OpenTelemetry instrumentation are added.
+
 ### Use a local PostgreSQL database
 
 SQLite (`EventStore.db`) remains the default. To use PostgreSQL, start a local PostgreSQL server and set the connection string before running the app from this project folder:

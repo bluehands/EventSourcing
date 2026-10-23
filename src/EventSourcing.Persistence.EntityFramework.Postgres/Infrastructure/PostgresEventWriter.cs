@@ -69,10 +69,8 @@ internal sealed class PostgresEventWriter(PostgresEventStoreContext context) : I
     async Task InsertArrays(Event[] events)
     {
         var connection = (NpgsqlConnection)context.Database.GetDbConnection();
-        await using var command = new NpgsqlCommand(ArraysSql, connection)
-        {
-            CommandTimeout = context.Database.GetCommandTimeout() ?? connection.CommandTimeout
-        };
+        await using var command = new NpgsqlCommand(ArraysSql, connection);
+        command.CommandTimeout = context.Database.GetCommandTimeout() ?? connection.CommandTimeout;
         command.Parameters.Add(new NpgsqlParameter<long> { TypedValue = events.Length });
         AddArray(command, events.Select(e => e.StreamType).ToArray(), NpgsqlDbType.Text);
         AddArray(command, events.Select(e => e.StreamId).ToArray(), NpgsqlDbType.Text);
@@ -93,7 +91,8 @@ internal sealed class PostgresEventWriter(PostgresEventStoreContext context) : I
         await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
         var connection = (NpgsqlConnection)context.Database.GetDbConnection();
         var timeout = context.Database.GetCommandTimeout() ?? connection.CommandTimeout;
-        await using var allocate = new NpgsqlCommand(AllocateSql, connection) { CommandTimeout = timeout };
+        await using var allocate = new NpgsqlCommand(AllocateSql, connection);
+        allocate.CommandTimeout = timeout;
         allocate.Parameters.Add(new NpgsqlParameter<long> { TypedValue = events.Length });
         var last = (long)(await allocate.ExecuteScalarAsync())!;
         var first = checked(last - events.Length + 1);
