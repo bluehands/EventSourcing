@@ -90,7 +90,7 @@ public sealed class BenchmarkDatabase : IAsyncDisposable
         }
         else if (Provider == "postgres")
         {
-            Metadata["CommandTimeoutSeconds"] = (context.Database.GetCommandTimeout() ?? 30).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Metadata["CommandTimeoutSeconds"] = (context.Database.GetCommandTimeout() ?? ((NpgsqlConnection)connection).CommandTimeout).ToString(System.Globalization.CultureInfo.InvariantCulture);
             foreach (var setting in new[] { "transaction_isolation", "synchronous_commit", "fsync", "full_page_writes", "wal_level", "max_connections" })
                 Metadata[setting] = await Scalar($"SHOW {setting}");
             Metadata["PositionAllocation"] = "Transaction-level advisory lock; CACHE 1 sequence; native arrays/COPY";
