@@ -48,7 +48,8 @@ public static class Program
 		app
 			.UseRouting()
 			.UseWebSockets()
-			.UseEndpoints(endpoints => endpoints.MapGraphQL());
+			.UseEndpoints(endpoints => endpoints.MapGraphQL()
+                .WithOptions(o => o.Tool.ServeMode = ChilliCream.Nitro.App.ServeMode.Embedded));
 
 		await app.Services.StartEventSourcing();
 

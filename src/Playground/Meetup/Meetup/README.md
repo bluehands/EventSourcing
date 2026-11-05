@@ -87,6 +87,10 @@ The sample references the event-sourcing projects in this repository, including 
 
 ### GraphQL API
 
+The GraphQL playground is served from the application's embedded assets, so it
+does not need access to an external CDN. After dependencies and container images
+have been downloaded, the playground also works offline or in restricted networks.
+
 Open http://localhost:60868 for sample operations and a link to the GraphQL playground at http://localhost:60868/graphql. Try these operations in the playground:
 ```gql
 query getTalks {
