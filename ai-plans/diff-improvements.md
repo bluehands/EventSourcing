@@ -1,10 +1,12 @@
 # Diff package improvement plan
 
-Status: proposed improvements, not implementation commitments.
+Status: items 2 and 3 done; item 4 partly done (see notes); item 1 partly addressed; item 5 open. See `diff-fixes.md`.
 
 Scope: evolve `Bluehands.EventSourcing.Diff` independently of ScriptRunner. Prioritize predictable collection semantics and correctness over adding options. Keep ordered comparisons as the default and settle collection behavior and difference kinds before a stable release.
 
 ## 1. Unordered comparison for atomic elements
+
+Status: partially addressed. Sets (`ISet<T>`/`IReadOnlySet<T>`) are now compared by membership (`SetEquals`). Unordered atomic lists (multiset) are still open.
 
 Add opt-in unordered comparison per collection property/path.
 
@@ -31,6 +33,8 @@ Acceptance checks:
 
 ## 2. Key-based matching for complex collections
 
+Status: done via `[Diff(typeof(T), MatchBy = ...)]` (ESDIFF006/007, `CollectionDiff.Keyed`).
+
 Treat identity-based matching as a separate feature from unordered atomic equality.
 
 - Require explicit key selection, such as `Customer.Id`; do not infer identity from a property named `Id`.
@@ -49,6 +53,8 @@ Acceptance checks:
 - Path exclusions work for added, removed, and modified entries.
 
 ## 3. Explicit difference kinds
+
+Status: done (`DifferenceKind`, `Difference.Kind`, factories).
 
 Add a small `DifferenceKind` with:
 
@@ -69,6 +75,8 @@ Acceptance checks:
 - Decide constructor compatibility before changing the public result type.
 
 ## 4. Diagnostics and dictionary hardening
+
+Status: done: ignored-name warning (ESDIFF005), `IDictionary` support, ambiguous interface properties (ESDIFF004). Open: dictionary key-comparer asymmetry, custom-comparison/ignored-path coverage review, mixed nullable generic usages.
 
 ### Ignored property names
 

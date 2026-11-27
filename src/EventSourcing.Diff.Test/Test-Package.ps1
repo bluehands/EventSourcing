@@ -16,6 +16,7 @@ try {
     $files = @($archive.Entries.FullName)
     if ('analyzers/dotnet/cs/EventSourcing.Diff.SourceGenerator.dll' -notin $files) { throw 'Analyzer missing from package.' }
     if ('lib/net10.0/EventSourcing.Diff.dll' -notin $files) { throw 'Runtime missing from package.' }
+    if ('lib/net10.0/EventSourcing.Diff.xml' -notin $files) { throw 'XML documentation missing from package.' }
     if ($manifest.package.metadata.dependencies.group.dependency) { throw 'The package must have no application dependencies.' }
 } finally { $archive.Dispose() }
 
@@ -56,6 +57,7 @@ public static partial class Comparisons;
 '@ | Set-Content (Join-Path $consumer 'Consumer.csproj')
 @'
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using EventSourcing.Diff;
 using Models;
@@ -70,8 +72,25 @@ try
     throw new Exception("Unknown runtime subclass was silently ignored.");
 }
 catch (NotSupportedException) { }
-Console.WriteLine("Package smoke check passed: generator loading, shared types, nested comparisons, external subtype rejection.");
 
+var error = new InvalidOperationException("boom");
+Document Doc(Exception? e, HashSet<string> tags, params Line[] lines) => new(e, tags, [.. lines]);
+if (DocumentComparisons.Diff(Doc(error, ["a", "b"], new Line(1, 1)), Doc(error, ["b", "a"], new Line(1, 1))).Length != 0)
+    throw new Exception("Equal exception or reordered set reported a difference.");
+ImmutableArray<Difference> added = DocumentComparisons.Diff(Doc(null, ["a"], new Line(1, 1)), Doc(null, ["a", "b"], new Line(1, 1)));
+if (added.Length != 1 || added[0].Kind != DifferenceKind.Added || added[0].PropertyPath.ToString() != "Tags")
+    throw new Exception("Set addition was not reported as Added.");
+if (DocumentComparisons.Diff(Doc(null, [], new Line(1, 1), new Line(2, 2)), Doc(null, [], new Line(2, 2), new Line(1, 1))).Length != 0)
+    throw new Exception("Reordered keyed list reported a difference.");
+ImmutableArray<Difference> keyed = DocumentComparisons.Diff(Doc(null, [], new Line(1, 1), new Line(2, 2)), Doc(null, [], new Line(2, 5), new Line(1, 1)));
+if (keyed.Length != 1 || keyed[0].Kind != DifferenceKind.Changed || keyed[0].PropertyPath.ToString() != "Lines[2].Quantity")
+    throw new Exception("Keyed element change had an unexpected path.");
+Console.WriteLine("Package smoke check passed: generator loading, XML docs, shared types, nested comparisons, external subtype rejection, framework types, sets, keyed matching.");
+
+public record Line(int Id, int Quantity);
+public record Document(Exception? Error, HashSet<string> Tags, List<Line> Lines);
+[Diff(typeof(Document)), Diff(typeof(Line), MatchBy = nameof(Line.Id))]
+public static partial class DocumentComparisons;
 public record State(Address Address);
 public record External(int Value, string Extra) : Base(Value);
 [Diff(typeof(State))]

@@ -33,15 +33,18 @@ Results are `ImmutableArray<Difference>`. Each difference contains `PropertyPath
 ## Comparison contract
 
 - **Objects:** readable public instance properties, including inherited properties, in ordinal property-name order. Indexers, static properties, and inaccessible getters are excluded. Shared references are skipped, so models must not be mutated in place.
-- **Atomic values:** non-collection value types (including nullable values), strings, `object`, delegates, `Uri`, `Version`, and `Type` use `EqualityComparer<T>.Default`. Structs are not traversed. A property typed as `object` is compared by equality, not by inspecting its runtime model.
+- **Atomic values:** non-collection value types, strings, `object`, delegates, and framework types (`System.*`/`Microsoft.*` from referenced assemblies that are not `IEnumerable<T>`, e.g. `Uri`, `Version`, `Type`, `Encoding`, `CultureInfo`, `Exception`) use `EqualityComparer<T>.Default`. Structs are not traversed. A property typed as `object` is compared by equality, not by inspecting its runtime model.
 - **Null or runtime-type changes:** one whole-object difference at the current path. A null collection is distinct from an empty collection.
-- **Dictionaries:** types implementing `IReadOnlyDictionary<TKey, TValue>` are matched by key. Removed and modified entries follow old enumeration order; additions follow new enumeration order. Key equality/comparers must be consistent between both dictionaries. The `IDictionary<TKey, TValue>` interface alone is not recognized as a keyed dictionary.
-- **Enumerables:** types implementing `IEnumerable<T>` are ordered. Atomic-element collections report a whole-collection difference; complex elements are compared by index. Insertions/removals can therefore produce positional differences. Sets are also compared in enumeration order. Enumerables must be finite and safe to enumerate.
-- **Immutable arrays:** default and empty arrays are distinct; a default/non-default transition is one whole-array difference.
-- **Polymorphism:** accessible, closed, concrete subclasses and interface implementations declared in the consumer assembly are discovered automatically, most-specific first. Concrete base instances are compared normally. Two distinct instances of an unknown runtime subtype throw `NotSupportedException` rather than silently losing changes. Use an explicit atomic declaration or a custom comparison for external/open hierarchies.
+- **Dictionaries:** types implementing `IReadOnlyDictionary<TKey, TValue>` or `IDictionary<TKey, TValue>` are matched by key. Removed and modified entries follow old enumeration order; additions follow new enumeration order. Key equality/comparers must be consistent between both dictionaries.
+- **Sets:** types implementing `IReadOnlySet<T>` or `ISet<T>` are compared by membership (`SetEquals`), ignoring order. Differences are reported at the set path as `Removed` (old elements missing from the new set) then `Added`; elements are not traversed.
+- **Enumerables:** types implementing `IEnumerable<T>` are ordered. Atomic-element collections report a whole-collection difference; complex elements are compared by index, with positions past the shorter list reported as `Added`/`Removed`. Insertions/removals can therefore produce positional differences (use key-based matching to avoid this). Enumerables must be finite and safe to enumerate.
+- **Nullable structs and immutable arrays:** `T?` is compared like `T` when both have values (e.g. `ImmutableArray<int>?`); a null transition is one `Changed`. Default and empty immutable arrays are distinct; a default/non-default transition is one whole-array difference.
+- **Polymorphism:** accessible, closed, concrete subclasses and interface implementations declared in the consumer assembly are discovered automatically, most-specific first. Concrete base instances are compared normally. Two distinct instances of an unknown runtime subtype throw `NotSupportedException` rather than silently losing changes. Use `TreatAsValue` or a custom comparison for external/open hierarchies.
 - **Graphs:** acyclic immutable models only. Recursive model *definitions* are supported, but comparing distinct cyclic object graphs is not. Getters and custom comparisons can throw; exceptions propagate.
 
-Results hold references to the original values, not serialized snapshots. A missing dictionary/list entry and an entry whose value is null can produce the same old/new values; the result is not an executable patch format. Values can contain secrets: filter or format them before logging.
+Results hold references to the original values, not serialized snapshots; the result is not an executable patch format. Values can contain secrets: filter or format them before logging.
+
+`Difference.Kind` is `Added` or `Removed` for membership: dictionary entries, list positions past the shorter list, set elements, and keyed elements (`OldValue` or `NewValue` is `null` respectively, so null-valued entries stay distinguishable). Everything else is `Changed`, including null transitions, runtime-type changes, and whole-collection differences.
 
 ## Ignore properties and paths
 
@@ -74,6 +77,20 @@ public static partial class IdComparisons;
 
 `TreatAsValue` applies to the selected type and its subclasses/implementations. This keeps domain IDs at one path without any application-specific rules in the generator.
 
+## Key-based matching
+
+Match complex collection elements by an explicit key instead of position:
+
+```csharp
+[Diff(typeof(Order))]
+[Diff(typeof(OrderLine), MatchBy = nameof(OrderLine.Id))]
+public static partial class OrderComparisons;
+```
+
+- `MatchBy` names a readable public instance property (not a collection) and is configured per element type. It applies to subclasses and implementations, so a key on a base interface works for polymorphic lists. Different `MatchBy` values for one type in a comparison class are an error.
+- Applies to lists, arrays, immutable arrays, and sets of that element type, and takes precedence over set membership. Order is ignored.
+- Matched elements are compared recursively with paths like `Lines[42].Quantity`; unmatched ones are `Removed`/`Added` at `Lines[42]`. Ignored paths apply to keyed entries too.
+- Duplicate keys, null keys, and null elements throw `InvalidOperationException` naming the collection path.
 ## Custom comparisons
 
 Supply a static `Diff` overload in the comparison class (any partial declaration). Its first two parameter types must match, followed by `PropertyPath?` and `DiffSettings?`, returning `ImmutableArray<Difference>`:
@@ -97,18 +114,27 @@ public static partial class CustomerComparisons
 }
 ```
 
-Custom methods own null handling, path exclusions, and their returned differences. Collections with custom element comparisons are compared element-by-element, rather than bypassing those methods with `SequenceEqual`.
+Custom methods own null handling, path exclusions, and their returned differences. Build results with `Difference.Changed(path, old, new)`, `Difference.Added(path, value)`, and `Difference.Removed(path, value)`; the `Difference` constructor defaults `Kind` to `Changed`. Collections with custom element comparisons are compared element-by-element, rather than bypassing those methods with `SequenceEqual`.
 
 ## Diagnostics and limits
 
 | Diagnostic | Meaning |
 |---|---|
 | `ESDIFF001` | Comparison class must be a non-file-local, top-level, non-generic static partial class |
-| `ESDIFF002` | Unsupported model: inaccessible/file-local/open type, ref struct, multidimensional array, pointer, or dynamic |
+| `ESDIFF002` | Unsupported model (reported at the `[Diff]` attribute with the property path): inaccessible/file-local/open type, ref struct, multidimensional array, pointer, or dynamic |
 | `ESDIFF003` | Invalid custom comparison signature |
+| `ESDIFF004` | Ambiguous property inherited from several interfaces; ignore it or provide a custom comparison |
+| `ESDIFF005` | Warning: an ignored property name matches no property of the type |
+| `ESDIFF006` | Invalid `MatchBy` property (missing, not readable/public/instance, indexer, or a collection) |
+| `ESDIFF007` | Conflicting `MatchBy` values for the same type |
 
-Unordered/identity-based matching, glob patterns, cycle detection, patch generation, and automatic serialization/redaction are intentionally not included.
+Limitations:
 
+- Dictionary lookups use each dictionary's own comparer; mismatched comparers can give asymmetric results.
+- Structs (including record structs) are not traversed; they are compared by equality.
+- Unknown runtime subtypes from other assemblies throw `NotSupportedException`.
+- Set elements are not traversed; keyed collections ignore order.
+- Glob patterns, cycle detection, patch generation, and automatic serialization/redaction are not included.
 ## Development checks
 
 ```powershell
@@ -117,4 +143,4 @@ dotnet pack src/EventSourcing.Diff/EventSourcing.Diff.csproj --configuration Rel
 ./src/EventSourcing.Diff.Test/Test-Package.ps1 -PackageDirectory ./artifacts/diff-package -WorkingDirectory "$env:TEMP/diff-package-smoke"
 ```
 
-The package smoke check uses an isolated NuGet cache and two consumer assemblies, without project references to this repository. It verifies analyzer loading, shared runtime type identity, nested comparisons of referenced models, and rejection of unknown external runtime subclasses.
+The package smoke check uses an isolated NuGet cache and two consumer assemblies, without project references to this repository. It verifies analyzer loading, shared runtime type identity, nested comparisons of referenced models, packaged XML documentation, framework types, sets, keyed matching, and rejection of unknown external runtime subclasses.
