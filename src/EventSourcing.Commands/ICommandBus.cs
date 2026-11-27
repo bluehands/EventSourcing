@@ -12,6 +12,11 @@ public interface ICommandBus
     Task SendCommand(Command command);
 }
 
+/// <remarks>
+/// Waiting for the <see cref="CommandProcessed{TError}"/> event only tells the caller whether the command succeeded
+/// or failed. To read the effect of a command, wait until it is applied and then read the affected projection.
+/// Do not use <see cref="CommandProcessed{TError}"/> events as a source of command outcomes elsewhere.
+/// </remarks>
 public static class CommandBusExtension
 {
     public static Task<Event<CommandProcessed<TError>>> SendAndWaitForProcessedEvent<TError>(this ICommandBus commandBus, Command command, IObservable<Event> events) where TError : notnull => commandBus.SendAndWaitForProcessedEvent(command, events
