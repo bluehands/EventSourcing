@@ -98,7 +98,9 @@ Ensure generated call sites consistently respect ignored paths before invoking c
 
 Add regression tests for conflicting inherited interface properties and mixed nullable generic usages. Support them correctly or produce actionable generator diagnostics rather than generated-code compiler errors. These edge cases require reproduction before being classified as confirmed defects.
 
-## 5. Measure allocations before optimizing
+## 5. Measure allocations before optimizing (done, replaced by `diff-runtime-performance.md`)
+
+Implemented and measured in `diff-runtime-performance.md`; the original notes follow.
 
 The current implementation builds paths and intermediate immutable result arrays throughout recursion. Measure their cost before changing the design.
 

@@ -18,6 +18,7 @@
   <Project Path="EventSourcing.Commands.SourceGenerator/EventSourcing.Commands.SourceGenerator.csproj" />
   <Project Path="EventSourcing.Commands.Templates/EventSourcing.Commands.Templates.csproj" />
   <Project Path="EventSourcing.Commands/EventSourcing.Commands.csproj" />
+  <Project Path="EventSourcing.Diff.Benchmarks/EventSourcing.Diff.Benchmarks.csproj" />
   <Project Path="EventSourcing.Diff.SourceGenerator/EventSourcing.Diff.SourceGenerator.csproj" />
   <Project Path="EventSourcing.Diff.Test/EventSourcing.Diff.Test.csproj" />
   <Project Path="EventSourcing.Diff/EventSourcing.Diff.csproj" />

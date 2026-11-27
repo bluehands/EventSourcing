@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -133,7 +133,7 @@ public sealed class DiffGenerator : IIncrementalGenerator
             Line((host.DeclaredAccessibility == Accessibility.Public ? "public" : "internal") + " static partial class " + Escape(host.Name));
             Line("{");
             foreach (var model in models.Values.OrderBy(m => Name(m.Type), StringComparer.Ordinal))
-                if (!customMethods.ContainsKey(model.Type)) EmitMethod(model);
+                EmitMethod(model);
             Line("}");
 
             // The hash keeps case-only variants apart because hint names are compared case-insensitively.
@@ -287,60 +287,118 @@ public sealed class DiffGenerator : IIncrementalGenerator
         {
             var type = model.Type;
             var parameterType = Name(type) + (type.IsReferenceType ? "?" : "");
-            Line($"    {(IsPublic(type) ? "public" : "internal")} static {Result} Diff({parameterType} oldValue, {parameterType} newValue, {Runtime}PropertyPath? path = null, {Runtime}DiffSettings? settings = null)");
-            Line("    {");
-            Line($"        path ??= {Runtime}PropertyPath.Empty;");
-            Line("        if (settings?.PathsToIgnore.Contains(path) == true) return [];");
+            var accessibility = IsPublic(type) ? "public" : "internal";
+            var extension = configurations.ContainsKey(type) ? "this " : "";
             var immutableArray = type is INamedTypeSymbol named && named.OriginalDefinition.ToDisplayString() == "System.Collections.Immutable.ImmutableArray<T>";
-            if (model.Atomic)
+            var custom = customMethods.ContainsKey(type);
+            Line($"    private static void CollectDifferences({parameterType} oldValue, {parameterType} newValue, {Runtime}DiffCollector collector)");
+            Line("    {");
+            if (custom)
             {
-                Line($"        return global::System.Collections.Generic.EqualityComparer<{parameterType}>.Default.Equals(oldValue, newValue) ? [] : [new(path, oldValue, newValue)];");
+                var bang = type.IsReferenceType ? "!" : "";
+                Line($"        collector.AddRange(Diff(oldValue{bang}, newValue{bang}, collector.Path, collector.Settings));");
+            }
+            else if (model.Atomic)
+            {
+                Line($"        if (!global::System.Collections.Generic.EqualityComparer<{parameterType}>.Default.Equals(oldValue, newValue)) collector.Changed(oldValue, newValue);");
             }
             else if (model.Underlying is not null)
             {
-                Line("        if (!oldValue.HasValue || !newValue.HasValue) return oldValue.HasValue == newValue.HasValue ? [] : [new(path, oldValue, newValue)];");
-                Line("        return Diff(oldValue.Value, newValue.Value, path, settings);");
+                Line("        if (!oldValue.HasValue || !newValue.HasValue)");
+                Line("        {");
+                Line("            if (oldValue.HasValue != newValue.HasValue) collector.Changed(oldValue, newValue);");
+                Line("            return;");
+                Line("        }");
+                Line("        CollectDifferences(oldValue.Value, newValue.Value, collector);");
             }
             else if (model.Dictionary is not null)
             {
                 var args = model.Dictionary.TypeArguments;
+                var exact = type is INamedTypeSymbol exactType && exactType.OriginalDefinition.ToDisplayString() is
+                    "System.Collections.Immutable.ImmutableDictionary<TKey, TValue>" or "System.Collections.Generic.Dictionary<TKey, TValue>";
                 var contract = $"global::System.Collections.Generic.{(model.ReadOnlyDictionary ? "IReadOnlyDictionary" : "IDictionary")}<{Name(args[0])}, {NullableName(args[1])}>?";
-                Line($"        return {Runtime}CollectionDiff.Dictionary<{Name(args[0])}, {NullableName(args[1])}>(({contract})oldValue, ({contract})newValue, Diff, path, settings);");
+                var cast = exact ? "" : $"({contract})";
+                Line($"        collector.Dictionary<{Name(args[0])}, {NullableName(args[1])}>({cast}oldValue, {cast}newValue, CollectDifferences);");
             }
             else if (model.Element is not null)
             {
                 if (immutableArray)
-                    Line("        if (oldValue.IsDefault || newValue.IsDefault) return oldValue.Equals(newValue) ? [] : [new(path, oldValue, newValue)];");
+                {
+                    Line("        if (oldValue.IsDefault || newValue.IsDefault)");
+                    Line("        {");
+                    Line("            if (!oldValue.Equals(newValue)) collector.Changed(oldValue, newValue);");
+                    Line("            return;");
+                    Line("        }");
+                }
                 var element = NullableName(model.Element);
+                var atomic = IsAtomic(model.Element) && !HasCustom(model.Element) ? "true" : "false";
                 if (model.Key is not null)
                 {
                     var keyType = IsNullableStruct(model.Key.Type, out _) ? "object" : Name(model.Key.Type);
-                    Line($"        return {Runtime}CollectionDiff.Keyed<{element}, {keyType}>(oldValue, newValue, static x => (({Name(model.Key.ContainingType)})x!).{Escape(model.Key.Name)}!, Diff, path, settings);");
+                    if (immutableArray) Line("        if (oldValue == newValue) return;");
+                    Line($"        collector.Keyed<{element}, {keyType}>(oldValue, newValue, static x => (({Name(model.Key.ContainingType)})x!).{Escape(model.Key.Name)}!, CollectDifferences);");
                 }
                 else if (model.Set is not null)
                 {
                     var contract = $"global::System.Collections.Generic.{model.Set}<{element}>?";
-                    Line($"        return {Runtime}CollectionDiff.Set<{element}>(({contract})oldValue, ({contract})newValue, path, settings);");
+                    Line($"        collector.Set<{element}>(({contract})oldValue, ({contract})newValue);");
+                }
+                else if (immutableArray || type is IArrayTypeSymbol)
+                    Line($"        collector.Array<{element}>(oldValue, newValue, CollectDifferences, {atomic});");
+                else if (FindInterface(type, "System.Collections.Generic.IReadOnlyList<T>") is { } list && SymbolEqualityComparer.Default.Equals(list.TypeArguments[0], model.Element))
+                {
+                    var contract = $"global::System.Collections.Generic.IReadOnlyList<{element}>?";
+                    Line($"        collector.List<{element}>(({contract})oldValue, ({contract})newValue, CollectDifferences, {atomic});");
                 }
                 else
-                    Line($"        return {Runtime}CollectionDiff.Enumerable<{element}>(oldValue, newValue, Diff, {(IsAtomic(model.Element) && !HasCustom(model.Element) ? "true" : "false")}, path, settings);");
+                    Line($"        collector.Enumerable<{element}>(oldValue, newValue, CollectDifferences, {atomic});");
             }
             else
             {
-                Line("        if (global::System.Object.ReferenceEquals(oldValue, newValue)) return [];");
-                Line("        if (oldValue is null || newValue is null || oldValue.GetType() != newValue.GetType()) return [new(path, oldValue, newValue)];");
+                Line("        if (global::System.Object.ReferenceEquals(oldValue, newValue)) return;");
+                Line("        if (oldValue is null || newValue is null || oldValue.GetType() != newValue.GetType())");
+                Line("        {");
+                Line("            collector.Changed(oldValue, newValue);");
+                Line("            return;");
+                Line("        }");
                 for (var index = 0; index < model.Derived.Length; index++)
                 {
                     var derived = Name(model.Derived[index]);
-                    Line($"        if (oldValue is {derived} derived{index}) return Diff(derived{index}, ({derived})newValue, path, settings);");
+                    Line($"        if (oldValue is {derived} derived{index})");
+                    Line("        {");
+                    Line($"            CollectDifferences(derived{index}, ({derived})newValue, collector);");
+                    Line("            return;");
+                    Line("        }");
                 }
-                Line($"        if (oldValue.GetType() != typeof({Name(type)})) throw new global::System.NotSupportedException($\"Runtime type '{{oldValue.GetType()}}' at '{{path}}' is not known to the diff generator. Declare a comparison in its assembly or provide a custom comparison.\");");
-                Line($"        var differences = global::System.Collections.Immutable.ImmutableArray.CreateBuilder<{Runtime}Difference>();");
+                Line($"        if (oldValue.GetType() != typeof({Name(type)})) throw new global::System.NotSupportedException($\"Runtime type '{{oldValue.GetType()}}' at '{{collector.Path}}' is not known to the diff generator. Declare a comparison in its assembly or provide a custom comparison.\");");
                 foreach (var property in model.Properties)
-                    Line($"        differences.AddRange(Diff(oldValue.{Escape(property.Name)}, newValue.{Escape(property.Name)}, path.Push({SymbolDisplay.FormatLiteral(property.Name, true)}), settings));");
-                Line("        return differences.ToImmutable();");
+                {
+                    var name = Escape(property.Name);
+                    var literal = SymbolDisplay.FormatLiteral(property.Name, true);
+                    var propertyType = NullableName(property.Type);
+                    var hasCustom = HasCustom(property.Type);
+                    if (!hasCustom && models.TryGetValue(property.Type.WithNullableAnnotation(NullableAnnotation.NotAnnotated), out var propertyModel) && propertyModel.Atomic)
+                        Line($"        if (!global::System.Collections.Generic.EqualityComparer<{propertyType}>.Default.Equals(oldValue.{name}, newValue.{name})) collector.Changed({literal}, oldValue.{name}, newValue.{name});");
+                    else
+                    {
+                        var shortcut = property.Type.IsReferenceType && !hasCustom ? $"!global::System.Object.ReferenceEquals(oldValue.{name}, newValue.{name}) && " : "";
+                        Line($"        if ({shortcut}collector.Enter({literal}))");
+                        Line("        {");
+                        Line($"            CollectDifferences(oldValue.{name}, newValue.{name}, collector);");
+                        Line("            collector.Exit();");
+                        Line("        }");
+                    }
+                    Line("        if (collector.Stopped) return;");
+                }
             }
             Line("    }");
+            if (!custom)
+                Line($"    {accessibility} static {Result} Diff({extension}{parameterType} oldValue, {parameterType} newValue, {Runtime}PropertyPath? path = null, {Runtime}DiffSettings? settings = null)" +
+                    $" => {Runtime}DiffCollector.Collect<{parameterType}>(oldValue, newValue, path, settings, CollectDifferences);");
+            if (!host.GetMembers("HasDifferences").OfType<IMethodSymbol>().Any(m => m.Parameters.Length >= 2 &&
+                    SymbolEqualityComparer.Default.Equals(m.Parameters[0].Type, type) && SymbolEqualityComparer.Default.Equals(m.Parameters[1].Type, type)))
+                Line($"    {accessibility} static bool HasDifferences({extension}{parameterType} oldValue, {parameterType} newValue, {Runtime}DiffSettings? settings = null)" +
+                    $" => {Runtime}DiffCollector.HasDifferences<{parameterType}>(oldValue, newValue, null, settings, CollectDifferences);");
         }
 
         void Fail(ITypeSymbol type, string via, Location? root, string reason)

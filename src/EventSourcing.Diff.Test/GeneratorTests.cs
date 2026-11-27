@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -583,14 +584,310 @@ public class GeneratorTests
         Assert.Single(names, n => n.StartsWith("A.comparisons.", StringComparison.Ordinal));
     }
 
-    internal static ImmutableArray<Difference> Run(string source)
+    const string RichModel = """
+        using EventSourcing.Diff;
+        using System;
+        using System.Collections.Generic;
+        using System.Collections.Immutable;
+        public enum Kind { A, B }
+        public record Leaf(string Name, int Value);
+        public record Line(int Id, int Quantity);
+        public record Money(decimal Amount, string Currency);
+        public readonly record struct Stamp(int Ticks, string Zone);
+        public abstract record Shape(int Id);
+        public record Circle(int Id, int Radius) : Shape(Id);
+        public record Square(int Id, int Side) : Shape(Id);
+        public record Rich(int Version, string? Name, Kind Kind, Leaf? Leaf, Shape? Shape, int? Count, Money Price, Stamp? Last,
+            ImmutableArray<Leaf> Items, Leaf[] Array, List<Leaf> List, IEnumerable<int> Numbers, ImmutableDictionary<string, Leaf> Map,
+            Dictionary<string, int> Counts, IDictionary<string, Leaf> Open, HashSet<string> Tags, ImmutableArray<Line> Lines);
+        [Diff(typeof(Rich), nameof(Rich.Version)), Diff(typeof(Line), MatchBy = nameof(Line.Id))]
+        public static partial class Comparisons
+        {
+            public static ImmutableArray<Difference> Diff(Money? a, Money? b, PropertyPath? path, DiffSettings? settings)
+                => a?.Amount == b?.Amount ? [] : [new(path ?? PropertyPath.Empty, a, b)];
+            public static ImmutableArray<Difference> Diff(Stamp a, Stamp b, PropertyPath? path, DiffSettings? settings)
+                => a.Ticks == b.Ticks ? [] : [new(path ?? PropertyPath.Empty, a, b)];
+        }
+        public static class Scenario
+        {
+            static Rich Make() => new(1, "n", Kind.A, new("l", 1), new Circle(1, 1), 1, new(1m, "EUR"), new Stamp(1, "a"),
+                [new("a", 1), new("b", 2)], [new("a", 1)], [new("a", 1)], new[] { 1, 2 }, ImmutableDictionary<string, Leaf>.Empty.Add("k", new("a", 1)),
+                new() { ["k"] = 1 }, new Dictionary<string, Leaf> { ["k"] = new("a", 1) }, ["x", "y"], [new(1, 1), new(2, 2)]);
+
+            public static object Run()
+            {
+                var b = Make();
+                var values = new List<Rich?>
+                {
+                    null, b, Make(), b with { Version = 2 }, b with { Name = null }, b with { Name = "other" }, b with { Kind = Kind.B },
+                    b with { Leaf = null }, b with { Leaf = new("l", 2) }, b with { Shape = null }, b with { Shape = new Circle(1, 2) },
+                    b with { Shape = new Square(1, 1) }, b with { Shape = new Circle(1, 1) }, b with { Count = null }, b with { Count = 2 },
+                    b with { Price = new(1m, "USD") }, b with { Price = new(2m, "EUR") }, b with { Last = null }, b with { Last = new Stamp(1, "b") },
+                    b with { Last = new Stamp(2, "a") }, b with { Items = default }, b with { Items = [] }, b with { Items = [new("a", 1)] },
+                    b with { Items = [new("a", 1), new("b", 3)] }, b with { Array = [] }, b with { Array = [new("a", 2)] },
+                    b with { List = [new("a", 1), new("z", 1)] }, b with { Numbers = new[] { 1, 3 } }, b with { Numbers = new List<int> { 1, 2 } },
+                    b with { Map = ImmutableDictionary<string, Leaf>.Empty }, b with { Map = b.Map.SetItem("k", new("a", 9)) },
+                    b with { Map = b.Map.Add("j", new("a", 1)) }, b with { Counts = new() { ["k"] = 2 } }, b with { Counts = new() },
+                    b with { Open = new Dictionary<string, Leaf>() }, b with { Open = new Dictionary<string, Leaf> { ["k"] = new("a", 5) } },
+                    b with { Tags = ["x"] }, b with { Tags = ["y", "x"] }, b with { Lines = [new(2, 2), new(1, 1)] },
+                    b with { Lines = [new(1, 1), new(2, 3)] }, b with { Lines = default }, b with { Lines = [] },
+                };
+                var P = PropertyPath.Empty;
+                var settings = new DiffSettings?[]
+                {
+                    null, new DiffSettings(), new DiffSettings([P.Push("Leaf")]), new DiffSettings([P.Push("Items").PushIndex(1)]),
+                    new DiffSettings([P.Push("Map").PushKey("k")]), new DiffSettings([P.Push("Shape").Push("Radius")]),
+                    new DiffSettings([P.Push("Lines").PushKey(1)]), new DiffSettings([P.Push("Price"), P.Push("Last")]),
+                    new DiffSettings([P.Push("Name"), P.Push("Items"), P.Push("Open").PushKey("k"), P.Push("Tags"), P.Push("Counts")]),
+                };
+                int total = 0, different = 0;
+                var mismatches = new List<string>();
+                for (var s = 0; s < settings.Length; s++)
+                    for (var i = 0; i < values.Count; i++)
+                        for (var j = 0; j < values.Count; j++)
+                        {
+                            var diff = Comparisons.Diff(values[i], values[j], null, settings[s]);
+                            var has = Comparisons.HasDifferences(values[i], values[j], settings[s]);
+                            if (has != values[i].HasDifferences(values[j], settings[s]) || has == diff.IsEmpty) mismatches.Add($"{s}:{i}:{j}");
+                            total++;
+                            if (!diff.IsEmpty) different++;
+                        }
+                return $"{string.Join(",", mismatches)}|{total}|{different}";
+            }
+        }
+        """;
+
+    [Fact]
+    public void HasDifferences_matches_Diff_for_a_broad_model_over_many_pairs_and_ignore_lists()
+    {
+        var parts = ((string)Invoke(RichModel)).Split('|');
+        Assert.Equal("", parts[0]);
+        var total = int.Parse(parts[1]);
+        var different = int.Parse(parts[2]);
+        Assert.True(total > 10000);
+        Assert.InRange(different, total / 4, total - 1000);
+    }
+
+    [Fact]
+    public void HasDifferences_stops_at_the_first_difference()
+    {
+        Assert.Equal("True0|True1|2", Invoke("""
+            using EventSourcing.Diff;
+            using System.Collections.Immutable;
+            public record Tag(string Value);
+            public record Model(int First, Tag Second, Tag Third);
+            [Diff(typeof(Model))]
+            public static partial class Comparisons
+            {
+                public static int Calls;
+                public static ImmutableArray<Difference> Diff(Tag? a, Tag? b, PropertyPath? path, DiffSettings? settings)
+                {
+                    Calls++;
+                    return a?.Value == b?.Value ? [] : [new(path ?? PropertyPath.Empty, a, b)];
+                }
+            }
+            public static class Scenario
+            {
+                public static object Run()
+                {
+                    var a = new Model(1, new("a"), new("a"));
+                    Comparisons.Calls = 0;
+                    var first = Comparisons.HasDifferences(a, a with { First = 2 });
+                    var firstCalls = Comparisons.Calls;
+                    Comparisons.Calls = 0;
+                    var second = Comparisons.HasDifferences(a, a with { Second = new("b"), Third = new("b") });
+                    var secondCalls = Comparisons.Calls;
+                    Comparisons.Calls = 0;
+                    Comparisons.Diff(a, a with { Second = new("b"), Third = new("b") });
+                    return $"{first}{firstCalls}|{second}{secondCalls}|{Comparisons.Calls}";
+                }
+            }
+            """));
+    }
+
+    [Fact]
+    public void HasDifferences_honors_ignored_paths()
+    {
+        Assert.Equal("False,False,True,True,True", Invoke("""
+            using EventSourcing.Diff;
+            public record Leaf(int Value);
+            public record Model(int A, Leaf B, Leaf[] C);
+            [Diff(typeof(Model))] public static partial class Comparisons;
+            public static class Scenario
+            {
+                public static object Run()
+                {
+                    var settings = new DiffSettings([PropertyPath.Empty.Push("B").Push("Value"), PropertyPath.Empty.Push("C").PushIndex(1)]);
+                    var a = new Model(1, new(1), [new(1), new(1)]);
+                    return string.Join(",", new[]
+                    {
+                        Comparisons.HasDifferences(a, a with { B = new(2) }, settings),
+                        Comparisons.HasDifferences(a, a with { C = [new(1), new(5)] }, settings),
+                        Comparisons.HasDifferences(a, a with { C = [new(2), new(1)] }, settings),
+                        Comparisons.HasDifferences(a, a with { A = 2 }, settings),
+                        Comparisons.HasDifferences(a, a with { B = new(2) }),
+                    });
+                }
+            }
+            """));
+    }
+
+    [Fact]
+    public void HasDifferences_handles_null_and_runtime_type_transitions()
+    {
+        Assert.Equal("False,True,True,False,True,True", Invoke("""
+            using EventSourcing.Diff;
+            public abstract record Shape(int Id);
+            public record Circle(int Id, int Radius) : Shape(Id);
+            public record Square(int Id, int Side) : Shape(Id);
+            [Diff(typeof(Shape))] public static partial class Comparisons;
+            public static class Scenario
+            {
+                public static object Run()
+                {
+                    Shape? none = null;
+                    Shape circle = new Circle(1, 1);
+                    return string.Join(",", new[]
+                    {
+                        Comparisons.HasDifferences(none, none), Comparisons.HasDifferences(none, circle), Comparisons.HasDifferences(circle, none),
+                        Comparisons.HasDifferences(circle, new Circle(1, 1)), Comparisons.HasDifferences(circle, new Circle(1, 2)),
+                        Comparisons.HasDifferences(circle, new Square(1, 1)),
+                    });
+                }
+            }
+            """));
+    }
+
+    [Fact]
+    public void HasDifferences_handles_keyed_set_and_dictionary_properties()
+    {
+        Assert.Equal("False,True,True,True,True,True,True", Invoke($$"""
+            {{Lines}}
+            public record Model(ImmutableArray<Line> Lines, HashSet<string> Tags, Dictionary<string, int> Counts, ImmutableDictionary<string, int> Frozen);
+            [Diff(typeof(Model)), Diff(typeof(Line), MatchBy = nameof(Line.Id))] public static partial class Comparisons;
+            public static class Scenario
+            {
+                static Model Make() => new([new(1, 1), new(2, 2)], ["x", "y"], new() { ["k"] = 1 }, ImmutableDictionary<string, int>.Empty.Add("k", 1));
+                public static object Run()
+                {
+                    var a = Make();
+                    return string.Join(",", new[]
+                    {
+                        Comparisons.HasDifferences(a, new Model([new(2, 2), new(1, 1)], ["y", "x"], new() { ["k"] = 1 }, ImmutableDictionary<string, int>.Empty.Add("k", 1))),
+                        Comparisons.HasDifferences(a, a with { Lines = [new(1, 1), new(2, 3)] }),
+                        Comparisons.HasDifferences(a, a with { Lines = [new(1, 1)] }),
+                        Comparisons.HasDifferences(a, a with { Tags = ["x"] }),
+                        Comparisons.HasDifferences(a, a with { Counts = new() { ["k"] = 2 } }),
+                        Comparisons.HasDifferences(a, a with { Counts = new() { ["k"] = 1, ["j"] = 1 } }),
+                        Comparisons.HasDifferences(a, a with { Frozen = ImmutableDictionary<string, int>.Empty }),
+                    });
+                }
+            }
+            """));
+    }
+
+    const string ExtensionModel = """
+        using EventSourcing.Diff;
+        public record Leaf(string Name);
+        public readonly record struct Point(int X);
+        public abstract record Shape(int Id);
+        public record Circle(int Id, int Radius) : Shape(Id);
+        public record Holder(Point? At, Leaf Leaf, string Text);
+        [Diff(typeof(Holder)), Diff(typeof(Shape)), Diff(typeof(Point))] public static partial class Comparisons;
+        public static class Scenario
+        {
+            public static object Run()
+            {
+                Shape a = new Circle(1, 1);
+                Shape b = new Circle(1, 2);
+                var first = new Holder(new Point(1), new("a"), "t");
+                var second = first with { At = new Point(2) };
+                return $"{a.Diff(b).Length}{a.HasDifferences(b)}{first.Diff(second).Length}{first.HasDifferences(second)}{new Point(1).HasDifferences(new Point(2))}{new Point(1).Diff(new Point(1)).Length}";
+            }
+        }
+        """;
+
+    [Fact]
+    public void Configured_types_get_extension_methods_and_property_only_types_stay_static()
+    {
+        Assert.Equal("1True1TrueTrue0", Invoke(ExtensionModel));
+        var methods = Load(ExtensionModel).GetType("Comparisons")!.GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(m => m.Name is "Diff" or "HasDifferences").ToArray();
+        static bool IsExtension(MethodInfo method) => method.IsDefined(typeof(ExtensionAttribute), false);
+        Assert.Equal(["Holder", "Point", "Shape"],
+            methods.Where(IsExtension).Select(m => m.GetParameters()[0].ParameterType.Name).Distinct().OrderBy(n => n, StringComparer.Ordinal));
+        foreach (var plain in new[] { "Leaf", "String", "Nullable`1" })
+        {
+            var matching = methods.Where(m => m.GetParameters()[0].ParameterType.Name == plain).ToArray();
+            Assert.NotEmpty(matching);
+            Assert.DoesNotContain(matching, IsExtension);
+        }
+    }
+
+    [Fact]
+    public void Unchanged_states_are_compared_without_allocations()
+    {
+        var deltas = (long[])Invoke("""
+            using EventSourcing.Diff;
+            using System;
+            using System.Collections.Generic;
+            using System.Collections.Immutable;
+            public enum Kind { A, B }
+            public record Leaf(string Name, int Value);
+            public abstract record Shape(int Id);
+            public record Circle(int Id, int Radius) : Shape(Id);
+            public record Square(int Id, int Side) : Shape(Id);
+            public record State(int Version, string Name, Guid Id, DateTimeOffset At, Kind Kind, Leaf Leaf, Shape Shape,
+                ImmutableArray<Leaf> Items, Leaf[] Array, List<Leaf> List, ImmutableDictionary<string, Leaf> Map);
+            [Diff(typeof(State))] public static partial class Comparisons;
+            public static class Scenario
+            {
+                static State Build() => new(1, "name", Guid.Parse("11111111-1111-1111-1111-111111111111"), new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                    Kind.B, new("leaf", 1), new Circle(1, 2), [new("a", 1), new("b", 2)], [new("c", 3)], [new("d", 4)],
+                    ImmutableDictionary<string, Leaf>.Empty.Add("k", new("e", 5)).Add("j", new("f", 6)));
+
+                public static object Run()
+                {
+                    var P = PropertyPath.Empty;
+                    var a = Build();
+                    var pairs = new[] { (a, a with { }), (a, Build()) };
+                    var settings = new DiffSettings?[] { null, new DiffSettings([P.Push("Name"), P.Push("Items").PushIndex(0), P.Push("Map").PushKey("k"), P.Push("Shape").Push("Radius")]) };
+                    var results = new long[pairs.Length * settings.Length * 2];
+                    var slot = 0;
+                    foreach (var (x, y) in pairs)
+                        foreach (var s in settings)
+                        {
+                            for (var warm = 0; warm < 5; warm++)
+                            {
+                                Comparisons.HasDifferences(x, y, s);
+                                Comparisons.Diff(x, y, null, s);
+                            }
+                            var found = false;
+                            var before = GC.GetAllocatedBytesForCurrentThread();
+                            for (var n = 0; n < 100; n++) found |= Comparisons.HasDifferences(x, y, s);
+                            results[slot++] = found ? -1 : GC.GetAllocatedBytesForCurrentThread() - before;
+                            before = GC.GetAllocatedBytesForCurrentThread();
+                            for (var n = 0; n < 100; n++) found |= !Comparisons.Diff(x, y, null, s).IsEmpty;
+                            results[slot++] = found ? -1 : GC.GetAllocatedBytesForCurrentThread() - before;
+                        }
+                    return results;
+                }
+            }
+            """, OptimizationLevel.Release);
+        Assert.Equal(new long[8], deltas);
+    }
+    internal static ImmutableArray<Difference> Run(string source) => (ImmutableArray<Difference>)Invoke(source);
+
+    static object Invoke(string source, OptimizationLevel level = OptimizationLevel.Debug) =>
+        Load(source, level).GetType("Scenario")!.GetMethod("Run")!.Invoke(null, null)!;
+
+    static Assembly Load(string source, OptimizationLevel level = OptimizationLevel.Debug)
     {
         var compilation = Generate(source);
         using var assembly = new MemoryStream();
-        var result = compilation.Emit(assembly, cancellationToken: TestContext.Current.CancellationToken);
+        var result = compilation.WithOptions(compilation.Options.WithOptimizationLevel(level)).Emit(assembly, cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
-        var loaded = Assembly.Load(assembly.ToArray());
-        return (ImmutableArray<Difference>)loaded.GetType("Scenario")!.GetMethod("Run")!.Invoke(null, null)!;
+        return Assembly.Load(assembly.ToArray());
     }
 
     static CSharpCompilation Generate(string source)

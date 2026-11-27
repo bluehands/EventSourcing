@@ -18,7 +18,7 @@ public record Customer(string Name, Address Address, int Version);
 public static partial class CustomerComparisons;
 ```
 
-Call a generated `Diff` overload:
+Call a generated `Diff` overload, or the extension methods for types named in `[Diff]`:
 
 ```csharp
 var before = new Customer("Alice", new("Paris"), 1);
@@ -26,9 +26,27 @@ var after = new Customer("Alice", new("Berlin"), 2);
 
 var differences = CustomerComparisons.Diff(before, after);
 // One difference: Address.City, old value "Paris", new value "Berlin".
+
+var same = before.Diff(after);              // extension, same result
+bool changed = before.HasDifferences(after); // true
 ```
 
 Results are `ImmutableArray<Difference>`. Each difference contains `PropertyPath`, `OldValue`, and `NewValue`. Nested model and collection overloads are generated automatically. No `partial` modifier or attributes are required on the models themselves.
+
+## HasDifferences
+
+`HasDifferences(oldValue, newValue, settings)` returns whether any difference exists and stops at the first one, without building a result list. The contract is `HasDifferences(a, b, s) == !Diff(a, b, null, s).IsEmpty`. The one exception: because it stops early, it may not reach invalid keyed data (duplicate or null keys) further on, and identical keyed lists skip key validation (see below).
+
+`Diff` and `HasDifferences` are generated as extension methods (`old.Diff(new)`, `old.HasDifferences(new)`) only for types named in a `[Diff(typeof(T))]` attribute. Overloads generated for types reached only through properties (e.g. `string`, collections) are plain static methods, so they don't appear on common types. `CustomerComparisons.Diff(a, b)` keeps working. `DiffCollector` and `DiffWalk` are public only because generated code uses them; don't call them directly.
+
+## Performance
+
+- Unchanged parts that are the same reference are skipped, so replay states that reuse unchanged substructure are cheap.
+- Paths are only built for recorded differences (and custom comparisons).
+- Ignore lists are checked without building paths.
+- Comparing unchanged states allocates nothing, except keyed lists whose elements are not all reference-identical (they build key lookups).
+
+Measurements are in [the benchmark README](../EventSourcing.Diff.Benchmarks/README.md).
 
 ## Comparison contract
 
@@ -90,7 +108,7 @@ public static partial class OrderComparisons;
 - `MatchBy` names a readable public instance property (not a collection) and is configured per element type. It applies to subclasses and implementations, so a key on a base interface works for polymorphic lists. Different `MatchBy` values for one type in a comparison class are an error.
 - Applies to lists, arrays, immutable arrays, and sets of that element type, and takes precedence over set membership. Order is ignored.
 - Matched elements are compared recursively with paths like `Lines[42].Quantity`; unmatched ones are `Removed`/`Added` at `Lines[42]`. Ignored paths apply to keyed entries too.
-- Duplicate keys, null keys, and null elements throw `InvalidOperationException` naming the collection path.
+- Duplicate keys, null keys, and null elements throw `InvalidOperationException` naming the collection path. Validation only runs when the lists are not element-for-element reference-identical; identical lists return early without validation.
 ## Custom comparisons
 
 Supply a static `Diff` overload in the comparison class (any partial declaration). Its first two parameter types must match, followed by `PropertyPath?` and `DiffSettings?`, returning `ImmutableArray<Difference>`:
@@ -114,7 +132,7 @@ public static partial class CustomerComparisons
 }
 ```
 
-Custom methods own null handling, path exclusions, and their returned differences. Build results with `Difference.Changed(path, old, new)`, `Difference.Added(path, value)`, and `Difference.Removed(path, value)`; the `Difference` constructor defaults `Kind` to `Changed`. Collections with custom element comparisons are compared element-by-element, rather than bypassing those methods with `SequenceEqual`.
+Custom methods own null handling, exclusions below their own path, and their returned differences; generated code doesn't call them at an exactly ignored path. Build results with `Difference.Changed(path, old, new)`, `Difference.Added(path, value)`, and `Difference.Removed(path, value)`; the `Difference` constructor defaults `Kind` to `Changed`. Collections with custom element comparisons are compared element-by-element, rather than bypassing those methods with `SequenceEqual`.
 
 ## Diagnostics and limits
 
@@ -143,4 +161,4 @@ dotnet pack src/EventSourcing.Diff/EventSourcing.Diff.csproj --configuration Rel
 ./src/EventSourcing.Diff.Test/Test-Package.ps1 -PackageDirectory ./artifacts/diff-package -WorkingDirectory "$env:TEMP/diff-package-smoke"
 ```
 
-The package smoke check uses an isolated NuGet cache and two consumer assemblies, without project references to this repository. It verifies analyzer loading, shared runtime type identity, nested comparisons of referenced models, packaged XML documentation, framework types, sets, keyed matching, and rejection of unknown external runtime subclasses.
+The package smoke check uses an isolated NuGet cache and two consumer assemblies, without project references to this repository. It verifies analyzer loading, shared runtime type identity, nested comparisons of referenced models, packaged XML documentation, framework types, sets, keyed matching, `HasDifferences`, extension methods, and rejection of unknown external runtime subclasses.

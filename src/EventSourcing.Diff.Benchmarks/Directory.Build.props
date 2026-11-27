@@ -1,0 +1,7 @@
+<Project>
+  <!-- BenchmarkDotNet builds a generated project below bin/, which inherits these props instead of the csproj settings. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+</Project>

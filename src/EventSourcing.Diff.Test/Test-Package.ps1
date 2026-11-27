@@ -85,7 +85,12 @@ if (DocumentComparisons.Diff(Doc(null, [], new Line(1, 1), new Line(2, 2)), Doc(
 ImmutableArray<Difference> keyed = DocumentComparisons.Diff(Doc(null, [], new Line(1, 1), new Line(2, 2)), Doc(null, [], new Line(2, 5), new Line(1, 1)));
 if (keyed.Length != 1 || keyed[0].Kind != DifferenceKind.Changed || keyed[0].PropertyPath.ToString() != "Lines[2].Quantity")
     throw new Exception("Keyed element change had an unexpected path.");
-Console.WriteLine("Package smoke check passed: generator loading, XML docs, shared types, nested comparisons, external subtype rejection, framework types, sets, keyed matching.");
+var unchanged = new State(new("same"));
+if (unchanged.HasDifferences(unchanged with { }) || !unchanged.HasDifferences(new State(new("other"))))
+    throw new Exception("HasDifferences extension returned an unexpected result.");
+if (unchanged.Diff(new State(new("other"))).Length != 1)
+    throw new Exception("Diff extension returned an unexpected result.");
+Console.WriteLine("Package smoke check passed: generator loading, XML docs, shared types, nested comparisons, external subtype rejection, framework types, sets, keyed matching, HasDifferences and extension methods.");
 
 public record Line(int Id, int Quantity);
 public record Document(Exception? Error, HashSet<string> Tags, List<Line> Lines);
