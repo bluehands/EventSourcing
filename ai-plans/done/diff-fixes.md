@@ -3,7 +3,7 @@
 Status: Steps 1–7 done. Scope: `src/EventSourcing.Diff`, `src/EventSourcing.Diff.SourceGenerator`, `src/EventSourcing.Diff.Test`.
 Nothing is published yet, so public API changes are allowed. Versioning and `AnalyzerReleases.Shipped.md` are out of scope.
 
-Generator performance is planned separately in `diff-generator-performance.md`.
+Generator performance is planned separately in `../open/diff-generator-performance.md`.
 
 ## Findings that motivate this plan
 
@@ -138,7 +138,7 @@ Tests: `ESDIFF002` message contains the via-path; `ESDIFF005` warning for `"Nmae
 
 - `Test-Package.ps1`: assert `lib/net10.0/EventSourcing.Diff.xml` is packed; the consumer (TreatWarningsAsErrors) adds a model with `Exception`, `HashSet<string>` and a `MatchBy` keyed list, and checks `Kind` values.
 - `src/EventSourcing.Diff/README.md`: update comparison contract (framework types, sets, `IDictionary`, nullable structs, keyed matching, `Kind`), diagnostics table (`ESDIFF001`–`ESDIFF007`), remove the "missing entry vs null value is ambiguous" caveat, document remaining limitations (dictionary comparer asymmetry, record structs not traversed, subtypes from other assemblies throw, set elements are not traversed, keyed collections ignore order).
-- `ai-plans/diff-improvements.md`: mark items 2, 3 and the implemented parts of 4 as done; note sets are handled via `SetEquals`.
+- `ai-plans/diff-improvements.md` (now split into `done/` and `open/`): mark items 2, 3 and the implemented parts of 4 as done; note sets are handled via `SetEquals`.
 
 ## Verification (after every step)
 

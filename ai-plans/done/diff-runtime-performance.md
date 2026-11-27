@@ -1,6 +1,6 @@
 # Diff runtime performance and `HasDifferences`
 
-Status: done. Measured results (see `src/EventSourcing.Diff.Benchmarks/README.md`): unchanged states with shared substructure went from ~24 KB / 5.7 µs to 0 B (24 B benchmark boxing) / ~70 ns; one deep change from 26 KB to 416 B; `HasDifferences` allocates 0 B except for non-identical keyed lists (~10 KB). Replaces item 5 of `diff-improvements.md`.
+Status: done. Measured results (see `src/EventSourcing.Diff.Benchmarks/README.md`): unchanged states with shared substructure went from ~24 KB / 5.7 µs to 0 B (24 B benchmark boxing) / ~70 ns; one deep change from 26 KB to 416 B; `HasDifferences` allocates 0 B except for non-identical keyed lists (~10 KB). Replaces item 5 of the original diff improvement plan (`diff-improvements.md` in this folder). The open follow-up for keyed lists is item 5 in `../open/diff-improvements.md`.
 
 ## Why
 
@@ -93,7 +93,7 @@ Paths are only needed when a difference is recorded, a custom comparison is call
 ### 7. Docs (done)
 
 - **`src/EventSourcing.Diff/README.md`:** document `HasDifferences` and its contract, the extension-method usage (`old.Diff(new)`, `old.HasDifferences(new)`), plus the performance notes "unchanged parts that are the same reference are skipped" and "paths are built only for differences".
-- **`ai-plans/diff-improvements.md`:** mark item 5 as replaced by this plan.
+- **`ai-plans/diff-improvements.md`** (now `done/diff-improvements.md`): mark item 5 as replaced by this plan.
 - **`Test-Package.ps1`:** extend it with one `HasDifferences` check.
 
 ## Tests

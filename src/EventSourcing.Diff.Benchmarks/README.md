@@ -1,6 +1,6 @@
 # EventSourcing.Diff.Benchmarks
 
-BenchmarkDotNet micro-benchmarks for the generated `EventSourcing.Diff` comparisons (time and allocated bytes per call). Used to measure the steps of `ai-plans/diff-runtime-performance.md`. Separate from the event-store workload runner in `EventSourcing.Benchmarks`.
+BenchmarkDotNet micro-benchmarks for the generated `EventSourcing.Diff` comparisons (time and allocated bytes per call). Used to measure the steps of `ai-plans/done/diff-runtime-performance.md`. Separate from the event-store workload runner in `EventSourcing.Benchmarks`.
 
 ## Run
 

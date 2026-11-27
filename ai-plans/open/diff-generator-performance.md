@@ -1,6 +1,6 @@
 # Diff generator IDE performance
 
-Status: proposed, not started. Do this after `diff-fixes.md`.
+Status: proposed, not started. The prerequisite `../done/diff-fixes.md` is done.
 
 ## Problem
 
@@ -28,4 +28,4 @@ This is fine for small projects but can slow typing in large ones.
 
 ## Risks
 
-An incomplete model equality produces stale generated code. The acceptance tests above guard against it. Runtime allocation tuning (`diff-improvements.md`, item 5) is a separate topic.
+An incomplete model equality produces stale generated code. The acceptance tests above guard against it. Runtime allocation tuning is done separately (`../done/diff-runtime-performance.md`).
