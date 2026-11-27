@@ -108,6 +108,10 @@ Your are basically free to model a command layer (or not) on top of your event s
 [^1]: An API that does not respect the '[Command Query Separation](https://de.wikipedia.org/wiki/Command-Query-Separation)' principle. So commands actually return data, i.e. UpdateSomething returns the updated entity.
 
 
+## Model comparisons
+
+[Bluehands.EventSourcing.Diff](src/EventSourcing.Diff/README.md) provides source-generated comparisons of immutable models with typed property paths and old/new values. It can be used independently of the event store and command layer.
+
 ## Projections
 
 As for the command layer you are basically free to build your projections the way you want. Just use the event stream to subscribe to events and apply them to your state objects.

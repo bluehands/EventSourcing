@@ -79,6 +79,12 @@ steps:
     packagesToPack: '**/*.csproj;!**/Playground/**/*.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)'
 
+- pwsh: >
+    & ./src/EventSourcing.Diff.Test/Test-Package.ps1
+    -PackageDirectory "$(Build.ArtifactStagingDirectory)"
+    -WorkingDirectory "$(Agent.TempDirectory)/diff-package-smoke"
+  displayName: Verify standalone diff package
+
 - task: PublishBuildArtifacts@1
   inputs:
     pathToPublish: '$(Build.ArtifactStagingDirectory)'

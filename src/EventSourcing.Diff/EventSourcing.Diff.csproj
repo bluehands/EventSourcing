@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <PackageId>Bluehands.EventSourcing.Diff</PackageId>
+    <PackageDescription>Source-generated structural comparisons with typed property paths for immutable .NET models. No event store dependency.</PackageDescription>
+    <PackageTags>Diff,SourceGenerator,Immutable,EventSourcing</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EventSourcing.Diff.SourceGenerator\EventSourcing.Diff.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <None Include="..\EventSourcing.Diff.SourceGenerator\bin\$(Configuration)\netstandard2.0\EventSourcing.Diff.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+</Project>
