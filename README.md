@@ -107,6 +107,8 @@ Your are basically free to model a command layer (or not) on top of your event s
 
 [^1]: An API that does not respect the '[Command Query Separation](https://de.wikipedia.org/wiki/Command-Query-Separation)' principle. So commands actually return data, i.e. UpdateSomething returns the updated entity.
 
+The principles behind events, commands and projections are summarized in the [event sourcing constitution](constitution_eventsourcing.md). It is a good starting point for your own team and AI coding agents. For example, read the outcome of a command from the affected projections, never from `CommandProcessed` events.
+
 
 ## Projections
 
